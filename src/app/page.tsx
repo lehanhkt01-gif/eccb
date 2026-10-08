@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { getCurrentUser, setCurrentUser, AuthUser } from "@/lib/authSession";
+import { getStoredMembers } from "@/lib/memberStore";
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
@@ -18,12 +21,21 @@ interface Article {
 }
 
 export default function HomePage() {
+  const router = useRouter();
+  const [currentUser, setCurrentUserState] = useState<AuthUser | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [articles, setArticles] = useState<Article[]>([]);
   const [loadingNews, setLoadingNews] = useState(true);
   
   // State xem chi tiết bản tin
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
+
+  // State Modal Đăng nhập / Đăng ký dành riêng cho Hội viên bằng CCCD
+  const [isMemberModalOpen, setIsMemberModalOpen] = useState(false);
+  const [memberCccd, setMemberCccd] = useState("");
+  const [memberPassword, setMemberPassword] = useState("");
+  const [memberLoginError, setMemberLoginError] = useState("");
+  const [isMemberLoggingIn, setIsMemberLoggingIn] = useState(false);
 
   // State quản trị cán bộ xã
   const [isCadreModalOpen, setIsCadreModalOpen] = useState(false);
@@ -41,11 +53,14 @@ export default function HomePage() {
   const [submitError, setSubmitError] = useState("");
   const [submitSuccess, setSubmitSuccess] = useState("");
 
-
-
-  // Tải danh sách bản tin từ API
+  // Tải danh sách bản tin từ API và kiểm tra trạng thái đăng nhập
   useEffect(() => {
     fetchNews();
+    const user = getCurrentUser();
+    setCurrentUserState(user);
+    if (user?.role === "SUPER_ADMIN") {
+      setIsCadreVerified(true);
+    }
   }, []);
 
   const fetchNews = async () => {
@@ -61,6 +76,74 @@ export default function HomePage() {
     } finally {
       setLoadingNews(false);
     }
+  };
+
+  // Xử lý đăng nhập Hội viên bằng CCCD trong Modal
+  const handleMemberModalLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setMemberLoginError("");
+    setIsMemberLoggingIn(true);
+
+    const cleanCccd = memberCccd.trim();
+    const cleanPass = memberPassword;
+
+    if (!cleanCccd || !cleanPass) {
+      setMemberLoginError("Vui lòng nhập đầy đủ số CCCD 12 số và mật khẩu.");
+      setIsMemberLoggingIn(false);
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: cleanCccd, password: cleanPass }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.user) {
+          setCurrentUser(data.user);
+          setCurrentUserState(data.user);
+          setIsMemberModalOpen(false);
+          router.push("/member");
+          return;
+        } else {
+          setMemberLoginError(data.message || "Xác thực không thành công.");
+          setIsMemberLoggingIn(false);
+          return;
+        }
+      }
+
+      if (res.status === 401 || res.status === 404 || res.status === 400) {
+        const errData = await res.json().catch(() => null);
+        setMemberLoginError(errData?.message || "Số CCCD hoặc mật khẩu không chính xác.");
+        setIsMemberLoggingIn(false);
+        return;
+      }
+    } catch {
+      // Fallback khi chạy static export demo
+      const members = getStoredMembers();
+      const found = members.find((m) => m.cccd === cleanCccd);
+      if (found || /^\d{12}$/.test(cleanCccd)) {
+        const authUser: AuthUser = {
+          username: cleanCccd,
+          cccd: cleanCccd,
+          fullName: found ? found.fullName : "Hội viên Cựu Chiến Binh",
+          phone: found?.phone || "",
+          hamletName: found?.hamletName || "Hội CCB Xã Ea Súp",
+          role: "MEMBER",
+        };
+        setCurrentUser(authUser);
+        setCurrentUserState(authUser);
+        setIsMemberModalOpen(false);
+        router.push("/member");
+        return;
+      }
+    }
+
+    setMemberLoginError("Số CCCD hoặc mật khẩu không chính xác. Vui lòng kiểm tra lại.");
+    setIsMemberLoggingIn(false);
   };
 
   // Mở modal thêm mới bản tin (dành cho Cán bộ xã)
@@ -198,22 +281,30 @@ export default function HomePage() {
 
           {/* Cụm Nút Điều Hướng (Ảnh 1: Nút "Đăng nhập" + Icon 3 gạch chứa "Cán bộ xã") */}
           <div className="flex items-center gap-2 relative">
-            {/* Nút Đăng nhập nổi bật */}
-            <Link
-              href="/login"
-              className="px-4 py-2 sm:py-2.5 bg-bronze-gold hover:bg-amber-700 text-white text-sm font-semibold rounded shadow-sm transition flex items-center gap-1.5"
+            {/* Nút Đăng nhập / Đăng ký nổi bật */}
+            <button
+              type="button"
+              onClick={() => {
+                if (currentUser?.role === "MEMBER") {
+                  router.push("/member");
+                } else {
+                  setIsMemberModalOpen(true);
+                }
+              }}
+              className="px-3.5 sm:px-4 py-2 sm:py-2.5 bg-bronze-gold hover:bg-amber-700 active:scale-98 text-white text-xs sm:text-sm font-bold rounded shadow-md transition flex items-center gap-1.5 cursor-pointer"
+              title="Đăng nhập hoặc Đăng ký dành riêng cho Hội viên CCB"
             >
               <span>🔑</span>
-              <span>Đăng nhập</span>
-            </Link>
+              <span>{currentUser?.role === "MEMBER" ? "Cổng Hội viên" : "Đăng nhập / Đăng ký"}</span>
+            </button>
 
-            {/* Nút 3 gạch ngang (Hamburger Menu) ẩn "Cán bộ xã" */}
+            {/* Nút 3 gạch ngang (Hamburger Menu) ẩn "Đăng nhập Cán bộ xã" */}
             <div className="relative">
               <button
                 type="button"
                 onClick={() => setMenuOpen(!menuOpen)}
                 aria-label="Menu chức năng"
-                className="w-10 h-10 flex items-center justify-center bg-moss-green-light hover:bg-moss-green-dark border border-emerald-300/40 rounded text-white text-lg transition focus:outline-none focus:ring-2 focus:ring-amber-400"
+                className="w-10 h-10 flex items-center justify-center bg-moss-green-light hover:bg-moss-green-dark border border-emerald-300/40 rounded text-white text-lg transition focus:outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer"
               >
                 ☰
               </button>
@@ -225,7 +316,7 @@ export default function HomePage() {
                     className="fixed inset-0 z-40 bg-black/20"
                     onClick={() => setMenuOpen(false)}
                   />
-                  <div className="absolute right-0 mt-2 w-64 bg-white text-deep-text rounded-lg shadow-xl border-2 border-moss-green z-50 py-2 animate-in fade-in duration-150">
+                  <div className="absolute right-0 mt-2 w-72 bg-white text-deep-text rounded-lg shadow-xl border-2 border-moss-green z-50 py-2 animate-in fade-in duration-150">
                     <div className="px-4 py-2 border-b border-stone-200">
                       <p className="text-xs font-bold text-moss-green uppercase">
                         Hệ Thống Phân Hệ
@@ -233,64 +324,70 @@ export default function HomePage() {
                       <p className="text-[11px] text-deep-muted">Hội CCB Xã Ea Súp</p>
                     </div>
 
-                    {/* Nút "Cán bộ xã" nằm trong 3 gạch ngang theo yêu cầu */}
+                    {/* Đăng nhập Cán bộ xã */}
                     <Link
-                      href="/admin"
+                      href="/login?role=admin"
                       onClick={() => setMenuOpen(false)}
                       className="flex items-center gap-3 px-4 py-3 text-sm font-bold text-moss-green hover:bg-cream-surface transition border-l-4 border-bronze-gold"
                     >
                       <span className="text-lg">🏛️</span>
                       <div>
-                        <div className="text-deep-text font-bold">Cán bộ xã</div>
+                        <div className="text-deep-text font-bold">Đăng nhập Cán bộ xã</div>
                         <div className="text-xs font-normal text-deep-muted">
                           Bảng điều hành thường trực xã
                         </div>
                       </div>
                     </Link>
 
+                    {/* Đăng nhập Chi Hội */}
                     <Link
-                      href="/admin/members"
-                      onClick={() => setMenuOpen(false)}
-                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-deep-text hover:bg-stone-100 transition"
-                    >
-                      <span className="text-base">👥</span>
-                      <span>Quản lý Hội viên (Mẫu 02)</span>
-                    </Link>
-
-                    <Link
-                      href="/branch"
+                      href="/login?role=branch"
                       onClick={() => setMenuOpen(false)}
                       className="flex items-center gap-3 px-4 py-2.5 text-sm text-deep-text hover:bg-stone-100 transition"
                     >
                       <span className="text-base">📱</span>
-                      <span>Cổng Chi Hội Trưởng (PWA)</span>
-                    </Link>
-
-                    <Link
-                      href="/member"
-                      onClick={() => setMenuOpen(false)}
-                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-deep-text hover:bg-emerald-50 transition"
-                    >
-                      <span className="text-base">🎖️</span>
                       <div>
-                        <div className="font-bold text-moss-green">Cổng Hội Viên (Cá nhân)</div>
-                        <div className="text-[11px] text-stone-500">Đăng nhập bằng số CCCD 12 số</div>
+                        <div className="font-semibold text-deep-text">Đăng nhập Chi Hội</div>
+                        <div className="text-[11px] text-deep-muted">20 Chi hội trưởng thôn buôn</div>
                       </div>
                     </Link>
 
-                    <div className="border-t border-stone-200 my-1 pt-1">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setMenuOpen(false);
-                          handleOpenCreateModal();
-                        }}
-                        className="w-full text-left flex items-center gap-3 px-4 py-2 text-xs font-semibold text-flag-red hover:bg-red-50 transition"
-                      >
-                        <span>📝</span>
-                        <span>Đăng bản tin tuyên truyền mới</span>
-                      </button>
-                    </div>
+                    {/* Cổng Hội Viên */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        if (currentUser?.role === "MEMBER") {
+                          router.push("/member");
+                        } else {
+                          setIsMemberModalOpen(true);
+                        }
+                      }}
+                      className="w-full text-left flex items-center gap-3 px-4 py-2.5 text-sm text-deep-text hover:bg-emerald-50 transition cursor-pointer"
+                    >
+                      <span className="text-base">🎖️</span>
+                      <div>
+                        <div className="font-bold text-moss-green">Đăng nhập Hội Viên</div>
+                        <div className="text-[11px] text-stone-500">Bằng số CCCD 12 số</div>
+                      </div>
+                    </button>
+
+                    {/* Nút "Đăng bản tin tuyên truyền mới" — CHỈ HIỂN THỊ KHI ĐÃ ĐĂNG NHẬP VAI TRÒ CÁN BỘ XÃ (SUPER_ADMIN) */}
+                    {currentUser?.role === "SUPER_ADMIN" && (
+                      <div className="border-t border-stone-200 my-1 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMenuOpen(false);
+                            handleOpenCreateModal();
+                          }}
+                          className="w-full text-left flex items-center gap-3 px-4 py-2 text-xs font-bold text-flag-red hover:bg-red-50 transition cursor-pointer"
+                        >
+                          <span>📝</span>
+                          <span>Đăng bản tin tuyên truyền mới</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </>
               )}
@@ -430,25 +527,27 @@ export default function HomePage() {
                       <span>→</span>
                     </button>
 
-                    {/* Nút Cán bộ xã Sửa / Xóa */}
-                    <div className="flex items-center gap-1.5 opacity-90 group-hover:opacity-100">
-                      <button
-                        type="button"
-                        onClick={() => handleOpenEditModal(item)}
-                        className="text-[11px] px-2 py-1 bg-amber-50 hover:bg-amber-100 text-bronze-gold font-bold rounded border border-amber-300 transition"
-                        title="Chỉnh sửa bản tin (Dành cho cán bộ xã)"
-                      >
-                        ✏️ Sửa
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteArticle(item.id)}
-                        className="text-[11px] px-2 py-1 bg-red-50 hover:bg-red-100 text-flag-red font-bold rounded border border-red-200 transition"
-                        title="Xóa bản tin (Dành cho cán bộ xã)"
-                      >
-                        🗑️
-                      </button>
-                    </div>
+                    {/* Nút Cán bộ xã Sửa / Xóa (Chỉ hiển thị cho SUPER_ADMIN) */}
+                    {currentUser?.role === "SUPER_ADMIN" && (
+                      <div className="flex items-center gap-1.5 opacity-90 group-hover:opacity-100">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditModal(item)}
+                          className="text-[11px] px-2 py-1 bg-amber-50 hover:bg-amber-100 text-bronze-gold font-bold rounded border border-amber-300 transition cursor-pointer"
+                          title="Chỉnh sửa bản tin (Dành cho cán bộ xã)"
+                        >
+                          ✏️ Sửa
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteArticle(item.id)}
+                          className="text-[11px] px-2 py-1 bg-red-50 hover:bg-red-100 text-flag-red font-bold rounded border border-red-200 transition cursor-pointer"
+                          title="Xóa bản tin (Dành cho cán bộ xã)"
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </article>
@@ -762,6 +861,112 @@ export default function HomePage() {
                   </div>
                 </form>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: ĐĂNG NHẬP / ĐĂNG KÝ DÀNH RIÊNG CHO HỘI VIÊN BẰNG CCCD */}
+      {isMemberModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white text-deep-text w-full max-w-md rounded-2xl shadow-2xl border-4 border-bronze-gold overflow-hidden animate-in zoom-in-95 duration-150">
+            {/* Header Modal */}
+            <div className="bg-moss-green text-white p-4 sm:p-5 flex items-center justify-between border-b-2 border-bronze-gold">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-flag-red border-2 border-bronze-gold flex items-center justify-center font-bold text-amber-300 text-sm shadow-inner shrink-0">
+                  CCB
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm sm:text-base uppercase tracking-tight text-white leading-tight">
+                    Đăng Nhập Hội Viên CCB
+                  </h3>
+                  <p className="text-[11px] text-amber-200">
+                    Dành riêng cho Hội viên bằng số CCCD 12 số
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMemberModalOpen(false);
+                  setMemberLoginError("");
+                }}
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white font-bold flex items-center justify-center cursor-pointer transition"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-5 sm:p-6 space-y-4">
+              {memberLoginError && (
+                <div className="p-3 bg-red-50 border-l-4 border-flag-red text-flag-red text-xs font-bold rounded-r">
+                  ⚠️ {memberLoginError}
+                </div>
+              )}
+
+              <form onSubmit={handleMemberModalLogin} className="space-y-3.5">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold uppercase tracking-wider text-deep-text block">
+                    Số Căn cước công dân (CCCD 12 số):
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    maxLength={12}
+                    placeholder="VD: 066050100001"
+                    value={memberCccd}
+                    onChange={(e) => setMemberCccd(e.target.value.replace(/\D/g, ""))}
+                    className="w-full p-3 bg-stone-50 border-2 border-stone-300 rounded-lg text-base font-semibold text-deep-text focus:border-moss-green focus:bg-white focus:outline-none"
+                    autoFocus
+                  />
+                  <p className="text-[11px] text-stone-500">
+                    * Nhập chính xác 12 chữ số ghi trên thẻ Căn cước của đồng chí.
+                  </p>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold uppercase tracking-wider text-deep-text block">
+                    Mật khẩu:
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="Nhập mật khẩu an toàn..."
+                    value={memberPassword}
+                    onChange={(e) => setMemberPassword(e.target.value)}
+                    className="w-full p-3 bg-stone-50 border-2 border-stone-300 rounded-lg text-base font-semibold text-deep-text focus:border-moss-green focus:bg-white focus:outline-none"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isMemberLoggingIn}
+                  className="w-full py-3 bg-moss-green hover:bg-emerald-900 active:scale-98 text-white font-bold text-sm uppercase tracking-wider rounded-lg shadow-md transition flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <span>{isMemberLoggingIn ? "Đang xác thực bảo mật..." : "🛡️ ĐĂNG NHẬP VÀO CỔNG HỘI VIÊN"}</span>
+                </button>
+              </form>
+
+              {/* Khung Hướng dẫn Đăng ký hội viên mới */}
+              <div className="p-3.5 bg-amber-50/90 border border-amber-300 rounded-xl space-y-1 text-xs text-stone-700">
+                <div className="flex items-center gap-1.5 font-bold text-amber-900">
+                  <span>📝</span>
+                  <span>Chưa có tài khoản hoặc Hội viên mới kết nạp?</span>
+                </div>
+                <p className="leading-relaxed text-[11px]">
+                  Đồng chí vui lòng liên hệ trực tiếp <strong>Chi hội trưởng</strong> tại thôn, buôn của mình hoặc <strong>Ban Thường trực Hội CCB Xã Ea Súp</strong> (Hotline: <strong>0943.170.770</strong>) để được cấp mã CCCD và hướng dẫn kết nạp theo Điều lệ Hội Cựu Chiến Binh Việt Nam.
+                </p>
+              </div>
+
+              <div className="text-center pt-1 border-t border-stone-200">
+                <Link
+                  href="/login"
+                  onClick={() => setIsMemberModalOpen(false)}
+                  className="text-xs font-semibold text-moss-green hover:underline"
+                >
+                  Cán bộ xã hoặc Chi hội trưởng? Chuyển sang Cổng đăng nhập quản trị →
+                </Link>
+              </div>
             </div>
           </div>
         </div>

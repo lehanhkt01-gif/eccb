@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { setCurrentUser, getMemberCustomPassword } from "@/lib/authSession";
@@ -8,10 +8,41 @@ import { getStoredMembers } from "@/lib/memberStore";
 
 export default function LoginPage() {
   const router = useRouter();
+  const [activeTab, setActiveTab] = useState<"admin" | "branch" | "member">("admin");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const roleParam = params.get("role");
+      if (roleParam === "branch") {
+        setActiveTab("branch");
+        setUsername("chihoi_thon_01");
+      } else if (roleParam === "member") {
+        setActiveTab("member");
+        setUsername("066050100001");
+      } else if (roleParam === "admin") {
+        setActiveTab("admin");
+        setUsername("lehanhkt01@gmail.com");
+      }
+    }
+  }, []);
+
+  const handleTabChange = (tab: "admin" | "branch" | "member") => {
+    setActiveTab(tab);
+    setErrorMessage("");
+    setPassword("");
+    if (tab === "admin") {
+      setUsername("lehanhkt01@gmail.com");
+    } else if (tab === "branch") {
+      setUsername("chihoi_thon_01");
+    } else {
+      setUsername("066050100001");
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -61,7 +92,7 @@ export default function LoginPage() {
         return;
       }
     } catch {
-      // 2. Fallback xử lý khi chạy trong môi trường tĩnh (Static Export / GitHub Pages không có Node backend)
+      // 2. Fallback xử lý khi chạy trong môi trường tĩnh (Static Export / GitHub Pages)
       const isCccd = /^\d{12}$/.test(cleanUser);
       const cleanLower = cleanUser.toLowerCase();
 
@@ -124,22 +155,6 @@ export default function LoginPage() {
     setIsLoading(false);
   };
 
-  // Điền nhanh tên tài khoản kiểm thử (Mật khẩu nhập từ file .env)
-  const fillSampleAccount = (type: "admin_lehanh" | "admin_trunghieu" | "branch" | "member") => {
-    if (type === "admin_lehanh") {
-      setUsername("lehanhkt01@gmail.com");
-    } else if (type === "admin_trunghieu") {
-      setUsername("trunghieuktkt@gmail.com");
-    } else if (type === "branch") {
-      setUsername("chihoi_thon_01");
-    } else if (type === "member") {
-      // Số CCCD mẫu của hội viên đầu tiên
-      setUsername("066050100001");
-    }
-    setPassword("");
-    setErrorMessage("");
-  };
-
   return (
     <div className="min-h-screen bg-cream-bg text-deep-text flex flex-col justify-between p-4 sm:p-6">
       {/* Top Header Nhỏ */}
@@ -165,9 +180,46 @@ export default function LoginPage() {
               E-CCB Ea Súp
             </h1>
             <p className="text-xs text-deep-muted">
-              Dành cho Cán bộ Hội và 612 Hội viên Cựu Chiến Binh Xã
+              Đăng nhập Cán bộ Xã, Chi hội trưởng &amp; Hội viên
             </p>
           </div>
+        </div>
+
+        {/* 3 Tabs Phân Hệ Đăng Nhập */}
+        <div className="grid grid-cols-3 gap-1 bg-stone-100 p-1 rounded-xl text-xs font-bold">
+          <button
+            type="button"
+            onClick={() => handleTabChange("admin")}
+            className={`py-2 px-1 rounded-lg transition text-center cursor-pointer ${
+              activeTab === "admin"
+                ? "bg-moss-green text-white shadow-xs"
+                : "text-stone-600 hover:text-moss-green"
+            }`}
+          >
+            🏛️ Cán bộ xã
+          </button>
+          <button
+            type="button"
+            onClick={() => handleTabChange("branch")}
+            className={`py-2 px-1 rounded-lg transition text-center cursor-pointer ${
+              activeTab === "branch"
+                ? "bg-bronze-gold text-white shadow-xs"
+                : "text-stone-600 hover:text-moss-green"
+            }`}
+          >
+            📱 Chi Hội
+          </button>
+          <button
+            type="button"
+            onClick={() => handleTabChange("member")}
+            className={`py-2 px-1 rounded-lg transition text-center cursor-pointer ${
+              activeTab === "member"
+                ? "bg-emerald-800 text-white shadow-xs"
+                : "text-stone-600 hover:text-moss-green"
+            }`}
+          >
+            🎖️ Hội Viên
+          </button>
         </div>
 
         {/* Thông báo lỗi nếu có */}
@@ -185,7 +237,13 @@ export default function LoginPage() {
               htmlFor="username"
               className="text-xs font-bold uppercase tracking-wider text-deep-text flex items-center justify-between"
             >
-              <span>Tài khoản / Số CCCD:</span>
+              <span>
+                {activeTab === "admin"
+                  ? "Email Cán bộ Thường trực:"
+                  : activeTab === "branch"
+                  ? "Tài khoản Chi Hội (chihoi_...):"
+                  : "Số Căn cước công dân (CCCD 12 số):"}
+              </span>
               <span className="text-[10px] text-stone-500 font-normal">Bitwarden Autofill</span>
             </label>
             <div className="relative">
@@ -195,15 +253,33 @@ export default function LoginPage() {
                 type="text"
                 autoComplete="username"
                 required
-                placeholder="CCCD (12 số) hoặc Email Cán bộ"
+                placeholder={
+                  activeTab === "admin"
+                    ? "VD: lehanhkt01@gmail.com hoặc trunghieuktkt@gmail.com"
+                    : activeTab === "branch"
+                    ? "VD: chihoi_thon_01"
+                    : "VD: 066050100001 (12 số CCCD)"
+                }
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 className="w-full p-3 bg-stone-50 border-2 border-stone-300 rounded-lg text-base font-semibold text-deep-text placeholder-stone-400 focus:border-moss-green focus:bg-white focus:outline-none"
               />
             </div>
-            <p className="text-[11px] text-stone-500">
-              * Hội viên: Sử dụng <strong>Số CCCD 12 số</strong> ghi trên thẻ Căn cước.
-            </p>
+            {activeTab === "admin" && (
+              <p className="text-[11px] text-stone-500">
+                * Dành cho Ban Thường trực: <code>lehanhkt01@gmail.com</code> / <code>trunghieuktkt@gmail.com</code>
+              </p>
+            )}
+            {activeTab === "branch" && (
+              <p className="text-[11px] text-stone-500">
+                * Dành cho 20 Chi hội trưởng (Định dạng: <code>chihoi_thon_01</code> đến <code>chihoi_buon_c</code>)
+              </p>
+            )}
+            {activeTab === "member" && (
+              <p className="text-[11px] text-stone-500">
+                * Hội viên nhập đúng <strong>Số CCCD 12 số</strong> được in trên thẻ Căn cước.
+              </p>
+            )}
           </div>
 
           {/* Trường Mật khẩu */}
@@ -255,51 +331,7 @@ export default function LoginPage() {
           </button>
         </form>
 
-        {/* Hướng Dẫn & Điền Nhanh Tài Khoản Mẫu */}
-        <div className="pt-3 border-t border-stone-200 space-y-2">
-          <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wider block text-center">
-            Chọn Phân Hệ Đăng Nhập Nhanh
-          </span>
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <button
-              type="button"
-              onClick={() => fillSampleAccount("admin_lehanh")}
-              className="p-2 bg-stone-100 hover:bg-stone-200 border border-stone-300 rounded font-semibold text-deep-text text-left transition"
-            >
-              <span className="block font-bold text-moss-green">👑 Admin Lê Hạnh</span>
-              <span className="text-[10px] text-stone-500">lehanhkt01@gmail.com</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => fillSampleAccount("admin_trunghieu")}
-              className="p-2 bg-stone-100 hover:bg-stone-200 border border-stone-300 rounded font-semibold text-deep-text text-left transition"
-            >
-              <span className="block font-bold text-moss-green">👑 Chủ tịch Hội CCB</span>
-              <span className="text-[10px] text-stone-500">trunghieuktkt@gmail.com</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => fillSampleAccount("branch")}
-              className="p-2 bg-stone-100 hover:bg-stone-200 border border-stone-300 rounded font-semibold text-deep-text text-left transition"
-            >
-              <span className="block font-bold text-bronze-gold">🏘️ Chi Hội Trưởng</span>
-              <span className="text-[10px] text-stone-500">Thôn 1 (chihoi_thon_01)</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => fillSampleAccount("member")}
-              className="p-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 rounded font-semibold text-deep-text text-left transition"
-            >
-              <span className="block font-bold text-emerald-800">🎖️ Hội Viên (CCCD)</span>
-              <span className="text-[10px] text-emerald-700">CCCD: 066050100001</span>
-            </button>
-          </div>
-          <p className="text-[10px] text-stone-500 text-center italic">
-            * Mật khẩu mặc định được quản lý tuyệt đối an toàn trong file .env theo tiêu chuẩn bảo mật.
-          </p>
-        </div>
-
-        {/* Huy hiệu Bảo Mật Bitwarden */}
+        {/* Chú thích bảo mật */}
         <div className="bg-amber-50/80 border border-amber-200 rounded-lg p-2.5 text-[11px] text-stone-600 flex items-center gap-2">
           <span className="text-base shrink-0">🔐</span>
           <span>
