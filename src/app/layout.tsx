@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://ccb.easupso.com"),
   title: "Hội Cựu Chiến Binh Xã Ea Súp | E-CCB Ea Súp",
   description:
     "Cổng thông tin điện tử Hội Cựu Chiến Binh Xã Ea Súp - Trực thuộc Hệ sinh thái Ea Súp Số (ccb.easupso.com). Phát huy truyền thống Bộ đội Cụ Hồ, gương mẫu, tiên phong chuyển đổi số.",
@@ -15,6 +16,28 @@ export const metadata: Metadata = {
     icon: "/images/logo-ccb.png",
     shortcut: "/images/logo-ccb.png",
     apple: "/images/logo-ccb.png",
+  },
+  openGraph: {
+    title: "Hội Cựu Chiến Binh Xã Ea Súp | E-CCB Ea Súp",
+    description: "Cổng thông tin điện tử & Nghiệp vụ Hội Cựu Chiến Binh Xã Ea Súp - Hệ sinh thái Ea Súp Số (ccb.easupso.com)",
+    url: "https://ccb.easupso.com",
+    siteName: "E-CCB Ea Súp",
+    images: [
+      {
+        url: "/images/logo-ccb.png",
+        width: 800,
+        height: 800,
+        alt: "Logo Hội Cựu Chiến Binh Việt Nam",
+      },
+    ],
+    locale: "vi_VN",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "Hội Cựu Chiến Binh Xã Ea Súp",
+    description: "Hệ thống Quản lý nghiệp vụ Hội CCB xã Ea Súp - Ea Súp Số",
+    images: ["/images/logo-ccb.png"],
   },
   keywords: [
     "Hội Cựu Chiến Binh Ea Súp",
