@@ -15,7 +15,7 @@ services:
     container_name: eccb_app
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "3011:3000"
     expose:
       - "3000"
     env_file:
