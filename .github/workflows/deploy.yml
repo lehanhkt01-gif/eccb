@@ -37,17 +37,7 @@ jobs:
         run: npx prisma generate
 
       - name: Build Static Export cho GitHub Pages
-        env:
-          GITHUB_PAGES: "true"
-          NEXT_PUBLIC_BASE_PATH: "/eccb"
-        run: |
-          # Tạm thời di dời thư mục api để Next.js xuất bản static HTML trơn tru
-          if [ -d "src/app/api" ]; then
-            mv src/app/api src/api_backup
-          fi
-          npm run build
-          # Tạo file .nojekyll để GitHub Pages không bỏ qua thư mục _next
-          touch out/.nojekyll
+        run: node scripts/export.js
 
       - name: Upload Pages Artifact
         uses: actions/upload-pages-artifact@v3
