@@ -24,14 +24,20 @@ export default function AdminLayout({
       icon: "👥",
     },
     {
+      href: "/admin/permissions",
+      label: "Quản Lý Cấp Quyền",
+      icon: "🔐",
+      badge: "Phân Quyền",
+    },
+    {
       href: "/branch",
-      label: "Cổng Chi Hội Trưởng (PWA)",
+      label: "Chi Hội Trưởng",
       icon: "📱",
       badge: "Mobile",
     },
     {
       href: "/",
-      label: "Cổng Thông Tin Công Khai",
+      label: "Cổng Thông Tin",
       icon: "🌐",
     },
   ];

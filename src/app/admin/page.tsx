@@ -50,32 +50,14 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* Tiêu đề & Lời chào điều hành */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-stone-300">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-bold uppercase tracking-tight text-deep-text">
-            Bento Grid Dashboard — Thường Trực Hội CCB Xã
-          </h2>
-          <p className="text-sm text-deep-muted mt-0.5">
-            Dữ liệu giám sát 20 thôn buôn • Tỷ lệ nợ quá hạn kiểm soát an toàn: <strong className="text-moss-green">0,06%</strong>
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Link
-            href="/admin/members"
-            className="px-3.5 py-2 bg-moss-green hover:bg-moss-green-light text-white text-xs sm:text-sm font-bold rounded-lg shadow-sm transition flex items-center gap-1.5"
-          >
-            <span>👥 Quản Lý 612 Hội Viên</span>
-          </Link>
-          <Link
-            href="/branch"
-            target="_blank"
-            className="px-3.5 py-2 bg-bronze-gold hover:bg-bronze-gold-light text-white text-xs sm:text-sm font-bold rounded-lg shadow-sm transition flex items-center gap-1.5"
-          >
-            <span>📱 Cổng PWA Chi Hội</span>
-          </Link>
-        </div>
+      {/* Tiêu đề điều hành */}
+      <div className="pb-3 border-b border-stone-300">
+        <h2 className="text-xl sm:text-2xl font-black uppercase tracking-tight text-deep-text">
+          ĐIỀU HÀNH, QUẢN LÝ NGHIỆP VỤ HỘI
+        </h2>
+        <p className="text-sm text-deep-muted mt-0.5">
+          Dữ liệu giám sát 20 thôn buôn • Tỷ lệ nợ quá hạn kiểm soát an toàn: <strong className="text-moss-green">0,06%</strong>
+        </p>
       </div>
 
       {/* ==================================================================== */}
