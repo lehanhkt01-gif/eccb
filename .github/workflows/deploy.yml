@@ -1,0 +1,59 @@
+name: Deploy E-CCB to GitHub Pages
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout mã nguồn
+        uses: actions/checkout@v4
+
+      - name: Thiết lập Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+
+      - name: Cài đặt dependencies
+        run: npm install
+
+      - name: Sinh Prisma Client
+        run: npx prisma generate
+
+      - name: Build Static Export cho GitHub Pages
+        env:
+          GITHUB_PAGES: "true"
+          NEXT_PUBLIC_BASE_PATH: "/eccb"
+        run: |
+          # Tạm thời di dời thư mục api để Next.js xuất bản static HTML trơn tru
+          if [ -d "src/app/api" ]; then
+            mv src/app/api src/api_backup
+          fi
+          npm run build
+          # Tạo file .nojekyll để GitHub Pages không bỏ qua thư mục _next
+          touch out/.nojekyll
+
+      - name: Upload Pages Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./out
+
+      - name: Triển khai lên GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
