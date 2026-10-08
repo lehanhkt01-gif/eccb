@@ -444,21 +444,23 @@ export default function HomePage() {
             </p>
           </div>
 
-          {/* Nút dành cho Cán bộ Xã đăng bài mới */}
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={handleOpenCreateModal}
-              className="inline-flex items-center gap-2 px-3.5 py-1.5 sm:px-4 sm:py-2 bg-moss-green hover:bg-moss-green-dark text-white text-xs sm:text-sm font-bold rounded shadow-xs transition"
-              title="Chỉ cán bộ xã mới có quyền tạo mới bản tin tuyên truyền"
-            >
-              <span>➕</span>
-              <span>Đăng Bản Tin Mới</span>
-              <span className="text-[10px] bg-amber-400 text-stone-900 px-1.5 py-0.5 rounded font-extrabold uppercase">
-                Cán bộ xã
-              </span>
-            </button>
-          </div>
+          {/* Nút dành cho Cán bộ Xã đăng bài mới — CHỈ HIỂN THỊ KHI ĐÃ ĐĂNG NHẬP VAI TRÒ CÁN BỘ XÃ (SUPER_ADMIN) */}
+          {currentUser?.role === "SUPER_ADMIN" && (
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={handleOpenCreateModal}
+                className="inline-flex items-center gap-2 px-3.5 py-1.5 sm:px-4 sm:py-2 bg-moss-green hover:bg-moss-green-dark text-white text-xs sm:text-sm font-bold rounded shadow-xs transition"
+                title="Chỉ cán bộ xã mới có quyền tạo mới bản tin tuyên truyền"
+              >
+                <span>➕</span>
+                <span>Đăng Bản Tin Mới</span>
+                <span className="text-[10px] bg-amber-400 text-stone-900 px-1.5 py-0.5 rounded font-extrabold uppercase">
+                  Cán bộ xã
+                </span>
+              </button>
+            </div>
+          )}
         </div>
 
         {loadingNews ? (
@@ -948,7 +950,7 @@ export default function HomePage() {
               </form>
 
               {/* Khung Hướng dẫn Đăng ký hội viên mới */}
-              <div className="p-3.5 bg-amber-50/90 border border-amber-300 rounded-xl space-y-1 text-xs text-stone-700">
+              <div className="p-3.5 bg-amber-50/90 border border-amber-300 rounded-xl space-y-2 text-xs text-stone-700">
                 <div className="flex items-center gap-1.5 font-bold text-amber-900">
                   <span>📝</span>
                   <span>Chưa có tài khoản hoặc Hội viên mới kết nạp?</span>
@@ -956,6 +958,15 @@ export default function HomePage() {
                 <p className="leading-relaxed text-[11px]">
                   Đồng chí vui lòng liên hệ trực tiếp <strong>Chi hội trưởng</strong> tại thôn, buôn của mình hoặc <strong>Ban Thường trực Hội CCB Xã Ea Súp</strong> (Hotline: <strong>0943.170.770</strong>) để được cấp mã CCCD và hướng dẫn kết nạp theo Điều lệ Hội Cựu Chiến Binh Việt Nam.
                 </p>
+                <div className="pt-1">
+                  <Link
+                    href="/register-member"
+                    onClick={() => setIsMemberModalOpen(false)}
+                    className="w-full py-2.5 px-3 bg-moss-green hover:bg-moss-green-dark text-white font-bold text-xs uppercase tracking-wider rounded-lg border-2 border-bronze-gold shadow-md transition flex items-center justify-center gap-2 cursor-pointer text-center"
+                  >
+                    <span>📝 Đăng ký Hội viên mới trực tuyến</span>
+                  </Link>
+                </div>
               </div>
 
               <div className="text-center pt-1 border-t border-stone-200">
