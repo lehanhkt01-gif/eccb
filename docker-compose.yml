@@ -16,12 +16,17 @@ services:
     restart: unless-stopped
     expose:
       - "3000"
+    env_file:
+      - .env
     environment:
       - NODE_ENV=production
       - PORT=3000
       - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}?schema=public
       - JWT_SECRET=${JWT_SECRET}
       - SITE_URL=${SITE_URL:-https://ccb.easupso.com}
+      - ADMIN_EMAILS=${ADMIN_EMAILS:-lehanhkt01@gmail.com,trunghieuktkt@gmail.com}
+      - ADMIN_DEFAULT_PASSWORD=${ADMIN_DEFAULT_PASSWORD}
+      - MEMBER_DEFAULT_PASSWORD=${MEMBER_DEFAULT_PASSWORD}
     depends_on:
       db:
         condition: service_healthy
