@@ -1,6 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
+
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
 interface Article {
   id: string;
@@ -211,13 +214,13 @@ export default function HomePage() {
           {/* Cụm Nút Điều Hướng (Ảnh 1: Nút "Đăng nhập" + Icon 3 gạch chứa "Cán bộ xã") */}
           <div className="flex items-center gap-2 relative">
             {/* Nút Đăng nhập nổi bật */}
-            <a
+            <Link
               href="/login"
               className="px-4 py-2 sm:py-2.5 bg-bronze-gold hover:bg-amber-700 text-white text-sm font-semibold rounded shadow-sm transition flex items-center gap-1.5"
             >
               <span>🔑</span>
               <span>Đăng nhập</span>
-            </a>
+            </Link>
 
             {/* Nút 3 gạch ngang (Hamburger Menu) ẩn "Cán bộ xã" */}
             <div className="relative">
@@ -246,7 +249,7 @@ export default function HomePage() {
                     </div>
 
                     {/* Nút "Cán bộ xã" nằm trong 3 gạch ngang theo yêu cầu */}
-                    <a
+                    <Link
                       href="/admin"
                       onClick={() => setMenuOpen(false)}
                       className="flex items-center gap-3 px-4 py-3 text-sm font-bold text-moss-green hover:bg-cream-surface transition border-l-4 border-bronze-gold"
@@ -258,25 +261,25 @@ export default function HomePage() {
                           Bảng điều hành thường trực xã
                         </div>
                       </div>
-                    </a>
+                    </Link>
 
-                    <a
+                    <Link
                       href="/admin/members"
                       onClick={() => setMenuOpen(false)}
                       className="flex items-center gap-3 px-4 py-2.5 text-sm text-deep-text hover:bg-stone-100 transition"
                     >
                       <span className="text-base">👥</span>
                       <span>Quản lý Hội viên (Mẫu 02)</span>
-                    </a>
+                    </Link>
 
-                    <a
+                    <Link
                       href="/branch"
                       onClick={() => setMenuOpen(false)}
                       className="flex items-center gap-3 px-4 py-2.5 text-sm text-deep-text hover:bg-stone-100 transition"
                     >
                       <span className="text-base">📱</span>
                       <span>Cổng Chi Hội Trưởng (PWA)</span>
-                    </a>
+                    </Link>
 
                     <div className="border-t border-stone-200 my-1 pt-1">
                       <button
@@ -305,7 +308,7 @@ export default function HomePage() {
         {/* Hình nền hạ độ phân giải WebP tối ưu tải trang */}
         <div
           className="absolute inset-0 bg-cover bg-center md:bg-right bg-no-repeat"
-          style={{ backgroundImage: "url('/images/hero-military-bg.webp')" }}
+          style={{ backgroundImage: `url('${basePath}/images/hero-military-bg.webp')` }}
         />
         {/* Lớp phủ chuyển sắc hài hòa, giữ trọn chuẩn tương phản WCAG AAA */}
         <div className="absolute inset-0 bg-gradient-to-r from-cream-bg via-cream-bg/92 to-cream-bg/40 sm:to-cream-bg/25" />
@@ -389,11 +392,11 @@ export default function HomePage() {
                   {/* Ảnh minh họa bài viết */}
                   <div className="h-40 w-full overflow-hidden relative bg-stone-100">
                     <img
-                      src={item.imageUrl || "/images/hero-military-bg.webp"}
+                      src={item.imageUrl ? (item.imageUrl.startsWith('/') ? `${basePath}${item.imageUrl}` : item.imageUrl) : `${basePath}/images/hero-military-bg.webp`}
                       alt={item.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = "/images/hero-military-bg.webp";
+                        (e.target as HTMLImageElement).src = `${basePath}/images/hero-military-bg.webp`;
                       }}
                     />
                     <div className="absolute top-2.5 left-2.5">
@@ -531,7 +534,7 @@ export default function HomePage() {
               {selectedArticle.imageUrl && (
                 <div className="rounded-lg overflow-hidden border border-stone-300 max-h-80">
                   <img
-                    src={selectedArticle.imageUrl}
+                    src={selectedArticle.imageUrl ? (selectedArticle.imageUrl.startsWith('/') ? `${basePath}${selectedArticle.imageUrl}` : selectedArticle.imageUrl) : `${basePath}/images/hero-military-bg.webp`}
                     alt={selectedArticle.title}
                     className="w-full h-full object-cover"
                   />
