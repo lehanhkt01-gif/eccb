@@ -1,0 +1,66 @@
+@import "tailwindcss";
+
+:root {
+  /* Bảng màu quân đội Hallmark E-CCB Ea Súp */
+  --moss-green: #244023;
+  --moss-green-light: #345c32;
+  --moss-green-dark: #192c18;
+  
+  --flag-red: #9E1A1A;
+  --flag-red-light: #bd2323;
+  --flag-red-dark: #7a1313;
+  
+  --bronze-gold: #B45309;
+  --bronze-gold-light: #d97706;
+  --bronze-gold-dark: #92400e;
+  
+  --cream-bg: #FBFBEE;
+  --cream-surface: #f5f5e3;
+  
+  --deep-text: #1A202C;
+  --deep-muted: #4A5568;
+
+  --background: var(--cream-bg);
+  --foreground: var(--deep-text);
+}
+
+@theme inline {
+  --color-moss-green: var(--moss-green);
+  --color-moss-green-light: var(--moss-green-light);
+  --color-moss-green-dark: var(--moss-green-dark);
+  
+  --color-flag-red: var(--flag-red);
+  --color-flag-red-light: var(--flag-red-light);
+  --color-flag-red-dark: var(--flag-red-dark);
+  
+  --color-bronze-gold: var(--bronze-gold);
+  --color-bronze-gold-light: var(--bronze-gold-light);
+  --color-bronze-gold-dark: var(--bronze-gold-dark);
+  
+  --color-cream-bg: var(--cream-bg);
+  --color-cream-surface: var(--cream-surface);
+  
+  --color-deep-text: var(--deep-text);
+  --color-deep-muted: var(--deep-muted);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+}
+
+/* KỶ LUẬT UI: Mobile-First và chống tràn ngang */
+html, body {
+  overflow-x: clip;
+  max-width: 100vw;
+  background-color: var(--cream-bg);
+  color: var(--deep-text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* KỶ LUẬT UI: Tiêu đề nghiêm cấm in nghiêng (No Italic Headings) */
+h1, h2, h3, h4, h5, h6,
+.heading-title {
+  font-style: normal !important;
+  letter-spacing: -0.01em;
+}

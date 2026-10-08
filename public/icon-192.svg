@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <rect width="192" height="192" rx="38" fill="#244023"/>
+  <circle cx="96" cy="96" r="76" fill="#9E1A1A" stroke="#B45309" stroke-width="6"/>
+  <!-- Ngôi sao vàng quân đội -->
+  <polygon points="96,44 107,77 142,77 114,97 125,130 96,110 67,130 78,97 50,77 85,77" fill="#FBBF24" stroke="#B45309" stroke-width="2"/>
+  <text x="96" y="162" text-anchor="middle" font-family="sans-serif" font-weight="900" font-size="20" fill="#FBFBEE" letter-spacing="2">E-CCB</text>
+</svg>

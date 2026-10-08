@@ -1,0 +1,50 @@
+# ==============================================================================
+# E-CCB EA SÚP — DOCKER IGNORE CONFIGURATION
+# Tối ưu hóa build context và bảo mật tối đa
+# ==============================================================================
+
+# Dependencies (Cài đặt sạch sẽ trong môi trường build Docker)
+node_modules
+npm-debug.log
+
+# Environment Files (CHẶN TUYỆT ĐỐI KHÔNG COPY CREDENTIAL VÀO IMAGE)
+.env
+.env*.local
+*.env
+!*.env.example
+
+# Database dumps & SQL (CHẶN TUYỆT ĐỐI)
+*.sql
+*.dump
+*.tar
+*.bak
+*.sqlite
+*.sqlite3
+*.db
+postgres_data
+
+# Local Build Artifacts
+.next
+out
+build
+dist
+
+# Git & Antigravity IDE Metadata
+.git
+.gitignore
+.github
+.agents
+.gemini
+
+# Documentation & Logs
+README.md
+AGENTS.md
+*.log
+
+# OS & Editor Files
+.DS_Store
+Thumbs.db
+.idea
+.vscode
+*.swp
+*.swo
