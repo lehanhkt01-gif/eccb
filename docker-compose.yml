@@ -76,21 +76,21 @@ services:
   #     - internal_net
 
   # ----------------------------------------------------------------------------
-  # 4. SERVICE DOZZLE: Web UI giám sát log realtime nhẹ và bảo mật
+  # 4. SERVICE DOZZLE: (Tùy chọn) Tắt để tránh trùng cổng trên VPS đa ứng dụng
   # ----------------------------------------------------------------------------
-  dozzle:
-    image: amir20/dozzle:latest
-    container_name: eccb_dozzle
-    restart: unless-stopped
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    ports:
-      - "8899:8080"
-    environment:
-      - DOZZLE_LEVEL=info
-      - DOZZLE_TAILSIZE=300
-    networks:
-      - internal_net
+  # dozzle:
+  #   image: amir20/dozzle:latest
+  #   container_name: eccb_dozzle
+  #   restart: unless-stopped
+  #   volumes:
+  #     - /var/run/docker.sock:/var/run/docker.sock:ro
+  #   ports:
+  #     - "8899:8080"
+  #   environment:
+  #     - DOZZLE_LEVEL=info
+  #     - DOZZLE_TAILSIZE=300
+  #   networks:
+  #     - internal_net
 
 # ------------------------------------------------------------------------------
 # VOLUMES & NETWORKS CÔ LẬP
