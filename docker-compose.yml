@@ -16,6 +16,8 @@ services:
     restart: unless-stopped
     ports:
       - "3011:3000"
+    volumes:
+      - ./public:/app/public:ro
     expose:
       - "3000"
     env_file:

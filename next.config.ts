@@ -11,6 +11,7 @@ const nextConfig: NextConfig = {
       }
     : {
         output: "standalone",
+        images: { unoptimized: true },
       }),
   reactStrictMode: true,
   poweredByHeader: false,
