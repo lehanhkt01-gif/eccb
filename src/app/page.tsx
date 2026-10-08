@@ -266,6 +266,18 @@ export default function HomePage() {
                       <span>Cổng Chi Hội Trưởng (PWA)</span>
                     </Link>
 
+                    <Link
+                      href="/member"
+                      onClick={() => setMenuOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-deep-text hover:bg-emerald-50 transition"
+                    >
+                      <span className="text-base">🎖️</span>
+                      <div>
+                        <div className="font-bold text-moss-green">Cổng Hội Viên (Cá nhân)</div>
+                        <div className="text-[11px] text-stone-500">Đăng nhập bằng số CCCD 12 số</div>
+                      </div>
+                    </Link>
+
                     <div className="border-t border-stone-200 my-1 pt-1">
                       <button
                         type="button"

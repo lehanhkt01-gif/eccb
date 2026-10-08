@@ -83,8 +83,20 @@ async function main() {
 
   console.log("🧹 Đã làm sạch cơ sở dữ liệu cũ.");
 
-  // Password mặc định cho tài khoản
-  const defaultPasswordHash = await bcrypt.hash("CcbEaSup@2026", 10);
+  // 1. ĐỌC CẤU HÌNH BẢO MẬT TỪ FILE .ENV (TUYỆT ĐỐI KHÔNG HARDCODE)
+  const adminDefaultPassword = process.env.ADMIN_DEFAULT_PASSWORD;
+  const memberDefaultPassword = process.env.MEMBER_DEFAULT_PASSWORD;
+  const adminEmailsEnv = process.env.ADMIN_EMAILS || "lehanhkt01@gmail.com,trunghieuktkt@gmail.com";
+
+  if (!adminDefaultPassword || !memberDefaultPassword) {
+    throw new Error(
+      "❌ LỖI BẢO MẬT: Chưa cấu hình ADMIN_DEFAULT_PASSWORD hoặc MEMBER_DEFAULT_PASSWORD trong file .env! Vui lòng cấu hình file .env trước khi seed dữ liệu."
+    );
+  }
+
+  // Băm mật khẩu bằng bcryptjs
+  const adminPasswordHash = await bcrypt.hash(adminDefaultPassword, 10);
+  const memberPasswordHash = await bcrypt.hash(memberDefaultPassword, 10);
 
   // 1. TẠO 20 THÔN, BUÔN XÃ EA SÚP
   const hamletMap: Record<string, string> = {};
@@ -101,19 +113,36 @@ async function main() {
   }
   console.log(`✅ Đã tạo thành công 20 Thôn, Buôn chuẩn xác của xã Ea Súp.`);
 
-  // 2. TẠO TÀI KHOẢN SUPER ADMIN: ĐẶNG TRUNG HIẾU
-  const superAdmin = await prisma.user.create({
-    data: {
-      username: "trunghieuktkt",
-      passwordHash: defaultPasswordHash,
-      fullName: "Đặng Trung Hiếu",
-      email: "trunghieuktkt@gmail.com",
-      phone: "0988776655",
-      role: Role.SUPER_ADMIN,
-      isActive: true,
+  // 2. TẠO 02 TÀI KHOẢN SUPER ADMIN: LÊ HẠNH & ĐẶNG TRUNG HIẾU TỪ FILE .ENV
+  const adminAccounts = [
+    {
+      username: "lehanhkt01",
+      email: "lehanhkt01@gmail.com",
+      fullName: "Lê Hạnh - Ban Quản Trị Hệ Thống",
+      phone: "0912345678",
     },
-  });
-  console.log(`✅ Đã tạo tài khoản SuperAdmin cho Chủ tịch Hội CCB xã: ${superAdmin.fullName} (${superAdmin.email})`);
+    {
+      username: "trunghieuktkt",
+      email: "trunghieuktkt@gmail.com",
+      fullName: "Đặng Trung Hiếu - Chủ tịch Hội CCB Xã",
+      phone: "0988776655",
+    },
+  ];
+
+  for (const admin of adminAccounts) {
+    await prisma.user.create({
+      data: {
+        username: admin.username,
+        passwordHash: adminPasswordHash,
+        fullName: admin.fullName,
+        email: admin.email,
+        phone: admin.phone,
+        role: Role.SUPER_ADMIN,
+        isActive: true,
+      },
+    });
+    console.log(`✅ Đã tạo Super Admin: ${admin.fullName} (${admin.email})`);
+  }
 
   // 3. TẠO 20 TÀI KHOẢN CHI HỘI TRƯỞNG
   for (let i = 0; i < HAMLET_DEFS.length; i++) {
@@ -122,7 +151,7 @@ async function main() {
     await prisma.user.create({
       data: {
         username,
-        passwordHash: defaultPasswordHash,
+        passwordHash: adminPasswordHash,
         fullName: h.leader,
         email: `${username}@easupso.com`,
         phone: h.phone,
@@ -323,6 +352,51 @@ async function main() {
 
   console.log(`✅ Đã nạp thành công ${TOTAL_MEMBERS} hội viên chuẩn 35 trường Phiếu Mẫu 02 phân bổ về 20 Chi hội.`);
 
+  // 6.1. TẠO 612 TÀI KHOẢN ĐĂNG NHẬP CHO TOÀN BỘ 612 HỘI VIÊN (ĐĂNG NHẬP BẰNG CCCD 12 SỐ)
+  const insertedMembers = await prisma.member.findMany({
+    select: { id: true, cccd: true, fullName: true, phone: true, hamletId: true },
+  });
+
+  const memberUsers = insertedMembers.map((m) => ({
+    username: m.cccd, // Số CCCD 12 số dùng làm tài khoản đăng nhập
+    passwordHash: memberPasswordHash,
+    fullName: m.fullName,
+    phone: m.phone,
+    role: Role.MEMBER,
+    memberId: m.id,
+    hamletId: m.hamletId,
+    isActive: true,
+  }));
+
+  for (let i = 0; i < memberUsers.length; i += BATCH_SIZE) {
+    const batch = memberUsers.slice(i, i + BATCH_SIZE);
+    await prisma.user.createMany({ data: batch });
+  }
+  console.log(`✅ Đã khởi tạo 612 tài khoản người dùng hội viên (Tên đăng nhập: Số CCCD 12 số, Mật khẩu từ .env).`);
+
+  // 6.2. TẠO BIÊN LAI NỘP QUỸ HỘI & HỘI PHÍ MẪU CHO CÁC HỘI VIÊN (50.000đ/tháng)
+  const contributionBatch: any[] = [];
+  const sampleMonths = ["2026-01", "2026-02", "2026-03"];
+  for (let i = 0; i < insertedMembers.length; i++) {
+    const mem = insertedMembers[i];
+    for (const mStr of sampleMonths) {
+      contributionBatch.push({
+        fundId: internalFund.id,
+        memberId: mem.id,
+        periodMonth: mStr,
+        amount: 50000,
+        receiptNumber: `BL-${mStr.replace("-", "")}-${mem.cccd.slice(-6)}`,
+        collectorName: "Chi hội trưởng",
+        note: `Thu hội phí & quỹ hội CCB tháng ${mStr.slice(-2)}/2026`,
+      });
+    }
+  }
+  for (let i = 0; i < contributionBatch.length; i += BATCH_SIZE) {
+    const batch = contributionBatch.slice(i, i + BATCH_SIZE);
+    await prisma.fundContribution.createMany({ data: batch });
+  }
+  console.log(`✅ Đã tạo ${contributionBatch.length} biên lai thu quỹ hội & hội phí mẫu cho hội viên.`);
+
   // 7. TẠO 10 KHOẢN VAY QUAY VÒNG QUỸ NỘI BỘ LÃI SUẤT 0%
   const sampleMembers = await prisma.member.findMany({
     where: { hasEconomicModel: true },
@@ -384,10 +458,10 @@ async function main() {
   console.log("\n==================================================================");
   console.log("🎉 SEED DỮ LIỆU HOÀN TẤT THÀNH CÔNG VƯỢT TRỘI!");
   console.log("   • Tổng số thôn buôn: 20 Thôn, Buôn chuẩn xác xã Ea Súp");
-  console.log("   • Tài khoản SuperAdmin: trunghieuktkt@gmail.com (Mật khẩu: CcbEaSup@2026)");
-  console.log("   • Tài khoản Chi hội trưởng: 20 tài khoản (chihoi_thon_01 -> chihoi_buon_c)");
-  console.log("   • Tổng số hội viên: 612 hội viên (35 trường thông tin chuẩn)");
-  console.log("   • Quỹ nội bộ: 1,3 tỷ đồng (Lãi suất 0%)");
+  console.log("   • 02 Super Admin: lehanhkt01@gmail.com, trunghieuktkt@gmail.com (Mật khẩu từ ADMIN_DEFAULT_PASSWORD trong .env)");
+  console.log("   • 20 Tài khoản Chi hội trưởng: (chihoi_thon_01 -> chihoi_buon_c)");
+  console.log("   • 612 Tài khoản Hội viên: Đăng nhập bằng số CCCD 12 số (Mật khẩu từ MEMBER_DEFAULT_PASSWORD trong .env)");
+  console.log("   • Quỹ nội bộ: 1,3 tỷ đồng (Lãi suất 0%) & Lịch sử đóng quỹ hội");
   console.log("   • 20 Tổ TK&VV NHCSXH: 52,18 tỷ đồng (Nợ quá hạn 0,06% = 31,3 triệu)");
   console.log("==================================================================");
 }

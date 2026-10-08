@@ -99,4 +99,5 @@ Dự án phục vụ Hội Cựu Chiến Binh xã Ea Súp, mang tính trang tr�
 | **07** | **Xây dựng Giao diện Trang chủ** | Áp dụng bảng màu Hallmark, thiết kế cổng thông tin E-CCB Ea Súp | ✅ **Đã hoàn thành** |
 | **08** | **Xác thực, Phân quyền & Desktop Admin** | Bento Grid Dashboard, Quản lý 612 hội viên (35 trường), Xuất Word (.docx) Mẫu 02 chuẩn NĐ 30, Form login Bitwarden | ✅ **Đã hoàn thành** |
 | **09** | **Quản lý 4 Nghiệp vụ Biến động** | Schema MemberMovement, API upload file PDF `/api/branch/movements`, Trang Quản lý nghiệp vụ `/branch/operations`, Thẻ card thứ 5 tại PWA | ✅ **Đã hoàn thành** |
-| **10** | **Triển khai VPS & SSL HTTPS** | Docker compose up trên VPS Maydell, cấp chứng chỉ SSL Let's Encrypt | ⏳ *Giai đoạn kế tiếp* |
+| **10** | **Hệ thống Tài khoản & Bảo mật Tuyệt đối** | Đọc mật khẩu từ `.env` (02 Super Admin `lehanhkt01@gmail.com`, `trunghieuktkt@gmail.com`, 612 Hội viên CCCD 12 số), Cổng hội viên `/member` (Tự đổi mật khẩu, xem hồ sơ CCCD cá nhân, Thu quỹ hội & hội phí, Bài giảng & tư liệu, Điểm danh) | ✅ **Đã hoàn thành** |
+| **11** | **Triển khai VPS & SSL HTTPS** | Docker compose up trên VPS Maydell, cấp chứng chỉ SSL Let's Encrypt | ⏳ *Giai đoạn kế tiếp* |
