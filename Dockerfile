@@ -5,7 +5,7 @@
 
 # 1. Base stage
 FROM node:20-alpine AS base
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 
 # 2. Dependencies stage
@@ -19,16 +19,19 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Generate Prisma Client trước khi build Next.js
-RUN npx prisma generate || true
+# Generate Prisma Client trước khi build Next.js (cần DATABASE_URL mẫu tại build time)
+ENV DATABASE_URL="postgresql://eccb_user:eccb_secret_pass@localhost:5432/eccb_db"
+RUN npx prisma generate
 
-# Tắt gửi telemetrics của Next.js
+# Tắt gửi telemetrics của Next.js và cấp phát bộ nhớ Node ổn định
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_OPTIONS="--max-old-space-size=2048"
 RUN npm run build
 
 # 4. Runner stage (Production)
 FROM node:20-alpine AS runner
 WORKDIR /app
+RUN apk add --no-cache libc6-compat openssl
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
