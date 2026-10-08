@@ -21,7 +21,7 @@ COPY . .
 
 # Generate Prisma Client trước khi build Next.js (cần DATABASE_URL mẫu tại build time)
 ENV DATABASE_URL="postgresql://eccb_user:eccb_secret_pass@localhost:5432/eccb_db"
-RUN npx prisma generate
+RUN npx prisma generate --schema=prisma/schema.prisma
 
 # Tắt gửi telemetrics của Next.js và cấp phát bộ nhớ Node ổn định
 ENV NEXT_TELEMETRY_DISABLED=1
