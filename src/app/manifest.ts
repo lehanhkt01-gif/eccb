@@ -14,14 +14,14 @@ export default function manifest(): MetadataRoute.Manifest {
     orientation: "portrait",
     icons: [
       {
-        src: "/icon-192.svg",
+        src: "/images/logo-ccb.png",
         sizes: "192x192",
-        type: "image/svg+xml",
+        type: "image/png",
       },
       {
-        src: "/icon-512.svg",
+        src: "/images/logo-ccb.png",
         sizes: "512x512",
-        type: "image/svg+xml",
+        type: "image/png",
       },
     ],
   };

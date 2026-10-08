@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { getCurrentUser, setCurrentUser, AuthUser } from "@/lib/authSession";
 import { getStoredMembers } from "@/lib/memberStore";
@@ -263,8 +264,15 @@ export default function HomePage() {
         <div className="max-w-6xl mx-auto px-4 py-3 sm:py-3.5 flex items-center justify-between gap-4">
           {/* Logo & Tiêu đề */}
           <div className="flex items-center gap-3 sm:gap-4 text-left">
-            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-flag-red border-2 border-bronze-gold flex items-center justify-center font-bold text-lg sm:text-xl text-amber-300 shadow-inner shrink-0">
-              CCB
+            <div className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-white border-2 border-bronze-gold flex items-center justify-center shadow-md overflow-hidden shrink-0">
+              <Image
+                src="/images/logo-ccb.png"
+                alt="Logo Hội CCB Việt Nam"
+                width={46}
+                height={46}
+                className="object-contain p-0.5"
+                priority
+              />
             </div>
             <div>
               <p className="text-[11px] sm:text-xs uppercase tracking-wider text-amber-300 font-semibold">
@@ -875,8 +883,14 @@ export default function HomePage() {
             {/* Header Modal */}
             <div className="bg-moss-green text-white p-4 sm:p-5 flex items-center justify-between border-b-2 border-bronze-gold">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-flag-red border-2 border-bronze-gold flex items-center justify-center font-bold text-amber-300 text-sm shadow-inner shrink-0">
-                  CCB
+                <div className="relative w-11 h-11 rounded-full bg-white border-2 border-bronze-gold flex items-center justify-center shadow-inner overflow-hidden shrink-0">
+                  <Image
+                    src="/images/logo-ccb.png"
+                    alt="Logo Hội CCB Việt Nam"
+                    width={40}
+                    height={40}
+                    className="object-contain p-0.5"
+                  />
                 </div>
                 <div>
                   <h3 className="font-bold text-sm sm:text-base uppercase tracking-tight text-white leading-tight">

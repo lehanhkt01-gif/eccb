@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 
 export default function AdminLayout({
@@ -70,8 +71,15 @@ export default function AdminLayout({
             </button>
 
             <Link href="/admin" className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-flag-red border-2 border-bronze-gold flex items-center justify-center font-bold text-amber-300 text-sm shadow-inner shrink-0">
-                CCB
+              <div className="relative w-11 h-11 rounded-full bg-white border-2 border-bronze-gold flex items-center justify-center shadow-inner overflow-hidden shrink-0">
+                <Image
+                  src="/images/logo-ccb.png"
+                  alt="Logo Hội CCB Việt Nam"
+                  width={42}
+                  height={42}
+                  className="object-contain p-0.5"
+                  priority
+                />
               </div>
               <div>
                 <h1 className="text-base sm:text-lg font-bold uppercase tracking-tight text-white leading-tight">

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
   getCurrentUser,
@@ -167,10 +168,17 @@ export default function MemberPortalPage() {
           <div className="flex items-center gap-3">
             <Link
               href="/"
-              className="w-10 h-10 rounded-full bg-flag-red border-2 border-bronze-gold flex items-center justify-center font-bold text-base text-amber-300 shadow-inner shrink-0 hover:scale-105 transition"
+              className="relative w-11 h-11 rounded-full bg-white border-2 border-bronze-gold flex items-center justify-center shadow-inner overflow-hidden shrink-0 hover:scale-105 transition"
               title="Về trang chủ"
             >
-              CCB
+              <Image
+                src="/images/logo-ccb.png"
+                alt="Logo Hội CCB Việt Nam"
+                width={40}
+                height={40}
+                className="object-contain p-0.5"
+                priority
+              />
             </Link>
             <div>
               <p className="text-[10px] sm:text-xs uppercase tracking-wider text-amber-300 font-semibold">

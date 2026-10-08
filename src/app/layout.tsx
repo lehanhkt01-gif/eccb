@@ -12,8 +12,9 @@ export const metadata: Metadata = {
     title: "E-CCB Ea Súp",
   },
   icons: {
-    icon: "/icon-192.svg",
-    apple: "/icon-192.svg",
+    icon: "/images/logo-ccb.png",
+    shortcut: "/images/logo-ccb.png",
+    apple: "/images/logo-ccb.png",
   },
   keywords: [
     "Hội Cựu Chiến Binh Ea Súp",
@@ -41,7 +42,8 @@ export default function RootLayout({
   return (
     <html lang="vi">
       <head>
-        <link rel="apple-touch-icon" href="/icon-192.svg" />
+        <link rel="apple-touch-icon" href="/images/logo-ccb.png" />
+        <link rel="icon" href="/images/logo-ccb.png" type="image/png" />
         <meta name="apple-mobile-web-app-title" content="E-CCB Ea Súp" />
       </head>
       <body className="min-h-screen bg-cream-bg text-deep-text antialiased">

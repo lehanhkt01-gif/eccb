@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { setCurrentUser, getMemberCustomPassword } from "@/lib/authSession";
 import { getStoredMembers } from "@/lib/memberStore";
@@ -169,8 +170,15 @@ export default function LoginPage() {
       <div className="max-w-md w-full mx-auto bg-white rounded-2xl border-4 border-bronze-gold shadow-2xl p-6 sm:p-8 space-y-5 my-4">
         {/* Biểu trưng Huy hiệu CCB */}
         <div className="text-center space-y-2">
-          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-flag-red border-4 border-bronze-gold flex items-center justify-center font-bold text-2xl sm:text-3xl text-amber-300 shadow-inner mx-auto">
-            CCB
+          <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white border-4 border-bronze-gold flex items-center justify-center shadow-lg mx-auto overflow-hidden">
+            <Image
+              src="/images/logo-ccb.png"
+              alt="Logo Hội CCB Việt Nam"
+              width={70}
+              height={70}
+              className="object-contain p-1"
+              priority
+            />
           </div>
           <div className="space-y-0.5">
             <span className="text-xs font-bold uppercase tracking-wider text-bronze-gold">

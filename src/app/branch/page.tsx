@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   MemberRecord,
   getStoredMembers,
@@ -520,9 +521,16 @@ export default function BranchMobilePage() {
           <div className="flex items-center gap-2.5">
             <button
               onClick={() => setActiveTab("home")}
-              className="w-10 h-10 rounded-full bg-flag-red border-2 border-bronze-gold flex items-center justify-center font-bold text-amber-300 text-sm shadow-inner active:scale-95"
+              className="relative w-11 h-11 rounded-full bg-white border-2 border-bronze-gold flex items-center justify-center shadow-inner overflow-hidden shrink-0 active:scale-95"
             >
-              CCB
+              <Image
+                src="/images/logo-ccb.png"
+                alt="Logo Hội CCB Việt Nam"
+                width={40}
+                height={40}
+                className="object-contain p-0.5"
+                priority
+              />
             </button>
             <div>
               <div className="flex items-center gap-1.5">
