@@ -175,24 +175,9 @@ export default function HomePage() {
 
   return (
     <main className="min-h-screen flex flex-col bg-cream-bg text-deep-text">
-      {/* Top Banner Tiêu ngữ & Hệ sinh thái */}
-      <section className="bg-flag-red text-white py-2 px-4 text-xs sm:text-sm font-medium tracking-wide">
-        <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <span className="inline-block w-2.5 h-2.5 rounded-full bg-bronze-gold"></span>
-            <span>HỘI CỰU CHIẾN BINH XÃ EA SÚP — HỆ SINH THÁI EA SÚP SỐ</span>
-          </div>
-          <div className="flex items-center gap-2 text-amber-200">
-            <span>Tỉnh Đắk Lắk</span>
-            <span className="hidden sm:inline">•</span>
-            <span className="text-white/90">ccb.easupso.com</span>
-          </div>
-        </div>
-      </section>
-
       {/* Main Header Quân đội Hallmark */}
       <header className="bg-moss-green text-white shadow-md border-b-4 border-bronze-gold sticky top-0 z-40">
-        <div className="max-w-6xl mx-auto px-4 py-4 sm:py-5 flex items-center justify-between gap-4">
+        <div className="max-w-6xl mx-auto px-4 py-3 sm:py-3.5 flex items-center justify-between gap-4">
           {/* Logo & Tiêu đề */}
           <div className="flex items-center gap-3 sm:gap-4 text-left">
             <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-flag-red border-2 border-bronze-gold flex items-center justify-center font-bold text-lg sm:text-xl text-amber-300 shadow-inner shrink-0">
@@ -200,7 +185,7 @@ export default function HomePage() {
             </div>
             <div>
               <p className="text-[11px] sm:text-xs uppercase tracking-wider text-amber-300 font-semibold">
-                Cổng Thông Tin Điện Tử & Quản Lý Hội Viên
+                CỔNG THÔNG TIN ĐIỆN TỬ &amp; NGHIỆP VỤ
               </p>
               <h1 className="text-lg sm:text-xl md:text-2xl font-bold uppercase tracking-tight text-white leading-tight">
                 Hội Cựu Chiến Binh Xã Ea Súp
@@ -303,8 +288,8 @@ export default function HomePage() {
       </header>
 
       {/* Hero Section với hình nền Bộ đội Cụ Hồ & Non sông Ea Súp */}
-      {/* ẢNH 2 ĐÃ ĐƯỢC ẨN TOÀN BỘ: Ẩn 3 badge sao & 2 nút bấm lớn */}
-      <section className="relative overflow-hidden border-b border-stone-200 py-14 md:py-20 lg:py-24 px-4 bg-cream-surface">
+      {/* Khoảng cách thu gọn sát lại (py-6 sm:py-8 md:py-10) */}
+      <section className="relative overflow-hidden border-b border-stone-200 py-6 sm:py-8 md:py-10 px-4 bg-cream-surface">
         {/* Hình nền hạ độ phân giải WebP tối ưu tải trang */}
         <div
           className="absolute inset-0 bg-cover bg-center md:bg-right bg-no-repeat"
@@ -316,8 +301,8 @@ export default function HomePage() {
 
         {/* Nội dung Hero tinh gọn, trang trọng */}
         <div className="relative z-10 max-w-6xl mx-auto">
-          <div className="max-w-2xl lg:max-w-3xl space-y-5 text-center md:text-left">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-moss-green/10 backdrop-blur-xs border border-moss-green/20 text-moss-green text-xs font-bold uppercase tracking-wider">
+          <div className="max-w-2xl lg:max-w-3xl space-y-3 sm:space-y-3.5 text-center md:text-left">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-moss-green/10 backdrop-blur-xs border border-moss-green/20 text-moss-green text-xs font-bold uppercase tracking-wider">
               <span className="w-2 h-2 rounded-full bg-moss-green animate-pulse"></span>
               Nền Tảng Quản Trị Chuyển Đổi Số
             </div>
@@ -333,19 +318,19 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ẢNH 3 ĐÃ SỬA THÀNH: BẢN TIN CÁC HOẠT ĐỘNG CỦA HỘI CỰU CHIẾN BINH XÃ */}
-      {/* Chỉ cán bộ xã mới có quyền chỉnh sửa, tạo mới bản tin tuyên truyền */}
-      <section id="ban-tin" className="py-12 px-4 max-w-6xl mx-auto w-full">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8 border-b-2 border-stone-200 pb-4">
+      {/* BẢN TIN CÁC HOẠT ĐỘNG CỦA HỘI CỰU CHIẾN BINH XÃ */}
+      {/* Khoảng cách thu gọn sát lại với Hero (py-6 sm:py-8) */}
+      <section id="ban-tin" className="py-6 sm:py-8 px-4 max-w-6xl mx-auto w-full">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 mb-5 border-b border-stone-200 pb-3">
           <div>
-            <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-flag-red mb-1">
+            <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-flag-red mb-0.5">
               <span>★</span>
               <span>TIẾNG NÓI CỰU CHIẾN BINH EA SÚP</span>
             </div>
-            <h2 className="text-2xl sm:text-3xl font-bold text-moss-green uppercase">
-              Bản Tin Hoạt Động & Tuyên Truyền Hội CCB Xã
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-moss-green uppercase">
+              Bản Tin Hoạt Động &amp; Tuyên Truyền Hội CCB Xã
             </h2>
-            <p className="text-sm text-deep-muted mt-1">
+            <p className="text-xs sm:text-sm text-deep-muted mt-0.5">
               Thông tin phong trào thi đua &quot;Cựu chiến binh gương mẫu&quot;, hoạt động nghĩa tình đồng đội và phát triển kinh tế
             </p>
           </div>
@@ -355,7 +340,7 @@ export default function HomePage() {
             <button
               type="button"
               onClick={handleOpenCreateModal}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-moss-green hover:bg-moss-green-dark text-white text-xs sm:text-sm font-bold rounded shadow-xs transition"
+              className="inline-flex items-center gap-2 px-3.5 py-1.5 sm:px-4 sm:py-2 bg-moss-green hover:bg-moss-green-dark text-white text-xs sm:text-sm font-bold rounded shadow-xs transition"
               title="Chỉ cán bộ xã mới có quyền tạo mới bản tin tuyên truyền"
             >
               <span>➕</span>
