@@ -3,6 +3,8 @@
 import React, { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { getCurrentUser, logout, AuthUser } from "@/lib/authSession";
 import {
   MemberRecord,
   getStoredMembers,
@@ -10,6 +12,8 @@ import {
   MovementType,
   recordLocalMovement,
 } from "@/lib/memberStore";
+import NotificationBell from "@/components/NotificationBell";
+import DualApprovalModal from "@/components/DualApprovalModal";
 
 // Dữ liệu 20 Thôn, Buôn xã Ea Súp
 const HAMLETS = [
@@ -126,8 +130,60 @@ const VIDEOS = [
   },
 ];
 
+// Hàm phân giải và khóa thôn của Chi hội trưởng
+function resolveBranchHamlet(user: AuthUser | null) {
+  if (!user) return HAMLETS[0];
+  if (user.hamletCode) {
+    const byCode = HAMLETS.find((h) => h.code === user.hamletCode);
+    if (byCode) return byCode;
+  }
+  if (user.hamletName) {
+    const byName = HAMLETS.find((h) => h.name.toLowerCase() === user.hamletName?.toLowerCase());
+    if (byName) return byName;
+  }
+  const u = user.username?.toLowerCase() || "";
+  for (let i = 1; i <= 13; i++) {
+    const numPad = i < 10 ? `0${i}` : `${i}`;
+    if (u.includes(`thon_${numPad}`) || u.includes(`thon_${i}`) || u.includes(`thon${numPad}`) || u.includes(`thon${i}`)) {
+      return HAMLETS.find((h) => h.code === `THON_${numPad}`) || HAMLETS[0];
+    }
+  }
+  if (u.includes("hoabinh")) return HAMLETS.find((h) => h.code === "THON_HOABINH") || HAMLETS[0];
+  if (u.includes("thangloi")) return HAMLETS.find((h) => h.code === "THON_THANGLOI") || HAMLETS[0];
+  if (u.includes("doanket")) return HAMLETS.find((h) => h.code === "THON_DOANKET") || HAMLETS[0];
+  if (u.includes("binhloi")) return HAMLETS.find((h) => h.code === "THON_BINHLOI") || HAMLETS[0];
+  if (u.includes("buon_a") || u.includes("buona")) return HAMLETS.find((h) => h.code === "BUON_A") || HAMLETS[0];
+  if (u.includes("buon_b") || u.includes("buonb")) return HAMLETS.find((h) => h.code === "BUON_B") || HAMLETS[0];
+  if (u.includes("buon_c") || u.includes("buonc")) return HAMLETS.find((h) => h.code === "BUON_C") || HAMLETS[0];
+  return HAMLETS[0];
+}
+
 export default function BranchMobilePage() {
+  const router = useRouter();
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [selectedHamletCode, setSelectedHamletCode] = useState("THON_01");
+
+  // Kiểm tra phiên đăng nhập và khóa cứng đúng thôn của Chi hội trưởng
+  useEffect(() => {
+    const user = getCurrentUser();
+    if (!user) {
+      router.push("/login?role=branch");
+      return;
+    }
+    setCurrentUser(user);
+
+    // KHI LÀ CHI HỘI TRƯỞNG: CHỈ ĐƯỢC PHÉP TRUY CẬP ĐÚNG 1 THÔN DUY NHẤT
+    if (user.role === "BRANCH_LEADER") {
+      const myHamlet = resolveBranchHamlet(user);
+      setSelectedHamletCode(myHamlet.code);
+    }
+  }, [router]);
+
+  const handleLogout = () => {
+    logout();
+    router.push("/");
+  };
+  const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"home" | "attendance" | "fund" | "media" | "members">("home");
   const [members, setMembers] = useState<MemberItem[]>(INITIAL_MEMBERS);
   const [isTvFullscreen, setIsTvFullscreen] = useState(false);
@@ -209,6 +265,18 @@ export default function BranchMobilePage() {
   const currentHamlet = useMemo(() => {
     return HAMLETS.find((h) => h.code === selectedHamletCode) || HAMLETS[0];
   }, [selectedHamletCode]);
+
+  // Đếm số lượng hồ sơ chờ duyệt tại thôn này
+  const pendingCount = useMemo(() => {
+    const stored = getStoredMembers();
+    return stored.filter(
+      (m) =>
+        m.hamletName === currentHamlet.name &&
+        (m.status === "PENDING_APPROVAL" ||
+          m.registrationStatus === "PENDING_APPROVAL" ||
+          m.registrationStatus === "BRANCH_APPROVED")
+    ).length;
+  }, [currentHamlet.name, members]);
 
   // Đồng bộ hóa danh sách hội viên với LocalStorage / MemberStore
   const syncMembers = () => {
@@ -547,18 +615,45 @@ export default function BranchMobilePage() {
             </div>
           </div>
 
-          {/* Chọn nhanh 20 Thôn Buôn */}
-          <select
-            value={selectedHamletCode}
-            onChange={(e) => setSelectedHamletCode(e.target.value)}
-            className="bg-moss-green-light border border-amber-300/40 text-white text-xs font-semibold py-1.5 px-2 rounded focus:outline-none"
-          >
-            {HAMLETS.map((h) => (
-              <option key={h.code} value={h.code} className="bg-moss-green text-white">
-                {h.name}
-              </option>
-            ))}
-          </select>
+          {/* Cụm điều khiển bên phải: Chuông thông báo xét duyệt + Nút Đăng xuất */}
+          <div className="flex items-center gap-2">
+            {/* CHỈ DUY NHẤT CÁN BỘ XÃ (SUPER_ADMIN) MỚI ĐƯỢC PHÉP CHUYỂN THÔN */}
+            {currentUser?.role === "SUPER_ADMIN" && (
+              <select
+                value={selectedHamletCode}
+                onChange={(e) => {
+                  if (currentUser?.role !== "BRANCH_LEADER") {
+                    setSelectedHamletCode(e.target.value);
+                  }
+                }}
+                className="bg-moss-green-light border border-amber-300/40 text-white text-xs font-semibold py-1.5 px-2 rounded-lg focus:outline-none cursor-pointer"
+              >
+                {HAMLETS.map((h) => (
+                  <option key={h.code} value={h.code} className="bg-moss-green text-white">
+                    {h.name}
+                  </option>
+                ))}
+              </select>
+            )}
+
+            {/* CHUÔNG THÔNG BÁO XÉT DUYỆT & NGHIỆP VỤ */}
+            <NotificationBell
+              currentUser={currentUser}
+              currentHamletName={currentHamlet.name}
+              onOpenApproval={() => setIsApprovalModalOpen(true)}
+            />
+
+            {/* Nút Đăng xuất */}
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="px-2.5 sm:px-3 py-1.5 bg-flag-red hover:bg-red-800 active:scale-95 text-white text-xs font-bold rounded-lg flex items-center gap-1 shadow-md transition cursor-pointer border border-red-300/40"
+              title="Đăng xuất khỏi tài khoản Chi hội trưởng"
+            >
+              <span>🚪</span>
+              <span>Đăng xuất</span>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -701,6 +796,37 @@ export default function BranchMobilePage() {
               </div>
               <span className="text-2xl text-stone-400 pr-1">➔</span>
             </Link>
+
+            {/* THẺ 6: XÉT DUYỆT HỘI VIÊN MỚI (Cơ chế Song trùng 2 cấp) */}
+            <button
+              onClick={() => setIsApprovalModalOpen(true)}
+              className="w-full min-h-[96px] p-4 bg-gradient-to-r from-amber-500/15 via-white to-amber-500/5 text-deep-text rounded-xl shadow-md border-2 border-bronze-gold hover:border-amber-500 flex items-center justify-between active:scale-[0.98] transition text-left cursor-pointer"
+            >
+              <div className="flex items-center gap-3.5">
+                <div className="w-14 h-14 rounded-full bg-amber-100 border-2 border-bronze-gold flex items-center justify-center text-2xl shadow-inner shrink-0 text-bronze-gold">
+                  🎖️
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg sm:text-xl font-bold uppercase tracking-tight text-deep-text leading-tight">
+                      XÉT DUYỆT HỘI VIÊN MỚI
+                    </h2>
+                    {pendingCount > 0 && (
+                      <span className="px-2 py-0.5 bg-flag-red text-white text-[11px] font-black rounded-full animate-pulse shadow-xs">
+                        {pendingCount} chờ duyệt
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs sm:text-sm text-deep-muted font-normal mt-0.5">
+                    Thẩm tra tư cách quân nhân &amp; Phê duyệt cấp Chi hội
+                  </p>
+                  <span className="inline-block mt-1 px-2 py-0.5 bg-amber-100 text-bronze-gold rounded text-[11px] font-semibold">
+                    Quy trình song trùng 2 cấp • Kèm minh chứng CCCD/Quyết định
+                  </span>
+                </div>
+              </div>
+              <span className="text-2xl text-bronze-gold pr-1">➔</span>
+            </button>
 
             {/* Hướng Dẫn Thêm Ra Màn Hình Chính (PWA Add To Home Screen) */}
             <div className="bg-cream-surface border border-stone-300 rounded-lg p-3 text-xs text-deep-muted text-center space-y-1">
@@ -2606,6 +2732,17 @@ export default function BranchMobilePage() {
           </button>
         </div>
       </nav>
+
+      {/* Modal Xét duyệt hội viên song trùng 2 cấp */}
+      <DualApprovalModal
+        isOpen={isApprovalModalOpen}
+        onClose={() => {
+          setIsApprovalModalOpen(false);
+          syncMembers();
+        }}
+        currentUser={currentUser}
+        currentHamletName={currentHamlet.name}
+      />
     </div>
   );
 }

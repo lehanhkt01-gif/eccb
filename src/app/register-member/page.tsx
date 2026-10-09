@@ -4,13 +4,13 @@ import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { createPendingMember, MemberRecord } from "@/lib/memberStore";
-import { setMemberCustomPassword } from "@/lib/authSession";
 
 const HAMLETS = [
   "Thôn 1", "Thôn 2", "Thôn 3", "Thôn 4", "Thôn 5",
   "Thôn 6", "Thôn 7", "Thôn 8", "Thôn 9", "Thôn 10",
-  "Thôn 11", "Thôn 12", "Thôn 13", "Thôn 14", "Thôn 15",
-  "Thôn 16", "Thôn 17", "Buôn A", "Buôn B", "Buôn C",
+  "Thôn 11", "Thôn 12", "Thôn 13",
+  "Thôn Hòa Bình", "Thôn Thắng Lợi", "Thôn Đoàn Kết", "Thôn Bình Lợi",
+  "Buôn A", "Buôn B", "Buôn C",
 ];
 
 const PERIODS = [
@@ -28,6 +28,7 @@ export default function RegisterMemberPage() {
   const [birthDate, setBirthDate] = useState("");
   const [gender, setGender] = useState("Nam");
   const [cccd, setCccd] = useState("");
+  const [cccdIssueDate, setCccdIssueDate] = useState("");
   const [phone, setPhone] = useState("");
   const [hometown, setHometown] = useState("Xã Ea Súp, Tỉnh Đắk Lắk");
   const [ethnicity, setEthnicity] = useState("Kinh");
@@ -66,9 +67,63 @@ export default function RegisterMemberPage() {
   const [economicModelType, setEconomicModelType] = useState("");
   const [economicModelName, setEconomicModelName] = useState("");
 
-  // 6. Tài khoản & Mật khẩu
-  const [password, setPassword] = useState("12345678@");
-  const [confirmPassword, setConfirmPassword] = useState("12345678@");
+  // 6. Tài liệu & Tệp đính kèm (Tối đa 5 file, mỗi file <= 5MB)
+  interface UploadedFileItem {
+    name: string;
+    size: number;
+    type: string;
+  }
+  const [attachedFiles, setAttachedFiles] = useState<UploadedFileItem[]>([]);
+  const [fileError, setFileError] = useState("");
+
+  // Xử lý tải file đính kèm
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFileError("");
+    const selectedFiles = e.target.files;
+    if (!selectedFiles || selectedFiles.length === 0) return;
+
+    if (attachedFiles.length + selectedFiles.length > 5) {
+      setFileError("Đồng chí chỉ được tải lên tối đa 5 tệp đính kèm.");
+      return;
+    }
+
+    const newFiles: UploadedFileItem[] = [];
+    const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+
+    for (let i = 0; i < selectedFiles.length; i++) {
+      const file = selectedFiles[i];
+      if (file.size > MAX_SIZE) {
+        setFileError(
+          `Tệp "${file.name}" vượt quá dung lượng tối đa 5MB (${(file.size / (1024 * 1024)).toFixed(1)} MB). Vui lòng chọn tệp nhỏ hơn.`
+        );
+        return;
+      }
+
+      if (attachedFiles.some((f) => f.name === file.name)) {
+        continue;
+      }
+
+      newFiles.push({
+        name: file.name,
+        size: file.size,
+        type: file.type || "application/octet-stream",
+      });
+    }
+
+    setAttachedFiles((prev) => [...prev, ...newFiles]);
+    e.target.value = "";
+  };
+
+  const handleRemoveFile = (index: number) => {
+    setAttachedFiles((prev) => prev.filter((_, i) => i !== index));
+    setFileError("");
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+  };
 
   // Trạng thái Form
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -90,17 +145,12 @@ export default function RegisterMemberPage() {
     }
 
     if (cleanCccd.length !== 12 || !/^\d{12}$/.test(cleanCccd)) {
-      setErrorMessage("Số Căn cước công dân (CCCD) phải bao gồm đúng 12 chữ số.");
+      setErrorMessage("Số Căn cước (CCCD) phải bao gồm đúng 12 chữ số.");
       return;
     }
 
-    if (password.length < 6) {
-      setErrorMessage("Mật khẩu khởi tạo phải có tối thiểu 6 ký tự.");
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setErrorMessage("Mật khẩu xác nhận không khớp. Vui lòng kiểm tra lại.");
+    if (!cccdIssueDate) {
+      setErrorMessage("Vui lòng nhập Ngày cấp Căn cước.");
       return;
     }
 
@@ -121,6 +171,7 @@ export default function RegisterMemberPage() {
         birthYear: birthYearNum,
         gender,
         cccd: cleanCccd,
+        cccdIssueDate,
         phone: cleanPhone || "0912000000",
         hometown: hometown.trim() || "Xã Ea Súp, Tỉnh Đắk Lắk",
         ethnicity,
@@ -163,12 +214,8 @@ export default function RegisterMemberPage() {
 
         // Nguồn đăng ký
         submittedBy: `Hội viên đăng ký trực tuyến (${hamletName})`,
+        attachedFiles,
       });
-
-      // Lưu mật khẩu nếu khác mặc định
-      if (password) {
-        setMemberCustomPassword(cleanCccd, password);
-      }
 
       setSubmittedRecord(newRecord);
       setIsSuccess(true);
@@ -260,6 +307,14 @@ export default function RegisterMemberPage() {
                 <span className="text-stone-500">Thời gian nộp:</span>
                 <span className="font-semibold text-stone-700">{submittedRecord.submissionDate}</span>
               </div>
+              {submittedRecord.attachedFiles && submittedRecord.attachedFiles.length > 0 && (
+                <div className="flex justify-between border-b border-stone-200 pb-2">
+                  <span className="text-stone-500">Hồ sơ đính kèm:</span>
+                  <span className="font-bold text-moss-green">
+                    📎 {submittedRecord.attachedFiles.length} tệp minh chứng
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between pt-1">
                 <span className="text-stone-500">Trạng thái:</span>
                 <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-800 font-bold text-xs">
@@ -268,8 +323,8 @@ export default function RegisterMemberPage() {
               </div>
             </div>
 
-            <div className="p-4 bg-amber-50 border border-amber-300 rounded-xl text-xs text-amber-900 max-w-xl mx-auto text-left leading-relaxed">
-              📌 <strong>Lưu ý:</strong> Sau khi Thường trực Hội CCB Xã Ea Súp phê duyệt chính thức, đồng chí có thể sử dụng số CCCD (<strong>{submittedRecord.cccd}</strong>) và mật khẩu vừa đăng ký để đăng nhập vào Cổng Hội Viên.
+            <div className="p-4 bg-amber-50 border-2 border-bronze-gold/60 rounded-xl text-xs sm:text-sm text-stone-800 max-w-xl mx-auto text-left leading-relaxed">
+              📌 <strong>Lưu ý quan trọng:</strong> Khi được Chi hội và Hội CCB xã phê duyệt, ra Quyết định thì hội viên đăng nhập bằng số căn cước (<strong>{submittedRecord.cccd}</strong>).
             </div>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-3">
@@ -286,9 +341,11 @@ export default function RegisterMemberPage() {
                   setSubmittedRecord(null);
                   setFullName("");
                   setCccd("");
+                  setCccdIssueDate("");
                   setPhone("");
+                  setAttachedFiles([]);
                 }}
-                className="w-full sm:w-auto px-5 py-3 bg-stone-200 hover:bg-stone-300 text-stone-800 font-bold text-sm rounded-lg transition"
+                className="w-full sm:w-auto px-5 py-3 bg-stone-200 hover:bg-stone-300 text-stone-800 font-bold text-sm rounded-lg transition cursor-pointer"
               >
                 📝 Đăng Ký Hồ Sơ Khác
               </button>
@@ -369,7 +426,7 @@ export default function RegisterMemberPage() {
 
                   <div className="space-y-1">
                     <label className="font-bold text-deep-text">
-                      Số CCCD (12 chữ số) <span className="text-flag-red">*</span>:
+                      Số Căn cước (12 chữ số) <span className="text-flag-red">*</span>:
                     </label>
                     <input
                       type="text"
@@ -380,7 +437,20 @@ export default function RegisterMemberPage() {
                       onChange={(e) => setCccd(e.target.value.replace(/\D/g, ""))}
                       className="w-full p-2.5 bg-stone-50 border border-stone-300 rounded-lg font-mono font-bold text-deep-text focus:border-moss-green focus:bg-white focus:outline-none"
                     />
-                    <span className="text-[10px] text-stone-500">* Dùng làm tên đăng nhập hệ thống</span>
+                    <span className="text-[10px] text-stone-500">* Tên đăng nhập khi được kết nạp</span>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="font-bold text-deep-text">
+                      Ngày cấp Căn cước <span className="text-flag-red">*</span>:
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={cccdIssueDate}
+                      onChange={(e) => setCccdIssueDate(e.target.value)}
+                      className="w-full p-2.5 bg-stone-50 border border-stone-300 rounded-lg text-deep-text focus:border-moss-green focus:bg-white focus:outline-none"
+                    />
                   </div>
 
                   <div className="space-y-1">
@@ -763,50 +833,116 @@ export default function RegisterMemberPage() {
                 </div>
               </section>
 
-              {/* PHẦN V: THIẾT LẬP MẬT KHẨU TÀI KHOẢN */}
-              <section className="space-y-4 bg-amber-50/70 p-5 rounded-xl border border-amber-300">
-                <div className="flex items-center gap-2 border-b border-amber-300 pb-2">
-                  <span className="text-lg">🔐</span>
-                  <h3 className="font-bold text-base text-amber-950 uppercase tracking-tight">
-                    V. Thiết Lập Mật Khẩu Đăng Nhập
-                  </h3>
+              {/* PHẦN V: TẢI FILE ĐÍNH KÈM HỒ SƠ MINH CHỨNG */}
+              <section className="space-y-4 bg-white p-5 rounded-xl border border-stone-300">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-stone-200 pb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">📎</span>
+                    <h3 className="font-bold text-base text-moss-green uppercase tracking-tight">
+                      V. Đính Kèm Hồ Sơ &amp; Minh Chứng Quân Nhân
+                    </h3>
+                  </div>
+                  <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-stone-100 text-stone-600 border border-stone-200">
+                    Đã đính kèm: <strong className="text-moss-green">{attachedFiles.length}</strong> / 5 tệp (Tối đa 5MB/tệp)
+                  </span>
                 </div>
 
-                <p className="text-xs text-stone-600">
-                  Tên đăng nhập mặc định của đồng chí là <strong>Số CCCD (12 chữ số)</strong> vừa kê khai ở trên. Vui lòng thiết lập mật khẩu an toàn:
+                <p className="text-xs text-stone-600 leading-relaxed">
+                  Đồng chí có thể tải lên các hồ sơ minh chứng như: <strong>Bản chụp Căn cước (CCCD) 2 mặt</strong>, <strong>Quyết định phục viên/xuất ngũ</strong>, <strong>Kỷ niệm chương / Huân huy chương</strong>, <strong>Giấy xác nhận thương binh</strong>... (Định dạng: Hình ảnh JPG, PNG, WEBP hoặc tài liệu PDF, DOC, DOCX).
                 </p>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs sm:text-sm">
-                  <div className="space-y-1">
-                    <label className="font-bold text-deep-text">
-                      Mật khẩu mong muốn <span className="text-flag-red">*</span>:
-                    </label>
+                {/* Khu vực Nút Tải file & Dropzone */}
+                <div className="flex flex-col sm:flex-row items-center gap-4 p-4 border-2 border-dashed border-stone-300 rounded-xl bg-stone-50/70 hover:bg-stone-50 transition">
+                  <label className="cursor-pointer inline-flex items-center gap-2 px-5 py-2.5 bg-moss-green hover:bg-moss-green-dark active:scale-98 text-white font-bold text-xs sm:text-sm rounded-lg border-2 border-bronze-gold shadow-sm transition">
+                    <span>📤</span>
+                    <span>Tải File Đính Kèm</span>
                     <input
-                      type="password"
-                      required
-                      placeholder="Mặc định: 12345678@"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="w-full p-2.5 bg-white border border-stone-300 rounded-lg font-semibold text-deep-text focus:border-moss-green focus:outline-none"
+                      type="file"
+                      multiple
+                      accept="image/*,.pdf,.doc,.docx"
+                      onChange={handleFileChange}
+                      disabled={attachedFiles.length >= 5}
+                      className="hidden"
                     />
-                    <span className="text-[11px] text-stone-500">Mật khẩu gợi ý chuẩn bảo mật: <strong>12345678@</strong></span>
-                  </div>
+                  </label>
 
-                  <div className="space-y-1">
-                    <label className="font-bold text-deep-text">
-                      Xác nhận lại mật khẩu <span className="text-flag-red">*</span>:
-                    </label>
-                    <input
-                      type="password"
-                      required
-                      placeholder="Nhập lại mật khẩu..."
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="w-full p-2.5 bg-white border border-stone-300 rounded-lg font-semibold text-deep-text focus:border-moss-green focus:outline-none"
-                    />
+                  <div className="text-xs text-stone-500 text-center sm:text-left">
+                    <p className="font-medium text-stone-700">
+                      Tối đa <strong>5 tệp</strong>, dung lượng mỗi tệp không vượt quá <strong>5MB</strong>
+                    </p>
+                    <p className="text-[11px] text-stone-500">
+                      Định dạng hỗ trợ: JPG, PNG, WEBP, PDF, DOC, DOCX
+                    </p>
                   </div>
                 </div>
+
+                {/* Cảnh báo lỗi kích thước hoặc số lượng file nếu có */}
+                {fileError && (
+                  <div className="p-3 bg-red-50 border border-red-300 rounded-lg text-xs font-bold text-flag-red flex items-center gap-2 animate-in fade-in duration-150">
+                    <span>⚠️</span>
+                    <span>{fileError}</span>
+                  </div>
+                )}
+
+                {/* Danh sách các file đã tải lên */}
+                {attachedFiles.length > 0 && (
+                  <div className="space-y-2 pt-2">
+                    <p className="text-xs font-bold text-stone-600 uppercase tracking-wider">
+                      Danh sách tệp đính kèm ({attachedFiles.length}/5):
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      {attachedFiles.map((file, idx) => {
+                        const isImage = file.type.startsWith("image/");
+                        const isPdf = file.type.includes("pdf");
+                        return (
+                          <div
+                            key={idx}
+                            className="flex items-center justify-between gap-2 p-2.5 bg-cream-surface/50 border border-stone-200 rounded-lg shadow-2xs hover:border-moss-green transition"
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <span className="text-xl shrink-0">
+                                {isImage ? "🖼️" : isPdf ? "📄" : "📎"}
+                              </span>
+                              <div className="min-w-0">
+                                <p className="text-xs font-bold text-deep-text truncate" title={file.name}>
+                                  {file.name}
+                                </p>
+                                <p className="text-[11px] text-stone-500">
+                                  {formatFileSize(file.size)} • <span className="text-emerald-700 font-semibold">✓ Đã sẵn sàng</span>
+                                </p>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveFile(idx)}
+                              className="text-stone-400 hover:text-flag-red p-1 rounded transition text-xs font-bold shrink-0 cursor-pointer"
+                              title="Xóa tệp này"
+                            >
+                              🗑️
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </section>
+
+              {/* GHI CHÚ PHÊ DUYỆT & TÀI KHOẢN ĐĂNG NHẬP */}
+              <div className="bg-amber-50/90 border-2 border-bronze-gold/60 rounded-xl p-4 sm:p-5 shadow-xs flex items-start gap-3">
+                <span className="text-2xl shrink-0 mt-0.5">🎖️</span>
+                <div className="space-y-1">
+                  <h4 className="font-bold text-sm sm:text-base text-moss-green uppercase tracking-wide">
+                    Lưu ý về phê duyệt hồ sơ &amp; tài khoản đăng nhập
+                  </h4>
+                  <p className="text-sm font-bold text-flag-red leading-snug">
+                    Khi được Chi hội và Hội CCB xã phê duyệt, ra Quyết định thì hội viên đăng nhập bằng số căn cước.
+                  </p>
+                  <p className="text-xs text-stone-600 leading-relaxed">
+                    Hồ sơ đăng ký trực tuyến sẽ được Chi hội trưởng thôn, buôn tại địa bàn tiếp nhận, thẩm tra tư cách quân nhân và báo cáo Thường trực Hội CCB xã Ea Súp xem xét ra quyết định kết nạp theo đúng Điều lệ Hội Cựu Chiến Binh Việt Nam.
+                  </p>
+                </div>
+              </div>
 
               {/* Nút gửi hồ sơ */}
               <div className="pt-4 border-t border-stone-300 flex flex-col sm:flex-row items-center justify-between gap-4">

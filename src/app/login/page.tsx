@@ -127,10 +127,41 @@ export default function LoginPage() {
         router.push("/admin");
         return;
       } else if (cleanLower.startsWith("chihoi_")) {
+        const branchKey = cleanLower.replace("chihoi_", "");
+        const hamletMap: Record<string, { code: string; name: string; leader: string }> = {
+          thon_01: { code: "THON_01", name: "Thôn 1", leader: "Trần Văn Định" },
+          thon_02: { code: "THON_02", name: "Thôn 2", leader: "Nguyễn Văn Hùng" },
+          thon_03: { code: "THON_03", name: "Thôn 3", leader: "Lê Đức Thọ" },
+          thon_04: { code: "THON_04", name: "Thôn 4", leader: "Phạm Hồng Thái" },
+          thon_05: { code: "THON_05", name: "Thôn 5", leader: "Hoàng Văn Nam" },
+          thon_06: { code: "THON_06", name: "Thôn 6", leader: "Vũ Đình Cường" },
+          thon_07: { code: "THON_07", name: "Thôn 7", leader: "Đỗ Xuân Bách" },
+          thon_08: { code: "THON_08", name: "Thôn 8", leader: "Bùi Văn Thành" },
+          thon_09: { code: "THON_09", name: "Thôn 9", leader: "Ngô Quang Hưng" },
+          thon_10: { code: "THON_10", name: "Thôn 10", leader: "Đinh Văn Quyết" },
+          thon_11: { code: "THON_11", name: "Thôn 11", leader: "Lương Thế Vinh" },
+          thon_12: { code: "THON_12", name: "Thôn 12", leader: "Trịnh Đình Dũng" },
+          thon_13: { code: "THON_13", name: "Thôn 13", leader: "Đặng Hữu Phúc" },
+          thon_hoabinh: { code: "THON_HOABINH", name: "Thôn Hòa Bình", leader: "Phan Văn Khải" },
+          thon_thangloi: { code: "THON_THANGLOI", name: "Thôn Thắng Lợi", leader: "Dương Minh Châu" },
+          thon_doanket: { code: "THON_DOANKET", name: "Thôn Đoàn Kết", leader: "Nguyễn Tiến Lực" },
+          thon_binhloi: { code: "THON_BINHLOI", name: "Thôn Bình Lợi", leader: "Tạ Quang Bửu" },
+          buon_a: { code: "BUON_A", name: "Buôn A", leader: "Y Dhăm Mlô" },
+          buon_b: { code: "BUON_B", name: "Buôn B", leader: "Y Blô Kbuôr" },
+          buon_c: { code: "BUON_C", name: "Buôn C", leader: "Y Khen Niê" },
+        };
+        const branchInfo = hamletMap[branchKey] || {
+          code: `THON_${branchKey.toUpperCase()}`,
+          name: `Thôn ${branchKey.toUpperCase()}`,
+          leader: `Chi hội trưởng ${branchKey.toUpperCase()}`,
+        };
+
         setCurrentUser({
           username: cleanLower,
-          fullName: `Chi hội trưởng ${cleanUser.replace("chihoi_", "").toUpperCase()}`,
+          fullName: `Đ/c ${branchInfo.leader}`,
           role: "BRANCH_LEADER",
+          hamletCode: branchInfo.code,
+          hamletName: branchInfo.name,
         });
         router.push("/branch");
         return;

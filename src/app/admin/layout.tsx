@@ -25,6 +25,12 @@ export default function AdminLayout({
       icon: "👥",
     },
     {
+      href: "/admin/funds",
+      label: "Quản Lý Quỹ & Vốn Vay",
+      icon: "💰",
+      badge: "53,48 Tỷ",
+    },
+    {
       href: "/admin/permissions",
       label: "Quản Lý Cấp Quyền",
       icon: "🔐",

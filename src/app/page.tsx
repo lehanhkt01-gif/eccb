@@ -4,8 +4,10 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { getCurrentUser, setCurrentUser, AuthUser } from "@/lib/authSession";
+import { getCurrentUser, setCurrentUser, subscribeAuthChange, AuthUser } from "@/lib/authSession";
 import { getStoredMembers } from "@/lib/memberStore";
+import Header from "@/components/Header";
+import NewsShareBar from "@/components/NewsShareBar";
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
@@ -24,7 +26,6 @@ interface Article {
 export default function HomePage() {
   const router = useRouter();
   const [currentUser, setCurrentUserState] = useState<AuthUser | null>(null);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [articles, setArticles] = useState<Article[]>([]);
   const [loadingNews, setLoadingNews] = useState(true);
   
@@ -54,14 +55,30 @@ export default function HomePage() {
   const [submitError, setSubmitError] = useState("");
   const [submitSuccess, setSubmitSuccess] = useState("");
 
-  // Tải danh sách bản tin từ API và kiểm tra trạng thái đăng nhập
+  // Tải danh sách bản tin từ API và đồng bộ liên tục trạng thái đăng nhập
   useEffect(() => {
     fetchNews();
     const user = getCurrentUser();
     setCurrentUserState(user);
     if (user?.role === "SUPER_ADMIN") {
       setIsCadreVerified(true);
+    } else {
+      setIsCadreVerified(false);
     }
+
+    // Đăng ký nhận sự kiện cập nhật auth tức thì trong và giữa các tab
+    const unsubscribe = subscribeAuthChange((updatedUser) => {
+      setCurrentUserState(updatedUser);
+      if (updatedUser?.role === "SUPER_ADMIN") {
+        setIsCadreVerified(true);
+      } else {
+        setIsCadreVerified(false);
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   const fetchNews = async () => {
@@ -259,150 +276,11 @@ export default function HomePage() {
 
   return (
     <main className="min-h-screen flex flex-col bg-cream-bg text-deep-text">
-      {/* Main Header Quân đội Hallmark */}
-      <header className="bg-moss-green text-white shadow-md border-b-4 border-bronze-gold sticky top-0 z-40">
-        <div className="max-w-6xl mx-auto px-4 py-3 sm:py-3.5 flex items-center justify-between gap-4">
-          {/* Logo & Tiêu đề */}
-          <div className="flex items-center gap-3 sm:gap-4 text-left">
-            <div className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-white border-2 border-bronze-gold flex items-center justify-center shadow-md overflow-hidden shrink-0">
-              <Image
-                src="/images/logo-ccb.png"
-                alt="Logo Hội CCB Việt Nam"
-                width={46}
-                height={46}
-                className="object-contain p-0.5"
-                priority
-              />
-            </div>
-            <div>
-              <p className="text-[11px] sm:text-xs uppercase tracking-wider text-amber-300 font-semibold">
-                CỔNG THÔNG TIN ĐIỆN TỬ &amp; NGHIỆP VỤ
-              </p>
-              <h1 className="text-lg sm:text-xl md:text-2xl font-bold uppercase tracking-tight text-white leading-tight">
-                Hội Cựu Chiến Binh Xã Ea Súp
-              </h1>
-              <p className="text-xs text-emerald-100 hidden sm:block">
-                Trung thành – Đoàn kết – Gương mẫu – Đổi mới
-              </p>
-            </div>
-          </div>
-
-          {/* Cụm Nút Điều Hướng (Ảnh 1: Nút "Đăng nhập" + Icon 3 gạch chứa "Cán bộ xã") */}
-          <div className="flex items-center gap-2 relative">
-            {/* Nút Đăng nhập / Đăng ký nổi bật */}
-            <button
-              type="button"
-              onClick={() => {
-                if (currentUser?.role === "MEMBER") {
-                  router.push("/member");
-                } else {
-                  setIsMemberModalOpen(true);
-                }
-              }}
-              className="px-3.5 sm:px-4 py-2 sm:py-2.5 bg-bronze-gold hover:bg-amber-700 active:scale-98 text-white text-xs sm:text-sm font-bold rounded shadow-md transition flex items-center gap-1.5 cursor-pointer"
-              title="Đăng nhập hoặc Đăng ký dành riêng cho Hội viên CCB"
-            >
-              <span>🔑</span>
-              <span>{currentUser?.role === "MEMBER" ? "Cổng Hội viên" : "Đăng nhập / Đăng ký"}</span>
-            </button>
-
-            {/* Nút 3 gạch ngang (Hamburger Menu) ẩn "Đăng nhập Cán bộ xã" */}
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setMenuOpen(!menuOpen)}
-                aria-label="Menu chức năng"
-                className="w-10 h-10 flex items-center justify-center bg-moss-green-light hover:bg-moss-green-dark border border-emerald-300/40 rounded text-white text-lg transition focus:outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer"
-              >
-                ☰
-              </button>
-
-              {/* Menu Dropdown đổ xuống khi click 3 gạch */}
-              {menuOpen && (
-                <>
-                  <div
-                    className="fixed inset-0 z-40 bg-black/20"
-                    onClick={() => setMenuOpen(false)}
-                  />
-                  <div className="absolute right-0 mt-2 w-72 bg-white text-deep-text rounded-lg shadow-xl border-2 border-moss-green z-50 py-2 animate-in fade-in duration-150">
-                    <div className="px-4 py-2 border-b border-stone-200">
-                      <p className="text-xs font-bold text-moss-green uppercase">
-                        Hệ Thống Phân Hệ
-                      </p>
-                      <p className="text-[11px] text-deep-muted">Hội CCB Xã Ea Súp</p>
-                    </div>
-
-                    {/* Đăng nhập Cán bộ xã */}
-                    <Link
-                      href="/login?role=admin"
-                      onClick={() => setMenuOpen(false)}
-                      className="flex items-center gap-3 px-4 py-3 text-sm font-bold text-moss-green hover:bg-cream-surface transition border-l-4 border-bronze-gold"
-                    >
-                      <span className="text-lg">🏛️</span>
-                      <div>
-                        <div className="text-deep-text font-bold">Đăng nhập Cán bộ xã</div>
-                        <div className="text-xs font-normal text-deep-muted">
-                          Bảng điều hành thường trực xã
-                        </div>
-                      </div>
-                    </Link>
-
-                    {/* Đăng nhập Chi Hội */}
-                    <Link
-                      href="/login?role=branch"
-                      onClick={() => setMenuOpen(false)}
-                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-deep-text hover:bg-stone-100 transition"
-                    >
-                      <span className="text-base">📱</span>
-                      <div>
-                        <div className="font-semibold text-deep-text">Đăng nhập Chi Hội</div>
-                        <div className="text-[11px] text-deep-muted">20 Chi hội trưởng thôn buôn</div>
-                      </div>
-                    </Link>
-
-                    {/* Cổng Hội Viên */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setMenuOpen(false);
-                        if (currentUser?.role === "MEMBER") {
-                          router.push("/member");
-                        } else {
-                          setIsMemberModalOpen(true);
-                        }
-                      }}
-                      className="w-full text-left flex items-center gap-3 px-4 py-2.5 text-sm text-deep-text hover:bg-emerald-50 transition cursor-pointer"
-                    >
-                      <span className="text-base">🎖️</span>
-                      <div>
-                        <div className="font-bold text-moss-green">Đăng nhập Hội Viên</div>
-                        <div className="text-[11px] text-stone-500">Bằng số CCCD 12 số</div>
-                      </div>
-                    </button>
-
-                    {/* Nút "Đăng bản tin tuyên truyền mới" — CHỈ HIỂN THỊ KHI ĐÃ ĐĂNG NHẬP VAI TRÒ CÁN BỘ XÃ (SUPER_ADMIN) */}
-                    {currentUser?.role === "SUPER_ADMIN" && (
-                      <div className="border-t border-stone-200 my-1 pt-1">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setMenuOpen(false);
-                            handleOpenCreateModal();
-                          }}
-                          className="w-full text-left flex items-center gap-3 px-4 py-2 text-xs font-bold text-flag-red hover:bg-red-50 transition cursor-pointer"
-                        >
-                          <span>📝</span>
-                          <span>Đăng bản tin tuyên truyền mới</span>
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      </header>
+      {/* Header / Navbar chuẩn quân đội Hallmark với Badge danh dự & Menu tác vụ cán bộ */}
+      <Header
+        onOpenCreateArticle={handleOpenCreateModal}
+        onOpenMemberModal={() => setIsMemberModalOpen(true)}
+      />
 
       {/* Hero Section với hình nền Bộ đội Cụ Hồ & Non sông Ea Súp */}
       {/* Khoảng cách thu gọn sát lại (py-6 sm:py-8 md:py-10) */}
@@ -516,9 +394,11 @@ export default function HomePage() {
                       <span>📅 {item.date}</span>
                       <span>👁️ {item.views || 100} lượt xem</span>
                     </div>
-                    <h3 className="text-base font-bold text-deep-text leading-snug line-clamp-2 group-hover:text-moss-green transition">
-                      {item.title}
-                    </h3>
+                    <Link href={`/tin-tuc/${item.id}`} className="block">
+                      <h3 className="text-base font-bold text-deep-text leading-snug line-clamp-2 group-hover:text-moss-green transition">
+                        {item.title}
+                      </h3>
+                    </Link>
                     <p className="text-xs text-deep-muted leading-relaxed line-clamp-3">
                       {item.summary}
                     </p>
@@ -528,14 +408,28 @@ export default function HomePage() {
                 {/* Chân thẻ bài viết: Nút xem chi tiết & Cụm Quản trị Cán bộ */}
                 <div className="p-4 pt-0">
                   <div className="pt-3 border-t border-stone-100 flex items-center justify-between">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedArticle(item)}
-                      className="text-xs font-bold text-moss-green hover:underline flex items-center gap-1"
-                    >
-                      <span>Đọc tiếp</span>
-                      <span>→</span>
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <Link
+                        href={`/tin-tuc/${item.id}`}
+                        className="text-xs font-bold text-moss-green hover:underline flex items-center gap-1"
+                      >
+                        <span>Đọc tiếp</span>
+                        <span>→</span>
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          const url = `https://ccb.easupso.com/tin-tuc/${item.id}`;
+                          const zaloUrl = `https://sp.zalo.me/share_inline?link=${encodeURIComponent(url)}&title=${encodeURIComponent(item.title)}&desc=${encodeURIComponent(item.summary)}`;
+                          window.open(zaloUrl, "_blank", "width=600,height=600,noopener,noreferrer");
+                        }}
+                        className="text-[11px] px-2 py-0.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded font-bold transition flex items-center gap-1 cursor-pointer"
+                        title="Chia sẻ trực tiếp lên Zalo hoặc nhóm Chi hội CCB"
+                      >
+                        <span>📲 Zalo</span>
+                      </button>
+                    </div>
 
                     {/* Nút Cán bộ xã Sửa / Xóa (Chỉ hiển thị cho SUPER_ADMIN) */}
                     {currentUser?.role === "SUPER_ADMIN" && (
@@ -637,6 +531,13 @@ export default function HomePage() {
                 <span>Lượt xem: <strong>{selectedArticle.views || 150}</strong></span>
               </div>
 
+              {/* Thanh chia sẻ đa kênh chuẩn đường dẫn bài viết */}
+              <NewsShareBar
+                title={selectedArticle.title}
+                url={`https://ccb.easupso.com/tin-tuc/${selectedArticle.id}`}
+                summary={selectedArticle.summary}
+              />
+
               {selectedArticle.imageUrl && (
                 <div className="rounded-lg overflow-hidden border border-stone-300 max-h-80">
                   <img
@@ -659,8 +560,14 @@ export default function HomePage() {
             </div>
 
             {/* Footer Modal */}
-            <div className="bg-stone-100 p-3.5 border-t border-stone-200 flex items-center justify-between">
-              <span className="text-xs text-deep-muted">Hội Cựu Chiến Binh Xã Ea Súp</span>
+            <div className="bg-stone-100 p-3.5 border-t border-stone-200 flex items-center justify-between gap-3">
+              <Link
+                href={`/tin-tuc/${selectedArticle.id}`}
+                target="_blank"
+                className="text-xs font-bold text-moss-green hover:underline flex items-center gap-1.5"
+              >
+                <span>↗ Mở trang bài viết độc lập (Chia sẻ Zalo/FB)</span>
+              </Link>
               <button
                 type="button"
                 onClick={() => setSelectedArticle(null)}

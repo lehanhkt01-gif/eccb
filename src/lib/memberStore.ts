@@ -8,6 +8,7 @@ export type ApprovalStatus = "PENDING_APPROVAL" | "ACTIVE" | "REJECTED";
 export interface MemberRecord {
   id: string;
   cccd: string;
+  cccdIssueDate?: string;
   fullName: string;
   birthDate?: string;
   birthYear: number;
@@ -76,12 +77,54 @@ export interface MemberRecord {
   expelledDate?: string;
   expelledReason?: string;
 
-  // Quản lý trạng thái phê duyệt (Approval Workflow)
+  // Quản lý trạng thái phê duyệt song trùng 2 cấp (Dual Approval Workflow)
   status: ApprovalStatus;
+  registrationStatus?: RegistrationStatus;
   submissionDate?: string;
   approvalDate?: string;
   rejectionReason?: string;
   submittedBy?: string; // Chi hội trưởng người gửi
+
+  // Cấp 1: Chi hội trưởng thẩm tra & phê duyệt
+  branchApproved?: boolean;
+  branchApprovedAt?: string;
+  branchApprovedBy?: string;
+  branchNotes?: string;
+
+  // Cấp 2: Thường trực Hội CCB xã ra Quyết định phê duyệt
+  adminApproved?: boolean;
+  adminApprovedAt?: string;
+  adminApprovedBy?: string;
+  adminNotes?: string;
+
+  // Hồ sơ tài liệu đính kèm (Tối đa 5 file, mỗi file <= 5MB)
+  attachedFiles?: {
+    name: string;
+    size: number;
+    type: string;
+    dataUrl?: string;
+  }[];
+}
+
+export type RegistrationStatus =
+  | "PENDING_APPROVAL" // Vừa đăng ký, chờ cả 2 cấp
+  | "BRANCH_APPROVED"  // Chi hội trưởng đã thẩm tra duyệt, chờ xã
+  | "ADMIN_APPROVED"   // Cán bộ xã đã duyệt trước, chờ chi hội trưởng xác nhận
+  | "APPROVED"         // ĐÃ ĐỦ 2 CẤP PHÊ DUYỆT (Chính thức là hội viên)
+  | "REJECTED";        // Bị từ chối (có lý do)
+
+export interface NotificationRecord {
+  id: string;
+  userId?: string;
+  targetRole?: "SUPER_ADMIN" | "BRANCH_LEADER" | "MEMBER" | "ALL" | string;
+  hamletId?: string;
+  hamletName?: string;
+  title: string;
+  content: string;
+  type: "NEW_REGISTRATION" | "DUAL_APPROVAL_STEP" | "ADMISSION_SUCCESS" | "NEW_ANNOUNCEMENT" | string;
+  linkUrl?: string;
+  isRead: boolean;
+  createdAt: string;
 }
 
 export type MovementType = "TRANSFER_IN" | "TRANSFER_OUT" | "EXPELLED" | "DECEASED";
@@ -115,12 +158,13 @@ export const INITIAL_MEMBERS: MemberRecord[] = [
   {
     id: "PENDING_001",
     cccd: "066068001234",
+    cccdIssueDate: "15/04/2022",
     fullName: "Nguyễn Đình Quảng",
     birthDate: "12/08/1968",
     birthYear: 1968,
     gender: "Nam",
     phone: "0913456789",
-    hometown: "Nghệ An",
+    hometown: "Huyện Nam Đàn, Tỉnh Nghệ An",
     ethnicity: "Kinh",
     religion: "Không",
     hamletName: "Thôn 1",
@@ -130,7 +174,7 @@ export const INITIAL_MEMBERS: MemberRecord[] = [
     dischargeDate: "08/1989",
     militaryRank: "Thượng sĩ",
     militaryPosition: "Phó Trung đội trưởng",
-    militaryTraining: "Trường Quân chính Quân khu",
+    militaryTraining: "Trường Quân chính Quân khu 9",
     period: "Biên giới Tây Nam",
     isCQN: false,
     isHouseholdHead: true,
@@ -139,29 +183,42 @@ export const INITIAL_MEMBERS: MemberRecord[] = [
     partyJoinDate: "19/05/1988",
     partyOfficialDate: "19/05/1989",
     partyCell: "Chi bộ Thôn 1",
-    partyBadge: "30 năm",
+    partyBadge: "30 năm tuổi Đảng",
     educationLevel: "12/12",
     politicalTheory: "Sơ cấp",
     professionalSkill: "Trung cấp Nông nghiệp",
-    policyStatus: "Không",
-    hasHealthInsurance100: false,
+    policyStatus: "Thương binh 4/4 (21%)",
+    policyWoundRate: "21%",
+    hasHealthInsurance100: true,
+    healthInsuranceCode: "CB466068001234",
     livingStandard: "KHONG_NGHEO",
     isPoorHousehold: false,
     isNearPoorHousehold: false,
     hasDilapidatedHouse: false,
     hasEconomicModel: true,
-    economicModelType: "Trang trại",
+    economicModelType: "Trang trại VAC",
     economicModelName: "Trang trại sầu riêng và mít Thái 3.5ha",
     economicRevenue: "450.000.000 đ",
     economicLaborCount: 4,
     economicIncome: "25.000.000 đ/tháng",
-    awards: "Bằng khen Chủ tịch UBND xã 2024",
+    awards: "Huân chương Chiến sĩ Vẻ vang, Bằng khen Chủ tịch UBND xã 2024",
+    titles: "Hội viên gương mẫu làm kinh tế giỏi",
     totalDebt: 0,
     isDeceased: false,
     isTransferred: false,
     status: "PENDING_APPROVAL",
+    registrationStatus: "PENDING_APPROVAL",
+    branchApproved: false,
+    adminApproved: false,
     submissionDate: "05/10/2026 08:30",
-    submittedBy: "Chi hội trưởng Trần Văn Định (Thôn 1)"
+    submittedBy: "Hội viên đăng ký trực tuyến (Thôn 1)",
+    attachedFiles: [
+      { name: "1. Don_xin_vao_Hoi_CCB_NguyenDinhQuang.pdf", size: 1845000, type: "application/pdf" },
+      { name: "2. Quyet_dinh_xuat_ngu_Su_doan_330.jpg", size: 2420000, type: "image/jpeg" },
+      { name: "3. Ban_chup_CCCD_2_mat_NguyenDinhQuang.jpg", size: 1150000, type: "image/jpeg" },
+      { name: "4. Giay_chung_nhan_thuong_binh_4_4.pdf", size: 1680000, type: "application/pdf" },
+      { name: "5. Chung_nhan_mo_hinh_kinh_te_VAC.jpg", size: 1950000, type: "image/jpeg" },
+    ],
   },
   // --- Hồ sơ mẫu 2: Chờ duyệt từ Thôn Thắng Lợi ---
   {
@@ -207,8 +264,18 @@ export const INITIAL_MEMBERS: MemberRecord[] = [
     isDeceased: false,
     isTransferred: false,
     status: "PENDING_APPROVAL",
+    registrationStatus: "BRANCH_APPROVED",
+    branchApproved: true,
+    branchApprovedAt: "06/10/2026 09:15",
+    branchApprovedBy: "Chi hội trưởng Dương Minh Châu",
+    branchNotes: "Đã thẩm tra tư cách quân nhân trực tiếp tại thôn, gia đình gương mẫu, đủ điều kiện.",
+    adminApproved: false,
     submissionDate: "07/10/2026 14:15",
-    submittedBy: "Chi hội trưởng Dương Minh Châu (Thôn Thắng Lợi)"
+    submittedBy: "Chi hội trưởng Dương Minh Châu (Thôn Thắng Lợi)",
+    attachedFiles: [
+      { name: "Ban_chup_CCCD_LeBaTung.pdf", size: 1800000, type: "application/pdf" },
+      { name: "Giay_chung_nhan_thuong_binh.pdf", size: 2100000, type: "application/pdf" },
+    ],
   },
   // --- Hồ sơ chính thức mẫu (ACTIVE) ---
   {
@@ -1164,7 +1231,26 @@ export function getStoredMembers(): MemberRecord[] {
     }
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed) && parsed.length > 0) {
-      return parsed;
+      // Tự động đồng bộ các trường mới và file đính kèm cho hồ sơ mẫu PENDING_001 / PENDING_002
+      let needsSave = false;
+      const merged = parsed.map((m: MemberRecord) => {
+        const initialMatch = INITIAL_MEMBERS.find((im) => im.id === m.id);
+        const initFileCount = initialMatch?.attachedFiles?.length || 0;
+        if (initialMatch && (!m.attachedFiles || m.attachedFiles.length < initFileCount || !m.cccdIssueDate)) {
+          needsSave = true;
+          return {
+            ...initialMatch,
+            ...m,
+            cccdIssueDate: m.cccdIssueDate || initialMatch.cccdIssueDate,
+            attachedFiles: (m.attachedFiles && m.attachedFiles.length >= initFileCount) ? m.attachedFiles : initialMatch.attachedFiles,
+          };
+        }
+        return m;
+      });
+      if (needsSave) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+      }
+      return merged;
     }
     return INITIAL_MEMBERS;
   } catch (err) {
@@ -1251,61 +1337,183 @@ export function createPendingMember(member: Partial<MemberRecord>): MemberRecord
     isDeceased: false,
     isTransferred: false,
 
-    // Trạng thái phê duyệt
+    // Trạng thái phê duyệt song trùng 2 cấp (Dual Approval)
     status: "PENDING_APPROVAL",
+    registrationStatus: "PENDING_APPROVAL",
+    branchApproved: false,
+    adminApproved: false,
     submissionDate: dateStr,
-    submittedBy: member.submittedBy || `Chi hội trưởng (${member.hamletName || "Thôn 1"})`,
+    submittedBy: member.submittedBy || `Hội viên đăng ký trực tuyến (${member.hamletName || "Thôn 1"})`,
+    attachedFiles: member.attachedFiles || [],
   };
 
   const updatedList = [newRecord, ...currentList];
   saveStoredMembers(updatedList);
+
+  // Tự động kích hoạt chuông thông báo cho Chi hội trưởng và Cán bộ xã
+  try {
+    createNotification({
+      targetRole: "BRANCH_LEADER",
+      hamletName: newRecord.hamletName,
+      title: `Hồ sơ đăng ký mới: ${newRecord.fullName}`,
+      content: `Đ/c ${newRecord.fullName} (CCCD: ${newRecord.cccd}) vừa gửi hồ sơ đăng ký tại ${newRecord.hamletName}. Đề nghị Chi hội trưởng thẩm tra tư cách quân nhân.`,
+      type: "NEW_REGISTRATION",
+      linkUrl: "/branch",
+    });
+
+    createNotification({
+      targetRole: "SUPER_ADMIN",
+      hamletName: newRecord.hamletName,
+      title: `Hồ sơ đăng ký mới từ ${newRecord.hamletName}`,
+      content: `Có hồ sơ mới của đ/c ${newRecord.fullName} tại ${newRecord.hamletName} đang chờ quy trình xét duyệt song trùng 2 cấp.`,
+      type: "NEW_REGISTRATION",
+      linkUrl: "/admin/members",
+    });
+  } catch (err) {
+    console.error("Lỗi khi tạo thông báo:", err);
+  }
+
   return newRecord;
 }
 
-export function approveMember(id: string): boolean {
+/**
+ * CẤP 1: CHI HỘI TRƯỞNG THẨM TRA VÀ PHÊ DUYỆT TƯ CÁCH QUÂN NHÂN
+ */
+export function approveMemberBranch(
+  id: string,
+  notes: string,
+  leaderName: string
+): { success: boolean; member?: MemberRecord } {
   const currentList = getStoredMembers();
   const now = new Date();
-  const dateStr = `${String(now.getDate()).padStart(2, "0")}/${String(now.getMonth() + 1).padStart(2, "0")}/${now.getFullYear()}`;
+  const dateStr = `${String(now.getDate()).padStart(2, "0")}/${String(now.getMonth() + 1).padStart(2, "0")}/${now.getFullYear()} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 
-  let found = false;
+  let target: MemberRecord | undefined;
   const updatedList = currentList.map((m) => {
     if (m.id === id) {
-      found = true;
-      return {
+      const isBothApproved = !!m.adminApproved;
+      target = {
         ...m,
-        status: "ACTIVE" as ApprovalStatus,
-        approvalDate: dateStr,
-        rejectionReason: undefined,
+        branchApproved: true,
+        branchApprovedAt: dateStr,
+        branchApprovedBy: leaderName,
+        branchNotes: notes || "Đã thẩm tra tư cách quân nhân tại thôn buôn, đủ tiêu chuẩn kết nạp.",
+        registrationStatus: (isBothApproved ? "APPROVED" : "BRANCH_APPROVED") as RegistrationStatus,
+        status: (isBothApproved ? "ACTIVE" : "PENDING_APPROVAL") as ApprovalStatus,
+        approvalDate: isBothApproved ? dateStr : m.approvalDate,
       };
+      return target;
     }
     return m;
   });
 
-  if (found) {
+  if (target) {
     saveStoredMembers(updatedList);
+    // Gửi thông báo tới Ban Thường trực Xã
+    createNotification({
+      targetRole: "SUPER_ADMIN",
+      hamletName: target.hamletName,
+      title: `Chi hội ${target.hamletName} đã thẩm tra duyệt: ${target.fullName}`,
+      content: `Chi hội trưởng ${leaderName} đã duyệt thẩm tra tư cách quân nhân cho đ/c ${target.fullName}. Đề nghị Thường trực Hội CCB Xã ra Quyết định kết nạp.`,
+      type: "DUAL_APPROVAL_STEP",
+      linkUrl: `/admin/members?search=${encodeURIComponent(target.fullName)}`,
+    });
+    return { success: true, member: target };
   }
-  return found;
+  return { success: false };
+}
+
+/**
+ * CẤP 2: THƯỜNG TRỰC HỘI CCB XÃ RA QUYẾT ĐỊNH PHÊ DUYỆT KẾT NẠP
+ */
+export function approveMemberAdmin(
+  id: string,
+  decisionNotes: string,
+  adminName: string
+): { success: boolean; member?: MemberRecord } {
+  const currentList = getStoredMembers();
+  const now = new Date();
+  const dateStr = `${String(now.getDate()).padStart(2, "0")}/${String(now.getMonth() + 1).padStart(2, "0")}/${now.getFullYear()} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+
+  let target: MemberRecord | undefined;
+  const updatedList = currentList.map((m) => {
+    if (m.id === id) {
+      const isBothApproved = !!m.branchApproved;
+      target = {
+        ...m,
+        adminApproved: true,
+        adminApprovedAt: dateStr,
+        adminApprovedBy: adminName,
+        adminNotes: decisionNotes || "Quyết định kết nạp chuẩn y bởi Thường trực Hội CCB Xã Ea Súp.",
+        registrationStatus: (isBothApproved ? "APPROVED" : "ADMIN_APPROVED") as RegistrationStatus,
+        status: (isBothApproved ? "ACTIVE" : "PENDING_APPROVAL") as ApprovalStatus,
+        approvalDate: isBothApproved ? dateStr : m.approvalDate,
+      };
+      return target;
+    }
+    return m;
+  });
+
+  if (target) {
+    saveStoredMembers(updatedList);
+    // Gửi thông báo tới Chi hội trưởng
+    createNotification({
+      targetRole: "BRANCH_LEADER",
+      hamletName: target.hamletName,
+      title: `Thường trực Xã đã phê duyệt kết nạp: ${target.fullName}`,
+      content: `${adminName} đã ký duyệt Quyết định kết nạp cho đ/c ${target.fullName}. ${target.branchApproved ? "Hồ sơ đã hoàn tất 2 cấp, chính thức là hội viên." : "Chờ Chi hội thẩm tra xác nhận."}`,
+      type: target.registrationStatus === "APPROVED" ? "ADMISSION_SUCCESS" : "DUAL_APPROVAL_STEP",
+      linkUrl: `/branch`,
+    });
+    return { success: true, member: target };
+  }
+  return { success: false };
+}
+
+/**
+ * TỪ CHỐI HỒ SƠ ĐĂNG KÝ (CÓ LÝ DO)
+ */
+export function rejectMemberDual(
+  id: string,
+  reason: string,
+  rejectedBy: string
+): { success: boolean; member?: MemberRecord } {
+  const currentList = getStoredMembers();
+  let target: MemberRecord | undefined;
+  const updatedList = currentList.map((m) => {
+    if (m.id === id) {
+      target = {
+        ...m,
+        status: "REJECTED" as ApprovalStatus,
+        registrationStatus: "REJECTED" as RegistrationStatus,
+        rejectionReason: reason || "Chưa đủ tiêu chuẩn kết nạp theo Điều lệ Hội CCB Việt Nam",
+      };
+      return target;
+    }
+    return m;
+  });
+
+  if (target) {
+    saveStoredMembers(updatedList);
+    createNotification({
+      targetRole: "ALL",
+      hamletName: target.hamletName,
+      title: `Hồ sơ đăng ký bị từ chối: ${target.fullName}`,
+      content: `Hồ sơ đăng ký của đ/c ${target.fullName} bị từ chối bởi ${rejectedBy}. Lý do: ${reason}`,
+      type: "DUAL_APPROVAL_STEP",
+      linkUrl: `/register-member`,
+    });
+    return { success: true, member: target };
+  }
+  return { success: false };
+}
+
+export function approveMember(id: string): boolean {
+  return approveMemberBranch(id, "Đã thẩm tra hợp lệ", "Chi hội trưởng CCB").success;
 }
 
 export function rejectMember(id: string, reason: string): boolean {
-  const currentList = getStoredMembers();
-  let found = false;
-  const updatedList = currentList.map((m) => {
-    if (m.id === id) {
-      found = true;
-      return {
-        ...m,
-        status: "REJECTED" as ApprovalStatus,
-        rejectionReason: reason,
-      };
-    }
-    return m;
-  });
-
-  if (found) {
-    saveStoredMembers(updatedList);
-  }
-  return found;
+  return rejectMemberDual(id, reason, "Chi hội trưởng CCB").success;
 }
 
 const MOVEMENTS_STORAGE_KEY = "eccb-easup_movements_v1";
@@ -1410,3 +1618,102 @@ export function recordLocalMovement(data: {
 
   return { success: true, movement: newMovement };
 }
+
+// ==============================================================================
+// 10. QUẢN LÝ THÔNG BÁO & CHUÔNG BÁO TÁC VỤ (NOTIFICATIONS)
+// ==============================================================================
+
+const STORAGE_KEY_NOTIFICATIONS = "eccb_notifications_v1";
+
+export function getStoredNotifications(): NotificationRecord[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_NOTIFICATIONS);
+    if (!raw) {
+      // Dữ liệu mẫu thông báo hệ thống ban đầu (Hồ sơ đăng ký mới & xét duyệt 2 cấp)
+      const initialNotifs: NotificationRecord[] = [
+        {
+          id: "notif-01",
+          targetRole: "BRANCH_LEADER",
+          hamletName: "Thôn 1",
+          title: "Hồ sơ đăng ký mới: Nguyễn Đình Quảng",
+          content: "Đ/c Nguyễn Đình Quảng (CCCD: 066068001234) vừa gửi hồ sơ kết nạp tại Thôn 1. Đề nghị Chi hội trưởng thẩm tra tư cách quân nhân.",
+          type: "NEW_REGISTRATION",
+          linkUrl: "/branch",
+          isRead: false,
+          createdAt: new Date().toISOString(),
+        },
+        {
+          id: "notif-02",
+          targetRole: "SUPER_ADMIN",
+          title: "Hồ sơ mới chờ duyệt: Nguyễn Đình Quảng (Thôn 1)",
+          content: "Hồ sơ đăng ký hội viên mới đang chờ Chi hội Thôn 1 thẩm tra và Thường trực Xã ra Quyết định kết nạp.",
+          type: "NEW_REGISTRATION",
+          linkUrl: "/admin/members",
+          isRead: false,
+          createdAt: new Date().toISOString(),
+        },
+        {
+          id: "notif-03",
+          targetRole: "SUPER_ADMIN",
+          title: "Chi hội Thôn Thắng Lợi đã duyệt: Lê Bá Tùng",
+          content: "Chi hội trưởng Dương Minh Châu đã thẩm tra đủ tư cách quân nhân cho đ/c Lê Bá Tùng. Đề nghị Thường trực Xã ra Quyết định kết nạp.",
+          type: "DUAL_APPROVAL_STEP",
+          linkUrl: "/admin/members",
+          isRead: false,
+          createdAt: new Date(Date.now() - 3600000).toISOString(),
+        },
+      ];
+      localStorage.setItem(STORAGE_KEY_NOTIFICATIONS, JSON.stringify(initialNotifs));
+      return initialNotifs;
+    }
+    return JSON.parse(raw) as NotificationRecord[];
+  } catch {
+    return [];
+  }
+}
+
+export function saveStoredNotifications(notifs: NotificationRecord[]): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(STORAGE_KEY_NOTIFICATIONS, JSON.stringify(notifs));
+    window.dispatchEvent(new CustomEvent("eccb-notifications-updated"));
+  } catch (err) {
+    console.error("Lỗi khi lưu thông báo:", err);
+  }
+}
+
+export function createNotification(data: Omit<NotificationRecord, "id" | "createdAt" | "isRead">): NotificationRecord {
+  const newNotif: NotificationRecord = {
+    ...data,
+    id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    isRead: false,
+    createdAt: new Date().toISOString(),
+  };
+
+  const list = getStoredNotifications();
+  saveStoredNotifications([newNotif, ...list]);
+  return newNotif;
+}
+
+export function markNotificationRead(id: string): void {
+  const list = getStoredNotifications();
+  const updated = list.map((n) => (n.id === id ? { ...n, isRead: true } : n));
+  saveStoredNotifications(updated);
+}
+
+export function markAllNotificationsRead(targetRole?: string, hamletName?: string): void {
+  const list = getStoredNotifications();
+  const updated = list.map((n) => {
+    let match = true;
+    if (targetRole && n.targetRole && n.targetRole !== "ALL" && n.targetRole !== targetRole) {
+      match = false;
+    }
+    if (hamletName && n.hamletName && n.hamletName !== hamletName) {
+      match = false;
+    }
+    return match ? { ...n, isRead: true } : n;
+  });
+  saveStoredNotifications(updated);
+}
+

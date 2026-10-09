@@ -21,62 +21,71 @@ datasource db {
 
 /// 1. Phân quyền người dùng & Cán bộ Hội (RBAC)
 enum Role {
-  SUPER_ADMIN    // Ban Quản trị Hệ sinh thái Ea Súp Số & Thường trực Hội CCB Xã
-  BRANCH_LEADER  // Chi hội trưởng 20 thôn buôn / Tổ trưởng
-  MEMBER         // Hội viên Cựu Chiến Binh
-  GUEST          // Khách xem thông tin công khai
+  SUPER_ADMIN // Ban Quản trị Hệ sinh thái Ea Súp Số & Thường trực Hội CCB Xã
+  BRANCH_LEADER // Chi hội trưởng 20 thôn buôn / Tổ trưởng
+  MEMBER // Hội viên Cựu Chiến Binh
+  GUEST // Khách xem thông tin công khai
 }
 
 /// 2. Thời kỳ quân ngũ tham gia chiến đấu / phục vụ
 enum Period {
-  CHONG_PHAP     // Thời kỳ Kháng chiến chống Pháp
-  CHONG_MY       // Thời kỳ Kháng chiến chống Mỹ cứu nước
-  BIEN_GIOI_BAC  // Chiến tranh bảo vệ Biên giới phía Bắc
-  TAY_NAM        // Chiến tranh bảo vệ Biên giới Tây Nam
-  QUOC_TE        // Làm nhiệm vụ quốc tế (Campuchia, Lào)
-  CUU_QUAN_NHAN  // Cựu quân nhân (thời bình / xây dựng bảo vệ Tổ quốc)
+  CHONG_PHAP // Thời kỳ Kháng chiến chống Pháp
+  CHONG_MY // Thời kỳ Kháng chiến chống Mỹ cứu nước
+  BIEN_GIOI_BAC // Chiến tranh bảo vệ Biên giới phía Bắc
+  TAY_NAM // Chiến tranh bảo vệ Biên giới Tây Nam
+  QUOC_TE // Làm nhiệm vụ quốc tế (Campuchia, Lào)
+  CUU_QUAN_NHAN // Cựu quân nhân (thời bình / xây dựng bảo vệ Tổ quốc)
 }
 
 /// 3. Đối tượng chính sách & Người có công
 enum PolicyStatus {
-  THUONG_BINH     // Thương binh các hạng
-  BENH_BINH       // Bệnh binh
-  DA_CAM          // Người hoạt động kháng chiến nhiễm chất độc hóa học (Da cam/Dioxin)
-  LAO_THANH_CM    // Cán bộ Lão thành Cách mạng
+  THUONG_BINH // Thương binh các hạng
+  BENH_BINH // Bệnh binh
+  DA_CAM // Người hoạt động kháng chiến nhiễm chất độc hóa học (Da cam/Dioxin)
+  LAO_THANH_CM // Cán bộ Lão thành Cách mạng
   TIEN_KHOI_NGHIA // Cán bộ Tiền khởi nghĩa
-  KHONG           // Không thuộc diện chính sách
+  KHONG // Không thuộc diện chính sách
 }
 
 /// Phương thức ghi nhận điểm danh sinh hoạt
 enum AttendanceMethod {
-  QR_SCAN         // Quét mã QR Token động bằng điện thoại
-  MANUAL_CHECKIN  // Cán bộ chi hội điểm danh trực tiếp
-  EXCUSED         // Vắng mặt có lý do chính đáng (báo phép trước)
+  QR_SCAN // Quét mã QR Token động bằng điện thoại
+  MANUAL_CHECKIN // Cán bộ chi hội điểm danh trực tiếp
+  EXCUSED // Vắng mặt có lý do chính đáng (báo phép trước)
 }
 
 /// Trạng thái khoản vay quay vòng quỹ nội bộ 0%
 enum FundLoanStatus {
-  PENDING         // Đang thẩm định xét duyệt
-  ACTIVE          // Đang vay trong hạn
-  REPAID          // Đã hoàn trả đầy đủ
-  OVERDUE         // Quá hạn chưa hoàn trả
+  PENDING // Đang thẩm định xét duyệt
+  ACTIVE // Đang vay trong hạn
+  REPAID // Đã hoàn trả đầy đủ
+  OVERDUE // Quá hạn chưa hoàn trả
 }
 
 /// 4. Trạng thái phê duyệt và sinh hoạt của hội viên
 enum MemberStatus {
   PENDING_APPROVAL // Chờ Ban Thường trực Hội CCB Xã phê duyệt
-  ACTIVE           // Hội viên chính thức sinh hoạt
-  REJECTED         // Hồ sơ bị từ chối phê duyệt
-  TRANSFERRED      // Chuyển sinh hoạt đi nơi khác
-  DECEASED         // Đã từ trần
+  ACTIVE // Hội viên chính thức sinh hoạt
+  REJECTED // Hồ sơ bị từ chối phê duyệt
+  TRANSFERRED // Chuyển sinh hoạt đi nơi khác
+  DECEASED // Đã từ trần
 }
 
 /// 5. Phân loại 4 nghiệp vụ biến động hội viên
 enum MovementType {
-  TRANSFER_IN   // Chuyển đến
-  TRANSFER_OUT  // Chuyển đi
-  EXPELLED      // Xóa tên
-  DECEASED      // Báo tử
+  TRANSFER_IN // Chuyển đến
+  TRANSFER_OUT // Chuyển đi
+  EXPELLED // Xóa tên
+  DECEASED // Báo tử
+}
+
+/// 6. Trạng thái phê duyệt song trùng 2 cấp (Dual Approval)
+enum RegistrationStatus {
+  PENDING_APPROVAL // Vừa đăng ký, chờ cả 2 cấp
+  BRANCH_APPROVED // Chi hội trưởng đã thẩm tra duyệt, chờ xã
+  ADMIN_APPROVED // Cán bộ xã đã duyệt trước, chờ chi hội trưởng xác nhận
+  APPROVED // ĐÃ ĐỦ 2 CẤP PHÊ DUYỆT (Chính thức là hội viên)
+  REJECTED // Bị từ chối (có lý do)
 }
 
 // ==============================================================================
@@ -84,25 +93,25 @@ enum MovementType {
 // ==============================================================================
 
 model User {
-  id           String    @id @default(cuid())
-  username     String    @unique
+  id           String  @id @default(cuid())
+  username     String  @unique
   passwordHash String
   fullName     String
   phone        String?
-  email        String?   @unique
-  role         Role      @default(MEMBER)
-  isActive     Boolean   @default(true)
+  email        String? @unique
+  role         Role    @default(MEMBER)
+  isActive     Boolean @default(true)
 
   // Liên kết 1-1 với hồ sơ Hội viên (nếu tài khoản là hội viên)
-  memberId     String?   @unique
-  member       Member?   @relation(fields: [memberId], references: [id], onDelete: SetNull)
+  memberId String? @unique
+  member   Member? @relation(fields: [memberId], references: [id], onDelete: SetNull)
 
   // Liên kết địa bàn quản lý thôn/buôn
-  hamletId     String?
-  hamlet       Hamlet?   @relation("HamletUsers", fields: [hamletId], references: [id], onDelete: SetNull)
+  hamletId String?
+  hamlet   Hamlet? @relation("HamletUsers", fields: [hamletId], references: [id], onDelete: SetNull)
 
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([role])
   @@index([hamletId])
@@ -115,26 +124,28 @@ model User {
 // ==============================================================================
 
 model Hamlet {
-  id                String          @id @default(cuid())
-  code              String          @unique // VD: THON_01 -> THON_17, BUON_A1, BUON_A2, BUON_BANA
-  name              String          // VD: "Thôn 1", "Thôn 2", ..., "Buôn A1", "Buôn A2", "Buôn Ba Na"
-  
+  id   String @id @default(cuid())
+  code String @unique // VD: THON_01 -> THON_17, BUON_A1, BUON_A2, BUON_BANA
+  name String // VD: "Thôn 1", "Thôn 2", ..., "Buôn A1", "Buôn A2", "Buôn Ba Na"
+
   // Thông tin Chi hội trưởng
-  branchLeaderName  String?         // Họ tên Chi hội trưởng CCB thôn buôn
-  branchLeaderPhone String?         // Số điện thoại Chi hội trưởng
-  branchLeaderId    String?         // Khóa ngoại liên kết Member nếu là hội viên
-  branchLeader      Member?         @relation("BranchLeaderMember", fields: [branchLeaderId], references: [id], onDelete: SetNull)
+  branchLeaderName  String? // Họ tên Chi hội trưởng CCB thôn buôn
+  branchLeaderPhone String? // Số điện thoại Chi hội trưởng
+  branchLeaderId    String? // Khóa ngoại liên kết Member nếu là hội viên
+  branchLeader      Member? @relation("BranchLeaderMember", fields: [branchLeaderId], references: [id], onDelete: SetNull)
 
   // Các quan hệ liên kết 3NF
-  members           Member[]        @relation("HamletMembers")
-  meetings          Meeting[]       @relation("HamletMeetings")
-  loanGroups        LoanGroup[]     @relation("HamletLoanGroups")
-  internalFunds     InternalFund[]  @relation("HamletInternalFunds")
-  users             User[]          @relation("HamletUsers")
-  movements         MemberMovement[] @relation("HamletMovements")
+  members       Member[]             @relation("HamletMembers")
+  meetings      Meeting[]            @relation("HamletMeetings")
+  loanGroups    LoanGroup[]          @relation("HamletLoanGroups")
+  internalFunds InternalFund[]       @relation("HamletInternalFunds")
+  users         User[]               @relation("HamletUsers")
+  movements     MemberMovement[]     @relation("HamletMovements")
+  registrations MemberRegistration[] @relation("HamletRegistrations")
+  notifications Notification[]       @relation("HamletNotifications")
 
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([code])
   @@map("hamlets")
@@ -146,90 +157,106 @@ model Hamlet {
 // ==============================================================================
 
 model Member {
-  id                     String            @id @default(cuid())
+  id String @id @default(cuid())
 
   // --- [1] THÔNG TIN ĐỊNH DANH & CÁ NHÂN ---
-  cccd                   String            @unique // Số CCCD 12 số (Khóa duy nhất)
-  fullName               String            // Họ và tên khai sinh
-  birthDate              DateTime?         // Ngày tháng năm sinh
-  gender                 String            @default("Nam") // Giới tính (Nam / Nữ)
-  hometown               String?           // Quê quán mới (Tỉnh/Thành phố, Huyện/Quận, Xã/Phường)
-  ethnicity              String            @default("Kinh") // Dân tộc (Kinh, Ê Đê, Ba Na, Gia Rai, Tày, Nùng...)
-  religion               String            @default("Không") // Tôn giáo (Không, Công giáo, Phật giáo, Tin lành...)
-  hamletId               String            // Nơi ở hiện tại: Khóa ngoại tới 20 thôn buôn
-  hamlet                 Hamlet            @relation("HamletMembers", fields: [hamletId], references: [id])
-  currentAddress         String?           // Địa chỉ nơi ở chi tiết (Số nhà, đường, xóm)
-  phone                  String?           // Số điện thoại liên lạc
+  cccd           String    @unique // Số CCCD 12 số (Khóa duy nhất)
+  idCardNumber   String? // CCCD 12 số (Tài khoản đăng nhập)
+  fullName       String // Họ và tên khai sinh
+  birthDate      DateTime? // Ngày tháng năm sinh
+  gender         String    @default("Nam") // Giới tính (Nam / Nữ)
+  hometown       String? // Quê quán mới (Tỉnh/Thành phố, Huyện/Quận, Xã/Phường)
+  ethnicity      String    @default("Kinh") // Dân tộc (Kinh, Ê Đê, Ba Na, Gia Rai, Tày, Nùng...)
+  religion       String    @default("Không") // Tôn giáo (Không, Công giáo, Phật giáo, Tin lành...)
+  hamletId       String // Nơi ở hiện tại: Khóa ngoại tới 20 thôn buôn
+  hamlet         Hamlet    @relation("HamletMembers", fields: [hamletId], references: [id])
+  currentAddress String? // Địa chỉ nơi ở chi tiết (Số nhà, đường, xóm)
+  phone          String? // Số điện thoại liên lạc
+
+  // Trạng thái phê duyệt song trùng 2 cấp (Dual Approval)
+  registrationStatus RegistrationStatus @default(PENDING_APPROVAL)
+
+  // Cấp 1: Chi hội trưởng thẩm tra & phê duyệt
+  branchApproved   Boolean   @default(false)
+  branchApprovedAt DateTime?
+  branchApprovedBy String? // Họ tên Chi hội trưởng duyệt
+  branchNotes      String? // Ý kiến thẩm tra tư cách quân nhân tại thôn buôn
+
+  // Cấp 2: Thường trực Hội CCB xã ra Quyết định phê duyệt
+  adminApproved   Boolean   @default(false)
+  adminApprovedAt DateTime?
+  adminApprovedBy String? // Cán bộ Thường trực xã duyệt (Đ/c Đặng Trung Hiếu)
+  adminNotes      String? // Số Quyết định kết nạp / Ý kiến Thường trực
 
   // --- [2] QUÁ TRÌNH QUÂN NGŨ & CỐNG HIẾN ---
-  enlistmentDate         DateTime?         // Ngày nhập ngũ
-  militaryUnit           String?           // Đơn vị khi nhập ngũ / phục vụ chiến đấu
-  dischargeDate          DateTime?         // Ngày xuất ngũ / chuyển ngành
-  militaryRank           String?           // Cấp bậc quân hàm cao nhất (Binh nhì, Hạ sĩ, Thiếu úy, Đại tá...)
-  militaryPosition       String?           // Chức vụ trong quân đội (Chiến sĩ, Tiểu đội trưởng, Đại đội trưởng...)
-  militaryTraining       String?           // Trường lớp, đào tạo quân sự, nghiệp vụ
-  period                 Period            @default(CUU_QUAN_NHAN) // Thời kỳ quân ngũ tham gia
-  isCQN                  Boolean           @default(false) // Là Cựu quân nhân (CQN)
-  isHouseholdHead        Boolean           @default(false) // Là chủ hộ gia đình
-  status                 MemberStatus      @default(ACTIVE) // Trạng thái: PENDING_APPROVAL, ACTIVE, REJECTED
-  rejectionReason        String?           // Lý do từ chối nếu có
+  enlistmentDate   DateTime? // Ngày nhập ngũ
+  militaryUnit     String? // Đơn vị khi nhập ngũ / phục vụ chiến đấu
+  dischargeDate    DateTime? // Ngày xuất ngũ / chuyển ngành
+  militaryRank     String? // Cấp bậc quân hàm cao nhất (Binh nhì, Hạ sĩ, Thiếu úy, Đại tá...)
+  militaryPosition String? // Chức vụ trong quân đội (Chiến sĩ, Tiểu đội trưởng, Đại đội trưởng...)
+  militaryTraining String? // Trường lớp, đào tạo quân sự, nghiệp vụ
+  period           Period       @default(CUU_QUAN_NHAN) // Thời kỳ quân ngũ tham gia
+  isCQN            Boolean      @default(false) // Là Cựu quân nhân (CQN)
+  isHouseholdHead  Boolean      @default(false) // Là chủ hộ gia đình
+  status           MemberStatus @default(ACTIVE) // Trạng thái: PENDING_APPROVAL, ACTIVE, REJECTED
+  rejectionReason  String? // Lý do từ chối nếu có
 
   // --- [3] CÔNG TÁC HỘI & XÂY DỰNG ĐẢNG ---
-  associationJoinDate    DateTime?         // Ngày kết nạp vào Hội CCB Việt Nam
-  associationRole        String?           @default("Hội viên") // Chức vụ trong Hội (Hội viên, Chi hội phó, Chi hội trưởng...)
-  partyJoinDate          DateTime?         // Ngày vào Đảng Cộng sản Việt Nam
-  partyOfficialDate      DateTime?         // Ngày vào Đảng chính thức
-  partyCell              String?           // Chi bộ sinh hoạt Đảng
-  partyBadge             String?           // Huy hiệu Đảng (VD: "30 năm", "40 năm", "50 năm"..."90 năm")
-  educationLevel         String?           // Trình độ học vấn/văn hóa (12/12, 10/10, 9/12...)
-  politicalTheory        String?           // Trình độ Lý luận chính trị (Sơ cấp, Trung cấp, Cao cấp, Cử nhân)
-  professionalSkill      String?           // Trình độ Chuyên môn kỹ thuật (Đại học, Cao đẳng, Trung cấp, Sơ cấp)
+  associationJoinDate DateTime? // Ngày kết nạp vào Hội CCB Việt Nam
+  associationRole     String?   @default("Hội viên") // Chức vụ trong Hội (Hội viên, Chi hội phó, Chi hội trưởng...)
+  partyJoinDate       DateTime? // Ngày vào Đảng Cộng sản Việt Nam
+  partyOfficialDate   DateTime? // Ngày vào Đảng chính thức
+  partyCell           String? // Chi bộ sinh hoạt Đảng
+  partyBadge          String? // Huy hiệu Đảng (VD: "30 năm", "40 năm", "50 năm"..."90 năm")
+  educationLevel      String? // Trình độ học vấn/văn hóa (12/12, 10/10, 9/12...)
+  politicalTheory     String? // Trình độ Lý luận chính trị (Sơ cấp, Trung cấp, Cao cấp, Cử nhân)
+  professionalSkill   String? // Trình độ Chuyên môn kỹ thuật (Đại học, Cao đẳng, Trung cấp, Sơ cấp)
 
   // --- [4] CHÍNH SÁCH NGƯỜI CÓ CÔNG & KHEN THƯỞNG ---
-  policyStatus           PolicyStatus      @default(KHONG) // Đối tượng chính sách
-  policyWoundRate        Int?              // Tỷ lệ tổn thương cơ thể / thương tật (%)
-  titles                 String?           // Danh hiệu thi đua (CCB gương mẫu, Chiến sĩ thi đua...)
-  memorialBadgeYear      Int?              // Năm nhận Kỷ niệm chương CCB Việt Nam
-  hasHealthInsurance100  Boolean           @default(false) // Được hưởng thẻ BHYT 100%
-  healthInsuranceCode    String?           // Mã thẻ BHYT 100% (nếu có)
+  policyStatus          PolicyStatus @default(KHONG) // Đối tượng chính sách
+  policyWoundRate       Int? // Tỷ lệ tổn thương cơ thể / thương tật (%)
+  titles                String? // Danh hiệu thi đua (CCB gương mẫu, Chiến sĩ thi đua...)
+  memorialBadgeYear     Int? // Năm nhận Kỷ niệm chương CCB Việt Nam
+  hasHealthInsurance100 Boolean      @default(false) // Được hưởng thẻ BHYT 100%
+  healthInsuranceCode   String? // Mã thẻ BHYT 100% (nếu có)
 
   // --- [5] KINH TẾ & ĐỜI SỐNG HỘ GIA ĐÌNH ---
-  isPoorHousehold        Boolean           @default(false) // Thuộc diện Hộ nghèo
-  isNearPoorHousehold    Boolean           @default(false) // Thuộc diện Hộ cận nghèo
-  hasDilapidatedHouse    Boolean           @default(false) // Đang ở Nhà tạm, nhà dột nát cần xóa
-  hasEconomicModel       Boolean           @default(false) // Có mô hình sản xuất kinh doanh / kinh tế CCB
-  economicModelType      String?           // Loại hình: Doanh nghiệp, HTX, Tổ hợp tác, Trang trại, Gia trại, Hộ KD
-  economicModelName      String?           // Tên mô hình kinh tế (Trang trại nuôi bò, vườn sầu riêng, cây ăn trái...)
-  economicRevenue        Decimal?          @db.Decimal(15, 2) // Doanh thu hàng năm (VNĐ)
-  economicLaborCount     Int?              // Số lao động địa phương được giải quyết việc làm
-  economicIncome         Decimal?          @db.Decimal(15, 2) // Thu nhập bình quân / Lợi nhuận hàng năm (VNĐ)
+  isPoorHousehold     Boolean  @default(false) // Thuộc diện Hộ nghèo
+  isNearPoorHousehold Boolean  @default(false) // Thuộc diện Hộ cận nghèo
+  hasDilapidatedHouse Boolean  @default(false) // Đang ở Nhà tạm, nhà dột nát cần xóa
+  hasEconomicModel    Boolean  @default(false) // Có mô hình sản xuất kinh doanh / kinh tế CCB
+  economicModelType   String? // Loại hình: Doanh nghiệp, HTX, Tổ hợp tác, Trang trại, Gia trại, Hộ KD
+  economicModelName   String? // Tên mô hình kinh tế (Trang trại nuôi bò, vườn sầu riêng, cây ăn trái...)
+  economicRevenue     Decimal? @db.Decimal(15, 2) // Doanh thu hàng năm (VNĐ)
+  economicLaborCount  Int? // Số lao động địa phương được giải quyết việc làm
+  economicIncome      Decimal? @db.Decimal(15, 2) // Thu nhập bình quân / Lợi nhuận hàng năm (VNĐ)
 
   // --- [6] BIẾN ĐỘNG HỘI VIÊN & DƯ NỢ VAY VỐN ---
-  isDeceased             Boolean           @default(false) // Đã từ trần
-  deceasedDate           DateTime?         // Ngày từ trần
-  hasMilitaryFuneral     Boolean           @default(false) // Được tổ chức lễ tang phủ Quân kỳ Quyết thắng
-  funeralAllowanceStatus String?           // Trạng thái chi trả mai táng phí (Chưa hưởng, Đã lập hồ sơ, Đã nhận)
-  isTransferred          Boolean           @default(false) // Đã chuyển sinh hoạt đi nơi khác
-  transferDestination    String?           // Nơi chuyển đến (huyện, tỉnh khác)
-  transferDate           DateTime?         // Ngày làm thủ tục chuyển đi
-  isExpelled             Boolean           @default(false) // Bị xóa tên khỏi danh sách hội viên
-  expelledDate           DateTime?         // Ngày có quyết định xóa tên
-  expelledReason         String?           // Lý do xóa tên
-  totalDebt              Decimal           @default(0) @db.Decimal(15, 2) // Tổng dư nợ vay vốn hiện tại (VNĐ)
+  isDeceased             Boolean   @default(false) // Đã từ trần
+  deceasedDate           DateTime? // Ngày từ trần
+  hasMilitaryFuneral     Boolean   @default(false) // Được tổ chức lễ tang phủ Quân kỳ Quyết thắng
+  funeralAllowanceStatus String? // Trạng thái chi trả mai táng phí (Chưa hưởng, Đã lập hồ sơ, Đã nhận)
+  isTransferred          Boolean   @default(false) // Đã chuyển sinh hoạt đi nơi khác
+  transferDestination    String? // Nơi chuyển đến (huyện, tỉnh khác)
+  transferDate           DateTime? // Ngày làm thủ tục chuyển đi
+  isExpelled             Boolean   @default(false) // Bị xóa tên khỏi danh sách hội viên
+  expelledDate           DateTime? // Ngày có quyết định xóa tên
+  expelledReason         String? // Lý do xóa tên
+  totalDebt              Decimal   @default(0) @db.Decimal(15, 2) // Tổng dư nợ vay vốn hiện tại (VNĐ)
 
   // --- [7] KHÓA NGOẠI VÀ QUAN HỆ LIÊN KẾT 3NF ---
-  loanGroupId            String?           // Tổ TK&VV trực thuộc (nếu có tham gia vay vốn NHCSXH)
-  loanGroup              LoanGroup?        @relation(fields: [loanGroupId], references: [id], onDelete: SetNull)
+  loanGroupId String? // Tổ TK&VV trực thuộc (nếu có tham gia vay vốn NHCSXH)
+  loanGroup   LoanGroup? @relation(fields: [loanGroupId], references: [id], onDelete: SetNull)
 
-  user                   User?             // Tài khoản người dùng hệ thống (nếu được cấp quyền)
-  ledHamlets             Hamlet[]          @relation("BranchLeaderMember")
-  attendances            Attendance[]      // Lịch sử điểm danh sinh hoạt chi hội
-  fundContributions      FundContribution[] // Lịch sử đóng quỹ nội bộ hàng tháng
-  fundLoans              FundLoan[]        // Lịch sử vay vốn quỹ quay vòng 0%
-  movements              MemberMovement[]  @relation("MemberMovements")
+  user              User? // Tài khoản người dùng hệ thống (nếu được cấp quyền)
+  ledHamlets        Hamlet[]           @relation("BranchLeaderMember")
+  attendances       Attendance[] // Lịch sử điểm danh sinh hoạt chi hội
+  fundContributions FundContribution[] // Lịch sử đóng quỹ nội bộ hàng tháng
+  fundLoans         FundLoan[] // Lịch sử vay vốn quỹ quay vòng 0%
+  movements         MemberMovement[]   @relation("MemberMovements")
 
-  createdAt              DateTime          @default(now())
-  updatedAt              DateTime          @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([cccd])
   @@index([fullName])
@@ -246,24 +273,24 @@ model Member {
 // ==============================================================================
 
 model Meeting {
-  id          String        @id @default(cuid())
-  title       String        // Tiêu đề: "Sinh hoạt Chi hội tháng 3/2026", "Họp chuyên đề kỷ niệm 30/4"...
-  meetingDate DateTime      // Ngày giờ diễn ra buổi họp
-  location    String        // Địa điểm (Nhà văn hóa thôn, Nhà sinh hoạt cộng đồng...)
-  
-  hamletId    String        // Chi hội thôn/buôn tổ chức sinh hoạt
-  hamlet      Hamlet        @relation("HamletMeetings", fields: [hamletId], references: [id], onDelete: Cascade)
+  id          String   @id @default(cuid())
+  title       String // Tiêu đề: "Sinh hoạt Chi hội tháng 3/2026", "Họp chuyên đề kỷ niệm 30/4"...
+  meetingDate DateTime // Ngày giờ diễn ra buổi họp
+  location    String // Địa điểm (Nhà văn hóa thôn, Nhà sinh hoạt cộng đồng...)
+
+  hamletId String // Chi hội thôn/buôn tổ chức sinh hoạt
+  hamlet   Hamlet @relation("HamletMeetings", fields: [hamletId], references: [id], onDelete: Cascade)
 
   // Cơ chế điểm danh bảo mật bằng QR Code Token động
-  qrToken     String        @unique // Token bảo mật ngẫu nhiên sinh ra cho buổi họp
-  qrExpiresAt DateTime      // Thời điểm hết hiệu lực của mã QR
-  isClosed    Boolean       @default(false) // Buổi sinh hoạt đã đóng sổ điểm danh
-  notes       String?       @db.Text // Biên bản tóm tắt nội dung sinh hoạt
+  qrToken     String   @unique // Token bảo mật ngẫu nhiên sinh ra cho buổi họp
+  qrExpiresAt DateTime // Thời điểm hết hiệu lực của mã QR
+  isClosed    Boolean  @default(false) // Buổi sinh hoạt đã đóng sổ điểm danh
+  notes       String?  @db.Text // Biên bản tóm tắt nội dung sinh hoạt
 
   attendances Attendance[]
 
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([hamletId])
   @@index([meetingDate])
@@ -271,20 +298,20 @@ model Meeting {
 }
 
 model Attendance {
-  id         String           @id @default(cuid())
+  id String @id @default(cuid())
 
-  meetingId  String
-  meeting    Meeting          @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  meetingId String
+  meeting   Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
 
-  memberId   String
-  member     Member           @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  memberId String
+  member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
   attendedAt DateTime         @default(now()) // Thời điểm ghi nhận điểm danh
   method     AttendanceMethod @default(QR_SCAN) // QR_SCAN, MANUAL_CHECKIN, EXCUSED
-  note       String?          // Ghi chú lý do nếu xin phép vắng mặt (EXCUSED)
-  verifiedBy String?          // Cán bộ xác nhận điểm danh (khi điểm danh bù)
+  note       String? // Ghi chú lý do nếu xin phép vắng mặt (EXCUSED)
+  verifiedBy String? // Cán bộ xác nhận điểm danh (khi điểm danh bù)
 
-  createdAt  DateTime         @default(now())
+  createdAt DateTime @default(now())
 
   // Đảm bảo mỗi hội viên chỉ có 1 bản ghi điểm danh trong 1 buổi sinh hoạt (Chuẩn 3NF)
   @@unique([meetingId, memberId])
@@ -299,44 +326,44 @@ model Attendance {
 // ==============================================================================
 
 model InternalFund {
-  id               String             @id @default(cuid())
-  name             String             // VD: "Quỹ Nghĩa Tình Đồng Đội Xã Ea Súp", "Quỹ Chi Hội Thôn 1"
-  description      String?
-  
-  hamletId         String?            // Null: Quỹ chung cấp Xã; Khác null: Quỹ cơ sở Thôn Buôn
-  hamlet           Hamlet?            @relation("HamletInternalFunds", fields: [hamletId], references: [id], onDelete: SetNull)
+  id          String  @id @default(cuid())
+  name        String // VD: "Quỹ Nghĩa Tình Đồng Đội Xã Ea Súp", "Quỹ Chi Hội Thôn 1"
+  description String?
 
-  totalCapital     Decimal            @default(1300000000) @db.Decimal(15, 2) // Tổng nguồn quỹ (~1,3 tỷ đồng)
-  availableBalance Decimal            @default(1300000000) @db.Decimal(15, 2) // Số dư khả dụng hiện tại
-  monthlyFeeAmount Decimal            @default(50000) @db.Decimal(15, 2)      // Định mức đóng quỹ định kỳ (VNĐ/tháng)
+  hamletId String? // Null: Quỹ chung cấp Xã; Khác null: Quỹ cơ sở Thôn Buôn
+  hamlet   Hamlet? @relation("HamletInternalFunds", fields: [hamletId], references: [id], onDelete: SetNull)
 
-  contributions    FundContribution[]
-  loans            FundLoan[]
+  totalCapital     Decimal @default(1300000000) @db.Decimal(15, 2) // Tổng nguồn quỹ (~1,3 tỷ đồng)
+  availableBalance Decimal @default(1300000000) @db.Decimal(15, 2) // Số dư khả dụng hiện tại
+  monthlyFeeAmount Decimal @default(50000) @db.Decimal(15, 2) // Định mức đóng quỹ định kỳ (VNĐ/tháng)
 
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
+  contributions FundContribution[]
+  loans         FundLoan[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([hamletId])
   @@map("internal_funds")
 }
 
 model FundContribution {
-  id            String       @id @default(cuid())
+  id String @id @default(cuid())
 
-  fundId        String
-  fund          InternalFund @relation(fields: [fundId], references: [id], onDelete: Cascade)
+  fundId String
+  fund   InternalFund @relation(fields: [fundId], references: [id], onDelete: Cascade)
 
-  memberId      String
-  member        Member       @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  memberId String
+  member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
-  periodMonth   String       // Kỳ đóng quỹ theo định dạng "YYYY-MM" (VD: "2026-03")
-  amount        Decimal      @db.Decimal(15, 2) // Số tiền đóng quỹ (VNĐ)
-  contributedAt DateTime     @default(now())    // Ngày nộp tiền
-  receiptNumber String?      @unique            // Số biên lai thu tiền
-  collectorName String?      // Người thu tiền (Chi hội trưởng / Thủ quỹ)
+  periodMonth   String // Kỳ đóng quỹ theo định dạng "YYYY-MM" (VD: "2026-03")
+  amount        Decimal  @db.Decimal(15, 2) // Số tiền đóng quỹ (VNĐ)
+  contributedAt DateTime @default(now()) // Ngày nộp tiền
+  receiptNumber String?  @unique // Số biên lai thu tiền
+  collectorName String? // Người thu tiền (Chi hội trưởng / Thủ quỹ)
   note          String?
 
-  createdAt     DateTime     @default(now())
+  createdAt DateTime @default(now())
 
   // Mỗi hội viên đóng 1 lần trong 1 kỳ tháng cho cùng 1 quỹ (Chuẩn 3NF)
   @@unique([fundId, memberId, periodMonth])
@@ -347,27 +374,27 @@ model FundContribution {
 }
 
 model FundLoan {
-  id           String         @id @default(cuid())
+  id String @id @default(cuid())
 
-  fundId       String
-  fund         InternalFund   @relation(fields: [fundId], references: [id], onDelete: Cascade)
+  fundId String
+  fund   InternalFund @relation(fields: [fundId], references: [id], onDelete: Cascade)
 
-  memberId     String
-  member       Member         @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  memberId String
+  member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
   amount       Decimal        @db.Decimal(15, 2) // Số tiền vay phát triển kinh tế (VNĐ)
   interestRate Decimal        @default(0.00) @db.Decimal(5, 2) // Lãi suất 0% (Hỗ trợ quay vòng nghĩa tình đồng đội)
-  startDate    DateTime       @default(now())    // Ngày giải ngân vay vốn
-  dueDate      DateTime       // Thời hạn hoàn trả theo thỏa thuận
-  returnedDate DateTime?      // Ngày thực tế hoàn trả đủ
-  status       FundLoanStatus @default(ACTIVE)   // PENDING, ACTIVE, REPAID, OVERDUE
+  startDate    DateTime       @default(now()) // Ngày giải ngân vay vốn
+  dueDate      DateTime // Thời hạn hoàn trả theo thỏa thuận
+  returnedDate DateTime? // Ngày thực tế hoàn trả đủ
+  status       FundLoanStatus @default(ACTIVE) // PENDING, ACTIVE, REPAID, OVERDUE
 
-  purpose      String?        // Mục đích vay (Mua phân bón, cây giống, con giống chăn nuôi...)
-  approvedBy   String?        // Cán bộ Ban thường vụ Hội phê duyệt
-  note         String?
+  purpose    String? // Mục đích vay (Mua phân bón, cây giống, con giống chăn nuôi...)
+  approvedBy String? // Cán bộ Ban thường vụ Hội phê duyệt
+  note       String?
 
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([fundId])
   @@index([memberId])
@@ -381,29 +408,29 @@ model FundLoan {
 // ==============================================================================
 
 model LoanGroup {
-  id                     String    @id @default(cuid())
-  code                   String    @unique // Mã Tổ TK&VV (VD: "TKVV_THON_01", "TKVV_BUON_A1"...)
-  name                   String    // Tên: "Tổ Tiết Kiệm & Vay Vốn Thôn 1", "Tổ TK&VV Buôn A2"...
-  
-  hamletId               String    // Trực thuộc địa bàn thôn buôn trong 20 thôn buôn
-  hamlet                 Hamlet    @relation("HamletLoanGroups", fields: [hamletId], references: [id])
+  id   String @id @default(cuid())
+  code String @unique // Mã Tổ TK&VV (VD: "TKVV_THON_01", "TKVV_BUON_A1"...)
+  name String // Tên: "Tổ Tiết Kiệm & Vay Vốn Thôn 1", "Tổ TK&VV Buôn A2"...
 
-  groupLeaderName        String    // Họ và tên Tổ trưởng Tổ TK&VV
-  groupLeaderPhone       String?   // Số điện thoại Tổ trưởng
+  hamletId String // Trực thuộc địa bàn thôn buôn trong 20 thôn buôn
+  hamlet   Hamlet @relation("HamletLoanGroups", fields: [hamletId], references: [id])
+
+  groupLeaderName  String // Họ và tên Tổ trưởng Tổ TK&VV
+  groupLeaderPhone String? // Số điện thoại Tổ trưởng
 
   // Các chỉ số tài chính ủy thác với Ngân hàng Chính sách Xã hội (NHCSXH)
-  totalEntrustedDebt     Decimal   @default(0) @db.Decimal(15, 2) // Tổng dư nợ ủy thác NHCSXH (>52 tỷ đồng toàn khối)
-  overdueDebt            Decimal   @default(0) @db.Decimal(15, 2) // Dư nợ quá hạn (VNĐ)
-  interestCollectionRate Decimal   @default(100.00) @db.Decimal(5, 2) // Tỷ lệ thu lãi đạt được (%) (Mục tiêu 100%)
-  totalBorrowers         Int       @default(0) // Tổng số hộ vay vốn trong tổ
-  savingsBalance         Decimal   @default(0) @db.Decimal(15, 2) // Số dư tiền gửi tiết kiệm của tổ viên tại NHCSXH
-  entrustedBankBranch    String    @default("Phòng giao dịch NHCSXH Huyện Ea Súp")
+  totalEntrustedDebt     Decimal @default(0) @db.Decimal(15, 2) // Tổng dư nợ ủy thác NHCSXH (>52 tỷ đồng toàn khối)
+  overdueDebt            Decimal @default(0) @db.Decimal(15, 2) // Dư nợ quá hạn (VNĐ)
+  interestCollectionRate Decimal @default(100.00) @db.Decimal(5, 2) // Tỷ lệ thu lãi đạt được (%) (Mục tiêu 100%)
+  totalBorrowers         Int     @default(0) // Tổng số hộ vay vốn trong tổ
+  savingsBalance         Decimal @default(0) @db.Decimal(15, 2) // Số dư tiền gửi tiết kiệm của tổ viên tại NHCSXH
+  entrustedBankBranch    String  @default("Phòng giao dịch NHCSXH Huyện Ea Súp")
 
   // Quan hệ các hội viên tham gia vay vốn trong tổ
-  members                Member[]
+  members Member[]
 
-  createdAt              DateTime  @default(now())
-  updatedAt              DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([code])
   @@index([hamletId])
@@ -416,22 +443,85 @@ model LoanGroup {
 // ==============================================================================
 
 model MemberMovement {
-  id             String        @id @default(uuid())
+  id             String       @id @default(uuid())
   memberId       String
-  member         Member        @relation("MemberMovements", fields: [memberId], references: [id], onDelete: Cascade)
+  member         Member       @relation("MemberMovements", fields: [memberId], references: [id], onDelete: Cascade)
   hamletId       String
-  hamlet         Hamlet        @relation("HamletMovements", fields: [hamletId], references: [id], onDelete: Cascade)
+  hamlet         Hamlet       @relation("HamletMovements", fields: [hamletId], references: [id], onDelete: Cascade)
   type           MovementType
-  eventDate      DateTime      // Ngày chuyển đến / chuyển đi / xóa tên / ngày mất
-  reason         String?       // Lý do chuyển, lý do xóa tên, nguyên nhân mất
-  destination    String?       // Nơi chuyển đi đến đâu, nơi chuyển đến từ đâu
-  decisionNumber String?       // Số quyết định / Giấy giới thiệu
-  documentPdfUrl String?       // Đường dẫn file văn bản PDF / ảnh xác nhận tải lên
-  burialPlace    String?       // Nơi an táng - áp dụng cho Báo tử
-  createdAt      DateTime      @default(now())
+  eventDate      DateTime // Ngày chuyển đến / chuyển đi / xóa tên / ngày mất
+  reason         String? // Lý do chuyển, lý do xóa tên, nguyên nhân mất
+  destination    String? // Nơi chuyển đi đến đâu, nơi chuyển đến từ đâu
+  decisionNumber String? // Số quyết định / Giấy giới thiệu
+  documentPdfUrl String? // Đường dẫn file văn bản PDF / ảnh xác nhận tải lên
+  burialPlace    String? // Nơi an táng - áp dụng cho Báo tử
+  createdAt      DateTime     @default(now())
 
   @@index([memberId])
   @@index([hamletId])
   @@index([type])
   @@map("member_movements")
+}
+
+// ==============================================================================
+// 8. ĐĂNG KÝ HỘI VIÊN MỚI & PHÊ DUYỆT SONG TRÙNG 2 CẤP (MEMBER REGISTRATION)
+// ==============================================================================
+
+model MemberRegistration {
+  id           String  @id @default(cuid())
+  fullName     String // Họ và tên
+  idCardNumber String  @unique // CCCD 12 số (Tài khoản đăng nhập)
+  phone        String?
+  hamletId     String // Khóa ngoại liên kết 20 thôn buôn
+  hamlet       Hamlet  @relation("HamletRegistrations", fields: [hamletId], references: [id])
+
+  // Trạng thái phê duyệt song trùng 2 cấp (Dual Approval)
+  status RegistrationStatus @default(PENDING_APPROVAL)
+
+  // Cấp 1: Chi hội trưởng thẩm tra & phê duyệt
+  branchApproved   Boolean   @default(false)
+  branchApprovedAt DateTime?
+  branchApprovedBy String? // Họ tên Chi hội trưởng duyệt
+  branchNotes      String? // Ý kiến thẩm tra tư cách quân nhân tại thôn buôn
+
+  // Cấp 2: Thường trực Hội CCB xã ra Quyết định phê duyệt
+  adminApproved   Boolean   @default(false)
+  adminApprovedAt DateTime?
+  adminApprovedBy String? // Cán bộ Thường trực xã duyệt (Đ/c Đặng Trung Hiếu)
+  adminNotes      String? // Số Quyết định kết nạp / Ý kiến Thường trực
+
+  rejectionReason String? // Lý do từ chối nếu không đủ tiêu chuẩn
+  attachedFiles   String[] @default([]) // Tối đa 5 file đính kèm minh chứng quân nhân
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([idCardNumber])
+  @@index([hamletId])
+  @@index([status])
+  @@map("member_registrations")
+}
+
+// ==============================================================================
+// 9. HỆ THỐNG THÔNG BÁO & CHUÔNG BÁO TÁC VỤ (NOTIFICATION)
+// ==============================================================================
+
+model Notification {
+  id         String   @id @default(cuid())
+  userId     String? // Gửi đích danh cho 1 user cụ thể
+  targetRole String? // SUPER_ADMIN | BRANCH_LEADER | MEMBER | ALL
+  hamletId   String? // Giới hạn theo thôn/buôn (đặc biệt cho Chi hội trưởng)
+  hamlet     Hamlet?  @relation("HamletNotifications", fields: [hamletId], references: [id], onDelete: SetNull)
+  title      String // Tiêu đề ngắn gọn
+  content    String // Nội dung chi tiết
+  type       String // NEW_REGISTRATION | DUAL_APPROVAL_STEP | ADMISSION_SUCCESS | NEW_ANNOUNCEMENT
+  linkUrl    String? // Link chuyển hướng khi click (ví dụ: /admin/approvals/abc123)
+  isRead     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([targetRole])
+  @@index([hamletId])
+  @@index([isRead])
+  @@map("notifications")
 }
