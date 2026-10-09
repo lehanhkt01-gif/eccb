@@ -566,7 +566,7 @@ export default function HomePage() {
                 target="_blank"
                 className="text-xs font-bold text-moss-green hover:underline flex items-center gap-1.5"
               >
-                <span>↗ Mở trang bài viết độc lập (Chia sẻ Zalo/FB)</span>
+                <span>↗ Mở trang bài viết độc lập (Sao chép link)</span>
               </Link>
               <button
                 type="button"
