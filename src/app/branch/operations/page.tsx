@@ -434,8 +434,18 @@ export default function BranchOperationsPage() {
             </div>
           </div>
 
-          {/* Cụm điều khiển bên phải: Chuông thông báo xét duyệt + Nút Đăng xuất */}
-          <div className="flex items-center gap-2">
+          {/* Cụm điều khiển bên phải: Trang chủ + Chuông thông báo + Nút Đăng xuất */}
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            {/* Nút liên kết về Trang chủ E-CCB */}
+            <Link
+              href="/"
+              className="px-2.5 sm:px-3 py-1.5 bg-white/15 hover:bg-white/25 active:scale-95 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 shadow-sm transition border border-white/20 cursor-pointer"
+              title="Trở về Trang chủ Cổng thông tin E-CCB Ea Súp"
+            >
+              <span className="text-sm">🏠</span>
+              <span className="hidden sm:inline">Trang chủ</span>
+            </Link>
+
             {/* CHỈ DUY NHẤT CÁN BỘ XÃ (SUPER_ADMIN) MỚI ĐƯỢC PHÉP CHUYỂN THÔN */}
             {currentUser?.role === "SUPER_ADMIN" && (
               <select

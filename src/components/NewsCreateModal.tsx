@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { AuthUser } from "@/lib/authSession";
 import { Article } from "@/lib/newsService";
+import FormattedContent from "@/components/FormattedContent";
 
 interface NewsCreateModalProps {
   isOpen: boolean;
@@ -43,6 +44,7 @@ export default function NewsCreateModal({
   const [author, setAuthor] = useState("");
   const [summary, setSummary] = useState("");
   const [content, setContent] = useState("");
+  const [contentMode, setContentMode] = useState<"edit" | "preview">("edit");
 
   // Quản lý ảnh (tối đa 5 ảnh)
   const [images, setImages] = useState<ImageItem[]>([]);
@@ -191,6 +193,9 @@ export default function NewsCreateModal({
 
   // Thao tác thanh công cụ văn bản
   const handleInsertFormatting = (type: "bold" | "italic" | "newline" | "indent" | "bullet") => {
+    // Đảm bảo tab đang ở chế độ Soạn thảo
+    setContentMode("edit");
+
     const textarea = contentTextareaRef.current;
     if (!textarea) return;
 
@@ -198,22 +203,50 @@ export default function NewsCreateModal({
     const end = textarea.selectionEnd;
     const selectedText = content.substring(start, end);
     let replacement = "";
+    let selectNewRange = false;
 
     switch (type) {
       case "bold":
-        replacement = selectedText ? `**${selectedText}**` : `**Văn bản in đậm**`;
+        if (selectedText) {
+          replacement = `**${selectedText}**`;
+        } else {
+          replacement = `**Nội dung in đậm**`;
+          selectNewRange = true;
+        }
         break;
       case "italic":
-        replacement = selectedText ? `*${selectedText}*` : `*Văn bản in nghiêng*`;
+        if (selectedText) {
+          replacement = `*${selectedText}*`;
+        } else {
+          replacement = `*Nội dung in nghiêng*`;
+          selectNewRange = true;
+        }
         break;
       case "newline":
         replacement = `\n\n`;
         break;
       case "indent":
-        replacement = `    `;
+        if (selectedText.includes("\n")) {
+          replacement = selectedText
+            .split("\n")
+            .map((line) => `    ${line}`)
+            .join("\n");
+        } else {
+          replacement = `    ${selectedText}`;
+        }
         break;
       case "bullet":
-        replacement = selectedText ? `\n• ${selectedText}` : `\n• Điểm thứ nhất...\n• Điểm thứ hai...`;
+        if (selectedText.includes("\n")) {
+          replacement = selectedText
+            .split("\n")
+            .map((line) => (line.trim().startsWith("•") ? line : `• ${line}`))
+            .join("\n");
+        } else if (selectedText) {
+          replacement = `\n• ${selectedText}`;
+        } else {
+          replacement = `\n• Điểm thứ nhất...\n• Điểm thứ hai...`;
+          selectNewRange = true;
+        }
         break;
     }
 
@@ -222,8 +255,19 @@ export default function NewsCreateModal({
 
     setTimeout(() => {
       textarea.focus();
-      const newPos = start + replacement.length;
-      textarea.setSelectionRange(newPos, newPos);
+      if (selectNewRange && !selectedText) {
+        if (type === "bold") {
+          textarea.setSelectionRange(start + 2, start + replacement.length - 2);
+        } else if (type === "italic") {
+          textarea.setSelectionRange(start + 1, start + replacement.length - 1);
+        } else {
+          const newPos = start + replacement.length;
+          textarea.setSelectionRange(newPos, newPos);
+        }
+      } else {
+        const newPos = start + replacement.length;
+        textarea.setSelectionRange(newPos, newPos);
+      }
     }, 50);
   };
 
@@ -331,7 +375,7 @@ export default function NewsCreateModal({
         thumbnail: primaryImage,
         imageGallery: sanitizedImageUrls,
         status: isCadre ? submitStatus : "PENDING_APPROVAL",
-        pin: "ccbeasup",
+        pin: isCadre ? "ccbeasup" : "",
         userRole: currentUser?.role || "GUEST",
       };
 
@@ -552,15 +596,41 @@ export default function NewsCreateModal({
             />
           </div>
 
-          {/* 4. NỘI DUNG BÀI VIẾT CHI TIẾT (*) VỚI THANH CÔNG CỤ ĐỊNH DẠNG */}
+          {/* 4. NỘI DUNG BÀI VIẾT CHI TIẾT (*) VỚI THANH CÔNG CỤ ĐỊNH DẠNG & LIVE PREVIEW */}
           <div className="space-y-1">
-            <div className="flex items-center justify-between flex-wrap gap-1 text-xs">
+            <div className="flex items-center justify-between flex-wrap gap-2 text-xs">
               <label className="font-bold uppercase tracking-wide text-deep-text">
                 Nội dung bài viết chi tiết <span className="text-flag-red">*</span>:
               </label>
-              <span className="text-[11px] text-stone-500">
-                Hỗ trợ định dạng văn bản chuẩn
-              </span>
+              
+              {/* Cụm chuyển đổi chế độ Soạn thảo / Xem trước */}
+              <div className="flex items-center p-0.5 bg-stone-200 rounded-lg">
+                <button
+                  type="button"
+                  onClick={() => setContentMode("edit")}
+                  className={`px-3 py-1 rounded-md font-bold text-xs transition cursor-pointer ${
+                    contentMode === "edit"
+                      ? "bg-moss-green text-white shadow-2xs"
+                      : "text-stone-700 hover:text-deep-text"
+                  }`}
+                >
+                  ✏️ Soạn thảo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setContentMode("preview")}
+                  className={`px-3 py-1 rounded-md font-bold text-xs transition cursor-pointer flex items-center gap-1 ${
+                    contentMode === "preview"
+                      ? "bg-moss-green text-white shadow-2xs"
+                      : "text-stone-700 hover:text-deep-text"
+                  }`}
+                >
+                  👁️ Xem trước
+                  {content.trim() && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-bronze-gold inline-block" />
+                  )}
+                </button>
+              </div>
             </div>
 
             {/* Thanh công cụ định dạng nhanh */}
@@ -569,7 +639,7 @@ export default function NewsCreateModal({
                 type="button"
                 onClick={() => handleInsertFormatting("bold")}
                 className="px-2.5 py-1 bg-white hover:bg-stone-200 border border-stone-300 rounded font-bold text-deep-text transition active:scale-95 cursor-pointer shadow-2xs"
-                title="In đậm chữ (**nội dung**)"
+                title="In đậm chữ: bôi đen đoạn chữ và bấm nút, hoặc bấm để chèn **nội dung in đậm**"
               >
                 <strong>B</strong> In đậm
               </button>
@@ -577,7 +647,7 @@ export default function NewsCreateModal({
                 type="button"
                 onClick={() => handleInsertFormatting("italic")}
                 className="px-2.5 py-1 bg-white hover:bg-stone-200 border border-stone-300 rounded italic text-deep-text transition active:scale-95 cursor-pointer shadow-2xs"
-                title="In nghiêng chữ (*nội dung*)"
+                title="In nghiêng chữ: bôi đen đoạn chữ và bấm nút, hoặc bấm để chèn *nội dung in nghiêng*"
               >
                 <em>I</em> In nghiêng
               </button>
@@ -585,7 +655,7 @@ export default function NewsCreateModal({
                 type="button"
                 onClick={() => handleInsertFormatting("bullet")}
                 className="px-2.5 py-1 bg-white hover:bg-stone-200 border border-stone-300 rounded text-deep-text transition active:scale-95 cursor-pointer shadow-2xs"
-                title="Gạch đầu dòng danh sách (• )"
+                title="Gạch đầu dòng danh sách: chèn dấu ● vào đầu dòng"
               >
                 • Gạch đầu dòng
               </button>
@@ -593,7 +663,7 @@ export default function NewsCreateModal({
                 type="button"
                 onClick={() => handleInsertFormatting("newline")}
                 className="px-2.5 py-1 bg-white hover:bg-stone-200 border border-stone-300 rounded text-deep-text transition active:scale-95 cursor-pointer shadow-2xs"
-                title="Ngắt đoạn văn mới"
+                title="Ngắt sang đoạn văn mới"
               >
                 ↵ Xuống dòng
               </button>
@@ -601,21 +671,46 @@ export default function NewsCreateModal({
                 type="button"
                 onClick={() => handleInsertFormatting("indent")}
                 className="px-2.5 py-1 bg-white hover:bg-stone-200 border border-stone-300 rounded text-deep-text transition active:scale-95 cursor-pointer shadow-2xs"
-                title="Thụt lề đoạn văn"
+                title="Thụt lề đoạn văn (thêm khoảng trắng đầu dòng)"
               >
                 ⇥ Thụt lề
               </button>
             </div>
 
-            <textarea
-              ref={contentTextareaRef}
-              required
-              rows={8}
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="Nhập nội dung đầy đủ của bài viết hoặc tin phản ánh phong trào..."
-              className="w-full px-3.5 py-2.5 bg-white border-2 border-stone-300 rounded-b-xl text-xs sm:text-sm font-normal text-deep-text focus:border-moss-green focus:outline-none transition leading-relaxed shadow-2xs"
-            />
+            {/* Nội dung: Chế độ Soạn thảo (Textarea) hoặc Xem trước (Formatted Preview) */}
+            {contentMode === "edit" ? (
+              <textarea
+                ref={contentTextareaRef}
+                required
+                rows={8}
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                placeholder="Nhập nội dung đầy đủ của bài viết hoặc tin phản ánh phong trào (Bôi đen chữ rồi bấm [In đậm], [In nghiêng] hoặc bấm [👁️ Xem trước] để kiểm tra)..."
+                className="w-full px-3.5 py-2.5 bg-white border-2 border-stone-300 rounded-b-xl text-xs sm:text-sm font-normal text-deep-text focus:border-moss-green focus:outline-none transition leading-relaxed shadow-2xs"
+              />
+            ) : (
+              <div className="w-full p-4 bg-cream-bg border-2 border-stone-300 rounded-b-xl min-h-[190px] max-h-[320px] overflow-y-auto text-xs sm:text-sm shadow-inner">
+                {content.trim() ? (
+                  <div className="space-y-2">
+                    <p className="text-[11px] font-bold uppercase text-moss-green border-b border-stone-300 pb-1 mb-2 flex items-center gap-1.5">
+                      <span>👁️</span> Xem trước bài viết thực tế khi xuất bản:
+                    </p>
+                    <FormattedContent content={content} />
+                  </div>
+                ) : (
+                  <div className="h-32 flex flex-col items-center justify-center text-stone-400 italic gap-1">
+                    <span>📝 Chưa có nội dung bài viết</span>
+                    <button
+                      type="button"
+                      onClick={() => setContentMode("edit")}
+                      className="text-xs text-moss-green underline not-italic font-semibold"
+                    >
+                      Bấm vào đây để chuyển sang tab Soạn thảo →
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* ========================================================================= */}

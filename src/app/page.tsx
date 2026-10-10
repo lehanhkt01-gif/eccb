@@ -9,6 +9,7 @@ import { getStoredMembers } from "@/lib/memberStore";
 import Header from "@/components/Header";
 import NewsShareBar from "@/components/NewsShareBar";
 import NewsCreateModal from "@/components/NewsCreateModal";
+import FormattedContent from "@/components/FormattedContent";
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
@@ -61,8 +62,6 @@ export default function HomePage() {
       let url = "/api/news";
       if (activeUser?.role === "SUPER_ADMIN") {
         url += "?role=SUPER_ADMIN";
-      } else if (activeUser) {
-        url += `?authorId=${encodeURIComponent(activeUser.id || activeUser.username || "")}`;
       }
       const res = await fetch(url);
       const json = await res.json();
@@ -624,8 +623,8 @@ export default function HomePage() {
               </div>
 
               {/* Nội dung chi tiết */}
-              <div className="text-base sm:text-lg leading-relaxed text-deep-text space-y-4 whitespace-pre-line font-normal">
-                {selectedArticle.content}
+              <div className="text-base sm:text-lg leading-relaxed text-deep-text font-normal">
+                <FormattedContent content={selectedArticle.content} />
               </div>
             </div>
 

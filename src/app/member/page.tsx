@@ -190,8 +190,16 @@ export default function MemberPortalPage() {
             </div>
           </div>
 
-          {/* Cụm nút Đổi mật khẩu & Đăng xuất */}
+          {/* Cụm nút Trang chủ, Đổi mật khẩu & Đăng xuất */}
           <div className="flex items-center gap-2">
+            <Link
+              href="/"
+              className="px-3 py-2 bg-white/15 hover:bg-white/25 active:scale-95 text-white text-xs font-bold rounded flex items-center gap-1.5 shadow-sm transition border border-white/20 cursor-pointer"
+              title="Trở về Trang chủ Cổng thông tin E-CCB Ea Súp"
+            >
+              <span className="text-sm">🏠</span>
+              <span className="hidden sm:inline">Trang chủ</span>
+            </Link>
             <button
               type="button"
               onClick={() => setIsChangePassOpen(true)}

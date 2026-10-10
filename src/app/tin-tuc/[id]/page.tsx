@@ -5,6 +5,7 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import Header from "@/components/Header";
 import NewsShareBar from "@/components/NewsShareBar";
+import FormattedContent from "@/components/FormattedContent";
 import { getAllNews, getNewsById, Article } from "@/lib/newsService";
 import { getFirstImageUrl, getPreviewDescription } from "@/lib/news-utils";
 
@@ -159,8 +160,8 @@ export default async function NewsDetailPage({ params }: PageProps) {
           </div>
 
           {/* Nội dung bài viết chi tiết chuẩn WCAG AAA - Cỡ chữ lớn dễ đọc cho CCB cao tuổi */}
-          <div className="text-stone-900 text-lg sm:text-xl leading-relaxed space-y-5 font-normal tracking-wide whitespace-pre-line pt-2">
-            {article.content}
+          <div className="pt-2">
+            <FormattedContent content={article.content} className="text-lg sm:text-xl" />
           </div>
 
           {/* Album ảnh minh họa / Gallery (nếu có nhiều hơn 1 ảnh) */}

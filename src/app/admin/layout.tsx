@@ -110,6 +110,15 @@ export default function AdminLayout({
             </div>
 
             <Link
+              href="/"
+              className="px-2.5 sm:px-3 py-1.5 bg-white/15 hover:bg-white/25 active:scale-95 text-white text-xs font-bold rounded flex items-center gap-1.5 border border-white/20 transition shadow-2xs"
+              title="Về Trang chủ Cổng thông tin E-CCB Ea Súp"
+            >
+              <span className="text-sm">🏠</span>
+              <span className="hidden sm:inline">Trang chủ</span>
+            </Link>
+
+            <Link
               href="/login"
               className="px-3 py-1.5 bg-flag-red hover:bg-flag-red-light text-white text-xs font-bold rounded border border-amber-400/30 shadow-xs transition"
             >

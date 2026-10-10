@@ -54,6 +54,7 @@ export async function GET(req: NextRequest) {
     const articles = await getArticles();
 
     const isCadre = role === "SUPER_ADMIN" || req.headers.get("x-admin-role") === "CADRE";
+    const mySubmissionsOnly = searchParams.get("mySubmissions") === "true";
 
     let result = articles;
 
@@ -61,11 +62,11 @@ export async function GET(req: NextRequest) {
       if (filterStatus && filterStatus !== "ALL") {
         result = articles.filter((a) => a.status === filterStatus);
       }
-    } else if (authorId) {
-      // Hội viên/Chi hội trưởng xem bài đã duyệt HOẶC bài của mình
-      result = articles.filter((a) => a.status === "APPROVED" || a.authorId === authorId);
+    } else if (mySubmissionsOnly && authorId) {
+      // Chỉ lấy riêng danh sách bài viết do tác giả này gửi (bao gồm cả chờ duyệt)
+      result = articles.filter((a) => a.authorId === authorId);
     } else {
-      // Công chúng chỉ xem bài đã được cán bộ xã duyệt xuất bản
+      // Bản tin xuất bản công khai trên Trang chủ và toàn hệ thống: BẮT BUỘC chỉ hiển thị bài APPROVED
       result = articles.filter((a) => a.status === "APPROVED");
     }
 
@@ -112,15 +113,22 @@ export async function POST(req: NextRequest) {
     } = body;
 
     const userRoleHeader = req.headers.get("x-user-role");
+    const adminRoleHeader = req.headers.get("x-admin-role");
     const effectiveRole = authorRole || userRoleHeader || "GUEST";
-    const isCadre =
-      effectiveRole === "SUPER_ADMIN" ||
-      req.headers.get("x-admin-role") === "CADRE" ||
-      pin === "ccbeasup" ||
-      pin === "0943170770";
 
     const isMemberOrLeader =
       effectiveRole === "MEMBER" || effectiveRole === "BRANCH_LEADER";
+
+    // Cán bộ xã CHỈ KHI vai trò thực tế là SUPER_ADMIN hoặc có admin header xác thực,
+    // VÀ TUYỆT ĐỐI không phải là tài khoản Chi hội trưởng hoặc Hội viên
+    let isCadre = false;
+    if (!isMemberOrLeader) {
+      if (effectiveRole === "SUPER_ADMIN" || adminRoleHeader === "CADRE") {
+        isCadre = true;
+      } else if (pin === "ccbeasup" || pin === "0943170770") {
+        isCadre = true;
+      }
+    }
 
     // Khách vãng lai chưa đăng nhập không được gửi bài
     if (!isCadre && !isMemberOrLeader) {
@@ -155,11 +163,14 @@ export async function POST(req: NextRequest) {
 
     const primaryImage = gallery[0] || "/images/hero-military-bg.webp";
 
-    // Quy tắc nghiệp vụ: Hội viên & Chi hội trưởng luôn tạo bài ở trạng thái PENDING_APPROVAL
-    // Cán bộ xã có thể chọn DRAFT hoặc APPROVED
+    // QUY TẮC NGHIỆP VỤ BẢO MẬT BẮT BUỘC THEO ĐIỀU LỆ HỘI CCB:
+    // - Hội viên & Chi hội trưởng: 100% BẮT BUỘC ở trạng thái PENDING_APPROVAL (Chờ Ban Thường trực Xã phê duyệt)
+    // - Chỉ Cán bộ Thường trực Xã mới có thẩm quyền xuất bản trực tiếp (APPROVED) hoặc lưu bản nháp (DRAFT)
     let articleStatus: ArticleStatus = "PENDING_APPROVAL";
     if (isCadre) {
       articleStatus = requestedStatus === "DRAFT" ? "DRAFT" : "APPROVED";
+    } else {
+      articleStatus = "PENDING_APPROVAL";
     }
 
     const newArticle: Article = {
@@ -237,12 +248,17 @@ export async function PUT(req: NextRequest) {
 
     const authHeader = req.headers.get("x-admin-role");
     const roleHeader = req.headers.get("x-user-role");
-    const isCadre =
-      authHeader === "CADRE" ||
-      roleHeader === "SUPER_ADMIN" ||
-      userRole === "SUPER_ADMIN" ||
-      pin === "ccbeasup" ||
-      pin === "0943170770";
+    const effectiveRole = userRole || roleHeader || "GUEST";
+    const isMemberOrLeader = effectiveRole === "MEMBER" || effectiveRole === "BRANCH_LEADER";
+
+    let isCadre = false;
+    if (!isMemberOrLeader) {
+      if (effectiveRole === "SUPER_ADMIN" || authHeader === "CADRE") {
+        isCadre = true;
+      } else if (pin === "ccbeasup" || pin === "0943170770") {
+        isCadre = true;
+      }
+    }
 
     // Quy tắc: Hội viên & Chi hội trưởng KHÔNG ĐƯỢC PHÉP chỉnh sửa tin bài đã gửi
     if (!isCadre) {
