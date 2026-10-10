@@ -8,13 +8,14 @@
     "start": "next start",
     "lint": "eslint",
     "seed": "tsx --env-file=.env prisma/seed.ts",
-    "seed:cht": "tsx --env-file=.env prisma/seed-cht.ts"
+    "seed:cht": "node --env-file=.env prisma/seed-cht.js"
   },
   "prisma": {
     "seed": "tsx --env-file=.env prisma/seed.ts"
   },
   "dependencies": {
     "@prisma/client": "6.4.1",
+    "bcryptjs": "^3.0.3",
     "docx": "^9.9.0",
     "next": "15.5.27",
     "react": "19.1.0",
@@ -27,7 +28,6 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "bcryptjs": "^3.0.3",
     "eslint": "^9",
     "eslint-config-next": "15.5.27",
     "prisma": "6.4.1",
