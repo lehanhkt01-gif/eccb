@@ -271,34 +271,51 @@ export default function NewsCreateModal({
     try {
       // 1. Tải lên các file ảnh mới (nếu có)
       setUploadingImages(true);
-      const finalImageUrls: string[] = [];
+      const finalImageUrls: string[] = new Array(images.length);
+      const newItemsToUpload: { item: ImageItem; index: number }[] = [];
 
-      for (const imgItem of images) {
-        if (imgItem.isExisting) {
-          finalImageUrls.push(imgItem.previewUrl);
-        } else if (imgItem.file) {
-          const fd = new FormData();
-          fd.append("files", imgItem.file);
+      images.forEach((img, idx) => {
+        if (img.isExisting) {
+          finalImageUrls[idx] = img.previewUrl;
+        } else if (img.file) {
+          newItemsToUpload.push({ item: img, index: idx });
+        }
+      });
 
-          const uploadRes = await fetch("/api/news/upload", {
-            method: "POST",
-            body: fd,
+      if (newItemsToUpload.length > 0) {
+        const fd = new FormData();
+        newItemsToUpload.forEach(({ item }) => {
+          if (item.file) fd.append("files", item.file);
+        });
+
+        const uploadRes = await fetch("/api/news/upload", {
+          method: "POST",
+          body: fd,
+        });
+
+        const uploadJson = await uploadRes.json();
+        if (!uploadRes.ok || !uploadJson.success) {
+          throw new Error(uploadJson.message || "Lỗi khi lưu ảnh tải lên máy chủ!");
+        }
+
+        if (Array.isArray(uploadJson.urls)) {
+          uploadJson.urls.forEach((savedUrl: string, uIdx: number) => {
+            const originalIndex = newItemsToUpload[uIdx]?.index;
+            if (typeof originalIndex === "number") {
+              finalImageUrls[originalIndex] = savedUrl;
+            } else {
+              finalImageUrls.push(savedUrl);
+            }
           });
-
-          const uploadJson = await uploadRes.json();
-          if (!uploadRes.ok || !uploadJson.success) {
-            throw new Error(uploadJson.message || `Lỗi tải ảnh ${imgItem.file.name}`);
-          }
-
-          if (Array.isArray(uploadJson.urls) && uploadJson.urls.length > 0) {
-            finalImageUrls.push(...uploadJson.urls);
-          }
         }
       }
+
+      // Lọc bỏ undefined hoặc rỗng
+      const sanitizedImageUrls = finalImageUrls.filter(Boolean);
       setUploadingImages(false);
 
       // 2. Gửi payload bài viết
-      const primaryImage = finalImageUrls[0] || "/images/hero-military-bg.webp";
+      const primaryImage = sanitizedImageUrls[0] || "/images/hero-military-bg.webp";
 
       const payload = {
         id: articleToEdit?.id,
@@ -312,7 +329,7 @@ export default function NewsCreateModal({
         authorPhone: currentUser?.phone || "",
         imageUrl: primaryImage,
         thumbnail: primaryImage,
-        imageGallery: finalImageUrls,
+        imageGallery: sanitizedImageUrls,
         status: isCadre ? submitStatus : "PENDING_APPROVAL",
         pin: "ccbeasup",
         userRole: currentUser?.role || "GUEST",

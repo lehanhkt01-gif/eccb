@@ -48,6 +48,10 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 
+# Đảm bảo các thư mục upload tồn tại và có quyền ghi cho tiến trình nextjs
+RUN mkdir -p /app/public/uploads/news /app/public/uploads/documents && \
+    chown -R nextjs:nodejs /app/public
+
 USER nextjs
 
 EXPOSE 3000

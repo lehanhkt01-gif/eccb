@@ -71,12 +71,22 @@ export async function POST(req: NextRequest) {
         .substring(0, 40);
 
       const uniqueFileName = `ccb_${Date.now()}_${Math.random().toString(36).substring(2, 7)}_${cleanBaseName}${ext || ".webp"}`;
-      const filePath = path.join(uploadDir, uniqueFileName);
-
       const bytes = await file.arrayBuffer();
-      await fs.writeFile(filePath, Buffer.from(bytes));
+      const buffer = Buffer.from(bytes);
 
-      savedUrls.push(`${UPLOAD_SUBDIR}/${uniqueFileName}`);
+      try {
+        const uploadDir = path.join(process.cwd(), "public", "uploads", "news");
+        await fs.mkdir(uploadDir, { recursive: true });
+        const filePath = path.join(uploadDir, uniqueFileName);
+        await fs.writeFile(filePath, buffer);
+        savedUrls.push(`${UPLOAD_SUBDIR}/${uniqueFileName}`);
+      } catch (fsErr) {
+        // Fallback tự động khi chạy trong container read-only hoặc chưa cấp quyền ghi
+        console.warn("Cảnh báo: Không thể ghi file vào ổ đĩa public/uploads, tự động kích hoạt fallback Base64 Data URL an toàn:", fsErr);
+        const mimeType = file.type || (ext === ".png" ? "image/png" : ext === ".webp" ? "image/webp" : "image/jpeg");
+        const base64 = buffer.toString("base64");
+        savedUrls.push(`data:${mimeType};base64,${base64}`);
+      }
     }
 
     return NextResponse.json({
@@ -87,7 +97,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error("Lỗi khi upload ảnh:", error);
     return NextResponse.json(
-      { success: false, message: "Lỗi hệ thống khi lưu ảnh tải lên!", error: String(error) },
+      { success: false, message: "Lỗi hệ thống khi tải ảnh lên!", error: String(error) },
       { status: 500 }
     );
   }
