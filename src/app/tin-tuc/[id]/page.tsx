@@ -163,6 +163,41 @@ export default async function NewsDetailPage({ params }: PageProps) {
             {article.content}
           </div>
 
+          {/* Album ảnh minh họa / Gallery (nếu có nhiều hơn 1 ảnh) */}
+          {article.imageGallery && article.imageGallery.length > 1 && (
+            <div className="mt-8 pt-6 border-t-2 border-stone-200 space-y-4">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">📸</span>
+                <h3 className="font-bold text-base sm:text-lg text-moss-green uppercase tracking-wide">
+                  Album Hình Ảnh Tư Liệu ({article.imageGallery.length} hình ảnh)
+                </h3>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
+                {article.imageGallery.map((imgUrl, idx) => (
+                  <a
+                    key={idx}
+                    href={imgUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group relative aspect-4/3 rounded-xl overflow-hidden border-2 border-stone-200 bg-stone-100 hover:border-moss-green shadow-xs hover:shadow-md transition duration-200 block"
+                    title={`Bấm để xem ảnh phóng to - Ảnh ${idx + 1}`}
+                  >
+                    <img
+                      src={imgUrl}
+                      alt={`${article.title} - Ảnh ${idx + 1}`}
+                      className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                    />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-end p-2">
+                      <span className="text-[11px] font-bold text-white bg-black/60 px-2 py-0.5 rounded backdrop-blur-xs opacity-0 group-hover:opacity-100 transition">
+                        🔍 Phóng to
+                      </span>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Hộp xác thực cơ quan biên tập */}
           <div className="mt-8 p-4 bg-emerald-50/60 border border-emerald-200 rounded-xl flex items-start gap-3">
             <div className="text-2xl">🎖️</div>

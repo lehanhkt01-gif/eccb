@@ -17,6 +17,7 @@ export interface Article {
   content: string;
   imageUrl?: string;
   thumbnail?: string;
+  imageGallery?: string[];
   status: ArticleStatus;
   reviewedById?: string;
   reviewedByName?: string;

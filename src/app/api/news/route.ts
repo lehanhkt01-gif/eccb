@@ -106,6 +106,8 @@ export async function POST(req: NextRequest) {
       authorPhone,
       imageUrl,
       thumbnail,
+      imageGallery,
+      status: requestedStatus,
       pin,
     } = body;
 
@@ -142,10 +144,23 @@ export async function POST(req: NextRequest) {
     const now = new Date();
     const dateStr = `${String(now.getDate()).padStart(2, "0")}/${String(now.getMonth() + 1).padStart(2, "0")}/${now.getFullYear()}`;
     const generatedSlug = `${slugify(title)}-${Date.now()}`;
-    const image = imageUrl?.trim() || thumbnail?.trim() || "/images/hero-military-bg.webp";
+
+    // Xử lý danh sách ảnh (tối đa 5 ảnh)
+    let gallery: string[] = [];
+    if (Array.isArray(imageGallery) && imageGallery.length > 0) {
+      gallery = imageGallery.slice(0, 5);
+    } else if (imageUrl || thumbnail) {
+      gallery = [(imageUrl || thumbnail).trim()];
+    }
+
+    const primaryImage = gallery[0] || "/images/hero-military-bg.webp";
 
     // Quy tắc nghiệp vụ: Hội viên & Chi hội trưởng luôn tạo bài ở trạng thái PENDING_APPROVAL
-    const articleStatus: ArticleStatus = isCadre ? "APPROVED" : "PENDING_APPROVAL";
+    // Cán bộ xã có thể chọn DRAFT hoặc APPROVED
+    let articleStatus: ArticleStatus = "PENDING_APPROVAL";
+    if (isCadre) {
+      articleStatus = requestedStatus === "DRAFT" ? "DRAFT" : "APPROVED";
+    }
 
     const newArticle: Article = {
       id: `tin-${Date.now()}`,
@@ -159,13 +174,14 @@ export async function POST(req: NextRequest) {
       authorPhone: authorPhone || "",
       summary: summary.trim(),
       content: content.trim(),
-      imageUrl: image,
-      thumbnail: image,
+      imageUrl: primaryImage,
+      thumbnail: primaryImage,
+      imageGallery: gallery,
       status: articleStatus,
       views: 1,
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),
-      ...(isCadre
+      ...(isCadre && articleStatus === "APPROVED"
         ? {
             reviewedById: "cadre-ea-sup",
             reviewedByName: "Ban Thường trực Hội CCB Xã Ea Súp",
@@ -180,7 +196,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       message: isCadre
-        ? "Đã đăng tải và xuất bản bản tin thành công!"
+        ? articleStatus === "DRAFT"
+          ? "Đã lưu bản nháp bài viết thành công!"
+          : "Đã đăng tải và xuất bản bản tin thành công!"
         : "Đã gửi bài viết thành công! Bài viết đang chờ Ban Thường trực Hội CCB Xã Ea Súp phê duyệt.",
       data: newArticle,
     });
@@ -211,6 +229,7 @@ export async function PUT(req: NextRequest) {
       author,
       imageUrl,
       thumbnail,
+      imageGallery,
       pin,
       rejectionReason,
       userRole,
@@ -289,6 +308,7 @@ export async function PUT(req: NextRequest) {
 
     // Chỉnh sửa nội dung bản tin (Cán bộ xã toàn quyền)
     const img = imageUrl ? imageUrl.trim() : thumbnail ? thumbnail.trim() : current.imageUrl;
+    const gallery = Array.isArray(imageGallery) ? imageGallery.slice(0, 5) : current.imageGallery || (img ? [img] : []);
     articles[idx] = {
       ...current,
       title: title ? title.trim() : current.title,
@@ -296,8 +316,9 @@ export async function PUT(req: NextRequest) {
       summary: summary ? summary.trim() : current.summary,
       content: content ? content.trim() : current.content,
       author: author ? author.trim() : current.author,
-      imageUrl: img,
-      thumbnail: img,
+      imageUrl: img || gallery[0],
+      thumbnail: img || gallery[0],
+      imageGallery: gallery,
       updatedAt: now.toISOString(),
     };
 

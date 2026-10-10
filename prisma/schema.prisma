@@ -552,6 +552,7 @@ model Article {
   summary      String?       @db.Text
   content      String        @db.Text
   thumbnail    String?
+  imageGallery String[]      @default([]) // Album tối đa 5 ảnh chi tiết của bài viết
   category     String        // Nghĩa tình đồng đội, Kinh tế CCB, Hoạt động Hội...
   status       ArticleStatus @default(PENDING_APPROVAL)
   authorId     String
