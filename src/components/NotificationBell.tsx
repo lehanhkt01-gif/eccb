@@ -110,101 +110,111 @@ export default function NotificationBell({
 
       {/* Dropdown danh sách thông báo */}
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white text-deep-text rounded-2xl shadow-2xl border-2 border-moss-green z-50 overflow-hidden animate-in fade-in duration-150">
-          {/* Header Thông báo */}
-          <div className="p-3 bg-gradient-to-r from-moss-green to-moss-green-dark text-white flex items-center justify-between border-b-2 border-amber-400">
-            <div className="flex items-center gap-1.5">
-              <span className="text-base">🔔</span>
-              <span className="text-xs sm:text-sm font-bold uppercase tracking-wide text-amber-300">
-                Thông Báo &amp; Xét Duyệt
-              </span>
-              {unreadCount > 0 && (
-                <span className="px-1.5 py-0.2 bg-flag-red text-white text-[10px] font-black rounded-full">
-                  {unreadCount} mới
+        <>
+          {/* Backdrop mờ mỏng trên Mobile - click ra ngoài để đóng */}
+          <div
+            className="fixed inset-0 bg-black/30 z-40 sm:hidden backdrop-blur-[1px]"
+            onClick={() => setIsOpen(false)}
+            aria-hidden="true"
+          />
+
+          {/* Container Popover: Mobile căn giữa màn hình (fixed inset-x-4 top-16 mx-auto), Desktop neo mép phải nút chuông */}
+          <div className="fixed inset-x-4 top-16 mx-auto sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-2 w-auto sm:w-80 sm:max-w-sm z-50 rounded-xl shadow-2xl border border-stone-200 bg-[#FBFBEE] overflow-hidden flex flex-col max-h-[80vh] sm:max-h-[460px] animate-in fade-in duration-150">
+            {/* Header Thông báo chuẩn Hallmark Quân đội */}
+            <div className="p-3 bg-gradient-to-r from-moss-green to-moss-green-dark text-white flex items-center justify-between border-b-2 border-amber-400 gap-2 shrink-0">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="text-base shrink-0">🔔</span>
+                <span className="text-xs sm:text-sm font-bold uppercase tracking-wide text-amber-300 truncate">
+                  Thông Báo &amp; Xét Duyệt
                 </span>
+                {unreadCount > 0 && (
+                  <span className="px-1.5 py-0.5 bg-flag-red text-white text-[10px] font-black rounded-full shrink-0">
+                    {unreadCount} mới
+                  </span>
+                )}
+              </div>
+
+              {unreadCount > 0 && (
+                <button
+                  type="button"
+                  onClick={handleMarkAllRead}
+                  className="text-[11px] text-amber-200 hover:text-white underline cursor-pointer shrink-0 whitespace-nowrap"
+                >
+                  Đã đọc tất cả
+                </button>
               )}
             </div>
 
-            {unreadCount > 0 && (
-              <button
-                type="button"
-                onClick={handleMarkAllRead}
-                className="text-[11px] text-amber-200 hover:text-white underline cursor-pointer"
-              >
-                Đã đọc tất cả
-              </button>
-            )}
-          </div>
-
-          {/* Danh sách thông báo */}
-          <div className="max-h-80 overflow-y-auto divide-y divide-stone-100">
-            {relevantNotifs.length === 0 ? (
-              <div className="py-8 text-center text-xs text-stone-500">
-                <span className="text-2xl block mb-1">📭</span>
-                Hiện chưa có thông báo xét duyệt nào mới.
-              </div>
-            ) : (
-              relevantNotifs.map((n) => (
-                <div
-                  key={n.id}
-                  onClick={() => handleItemClick(n)}
-                  className={`p-3 transition cursor-pointer flex items-start gap-2.5 hover:bg-stone-50 ${
-                    !n.isRead ? "bg-amber-50/60 font-medium" : "opacity-80"
-                  }`}
-                >
-                  <span className="text-lg shrink-0 mt-0.5">
-                    {n.type === "NEW_REGISTRATION"
-                      ? "📝"
-                      : n.type === "DUAL_APPROVAL_STEP"
-                      ? "⏳"
-                      : n.type === "ADMISSION_SUCCESS"
-                      ? "🎖️"
-                      : "📢"}
-                  </span>
-
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-1">
-                      <p className="text-xs font-bold text-moss-green truncate">
-                        {n.title}
-                      </p>
-                      {!n.isRead && (
-                        <span className="w-2 h-2 rounded-full bg-flag-red shrink-0" />
-                      )}
-                    </div>
-                    <p className="text-[11px] text-deep-text line-clamp-2 mt-0.5 leading-snug">
-                      {n.content}
-                    </p>
-                    <span className="text-[10px] text-stone-400 mt-1 block">
-                      {new Date(n.createdAt).toLocaleDateString("vi-VN", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        day: "2-digit",
-                        month: "2-digit",
-                      })}
-                    </span>
-                  </div>
+            {/* Danh sách thông báo - Cuộn mượt với max-height */}
+            <div className="overflow-y-auto divide-y divide-stone-200/80 flex-1 max-h-[60vh] sm:max-h-[340px]">
+              {relevantNotifs.length === 0 ? (
+                <div className="py-8 text-center text-xs text-stone-500">
+                  <span className="text-2xl block mb-1">📭</span>
+                  Hiện chưa có thông báo xét duyệt nào mới.
                 </div>
-              ))
+              ) : (
+                relevantNotifs.map((n) => (
+                  <div
+                    key={n.id}
+                    onClick={() => handleItemClick(n)}
+                    className={`p-3 transition cursor-pointer flex items-start gap-2.5 hover:bg-amber-100/40 ${
+                      !n.isRead ? "bg-amber-50/80 font-medium" : "opacity-85"
+                    }`}
+                  >
+                    <span className="text-lg shrink-0 mt-0.5">
+                      {n.type === "NEW_REGISTRATION"
+                        ? "📝"
+                        : n.type === "DUAL_APPROVAL_STEP"
+                        ? "⏳"
+                        : n.type === "ADMISSION_SUCCESS"
+                        ? "🎖️"
+                        : "📢"}
+                    </span>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-1">
+                        <p className="text-xs font-bold text-moss-green truncate">
+                          {n.title}
+                        </p>
+                        {!n.isRead && (
+                          <span className="w-2 h-2 rounded-full bg-flag-red shrink-0" />
+                        )}
+                      </div>
+                      <p className="text-[11px] text-deep-text line-clamp-2 mt-0.5 leading-snug">
+                        {n.content}
+                      </p>
+                      <span className="text-[10px] text-stone-500 mt-1 block">
+                        {new Date(n.createdAt).toLocaleDateString("vi-VN", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          day: "2-digit",
+                          month: "2-digit",
+                        })}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Footer Dropdown */}
+            {onOpenApproval && (
+              <div className="p-2.5 bg-stone-100/90 border-t border-stone-200 text-center shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsOpen(false);
+                    onOpenApproval();
+                  }}
+                  className="w-full py-1.5 bg-moss-green hover:bg-moss-green-light active:scale-98 text-white rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                >
+                  <span>📋</span>
+                  <span>Mở Bảng Xét Duyệt Song Trùng 2 Cấp</span>
+                </button>
+              </div>
             )}
           </div>
-
-          {/* Footer Dropdown */}
-          {onOpenApproval && (
-            <div className="p-2 bg-stone-100 border-t border-stone-200 text-center">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsOpen(false);
-                  onOpenApproval();
-                }}
-                className="w-full py-1.5 bg-moss-green hover:bg-moss-green-light active:scale-98 text-white rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer"
-              >
-                <span>📋</span>
-                <span>Mở Bảng Xét Duyệt Song Trùng 2 Cấp</span>
-              </button>
-            </div>
-          )}
-        </div>
+        </>
       )}
     </div>
   );

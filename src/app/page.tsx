@@ -11,17 +11,7 @@ import NewsShareBar from "@/components/NewsShareBar";
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
-interface Article {
-  id: string;
-  title: string;
-  category: string;
-  date: string;
-  author: string;
-  summary: string;
-  content: string;
-  imageUrl?: string;
-  views?: number;
-}
+import { Article } from "@/lib/newsService";
 
 export default function HomePage() {
   const router = useRouter();
@@ -55,9 +45,11 @@ export default function HomePage() {
   const [submitError, setSubmitError] = useState("");
   const [submitSuccess, setSubmitSuccess] = useState("");
 
+  // Tab lọc trạng thái bài viết (Dành cho Cán bộ xã hoặc tác giả)
+  const [articleTab, setArticleTab] = useState<"ALL" | "APPROVED" | "PENDING_APPROVAL">("ALL");
+
   // Tải danh sách bản tin từ API và đồng bộ liên tục trạng thái đăng nhập
   useEffect(() => {
-    fetchNews();
     const user = getCurrentUser();
     setCurrentUserState(user);
     if (user?.role === "SUPER_ADMIN") {
@@ -65,6 +57,7 @@ export default function HomePage() {
     } else {
       setIsCadreVerified(false);
     }
+    fetchNews(user);
 
     // Đăng ký nhận sự kiện cập nhật auth tức thì trong và giữa các tab
     const unsubscribe = subscribeAuthChange((updatedUser) => {
@@ -74,6 +67,7 @@ export default function HomePage() {
       } else {
         setIsCadreVerified(false);
       }
+      fetchNews(updatedUser);
     });
 
     return () => {
@@ -81,10 +75,17 @@ export default function HomePage() {
     };
   }, []);
 
-  const fetchNews = async () => {
+  const fetchNews = async (user?: AuthUser | null) => {
     try {
       setLoadingNews(true);
-      const res = await fetch("/api/news");
+      const activeUser = user !== undefined ? user : currentUser;
+      let url = "/api/news";
+      if (activeUser?.role === "SUPER_ADMIN") {
+        url += "?role=SUPER_ADMIN";
+      } else if (activeUser) {
+        url += `?authorId=${encodeURIComponent(activeUser.id || activeUser.username || "")}`;
+      }
+      const res = await fetch(url);
       const json = await res.json();
       if (json.success && Array.isArray(json.data)) {
         setArticles(json.data);
@@ -164,35 +165,56 @@ export default function HomePage() {
     setIsMemberLoggingIn(false);
   };
 
-  // Mở modal thêm mới bản tin (dành cho Cán bộ xã)
+  // Mở modal thêm mới bản tin (Hội viên / Chi hội trưởng / Cán bộ xã)
   const handleOpenCreateModal = () => {
+    if (!currentUser) {
+      // Nhắc nhở người dùng đăng nhập tài khoản trước
+      setIsMemberModalOpen(true);
+      return;
+    }
+
     setIsEditingArticle(null);
     setFormTitle("");
     setFormCategory("Hoạt động Hội");
     setFormSummary("");
     setFormContent("");
-    setFormAuthor("Thường trực Hội CCB Xã Ea Súp");
+
+    if (currentUser.role === "SUPER_ADMIN") {
+      setFormAuthor("Thường trực Hội CCB Xã Ea Súp");
+      setIsCadreVerified(true);
+    } else if (currentUser.role === "BRANCH_LEADER") {
+      setFormAuthor(`Đ/c ${currentUser.fullName} - CHT ${currentUser.hamletName || ""}`);
+      setIsCadreVerified(true);
+    } else {
+      setFormAuthor(`Đ/c ${currentUser.fullName} - Hội viên ${currentUser.hamletName || ""}`);
+      setIsCadreVerified(true);
+    }
+
     setFormImageUrl("/images/hero-military-bg.webp");
     setSubmitError("");
     setSubmitSuccess("");
     setIsCadreModalOpen(true);
   };
 
-  // Mở modal sửa bản tin
+  // Mở modal sửa bản tin (Chỉ Cán bộ xã được phép)
   const handleOpenEditModal = (article: Article) => {
+    if (currentUser?.role !== "SUPER_ADMIN") {
+      alert("Theo quy định Điều lệ Hội, chỉ Cán bộ Thường trực xã mới có quyền chỉnh sửa bài viết đã lưu hành!");
+      return;
+    }
     setIsEditingArticle(article);
     setFormTitle(article.title);
     setFormCategory(article.category);
     setFormSummary(article.summary);
     setFormContent(article.content);
     setFormAuthor(article.author);
-    setFormImageUrl(article.imageUrl || "/images/hero-military-bg.webp");
+    setFormImageUrl(article.imageUrl || article.thumbnail || "/images/hero-military-bg.webp");
     setSubmitError("");
     setSubmitSuccess("");
     setIsCadreModalOpen(true);
   };
 
-  // Xác thực cán bộ xã bằng mã PIN (mặc định ccbeasup hoặc số hotline 0943170770)
+  // Xác thực cán bộ xã bằng mã PIN (khi chưa đăng nhập bằng tài khoản)
   const handleVerifyCadre = (e: React.FormEvent) => {
     e.preventDefault();
     if (cadrePin === "ccbeasup" || cadrePin === "0943170770" || cadrePin === "123456") {
@@ -203,7 +225,7 @@ export default function HomePage() {
     }
   };
 
-  // Gửi form lưu / cập nhật bản tin
+  // Gửi form lưu / cập nhật bản tin (Hybrid RBAC + ABAC)
   const handleSaveArticle = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError("");
@@ -226,27 +248,37 @@ export default function HomePage() {
         summary: formSummary,
         content: formContent,
         author: formAuthor,
+        authorId: currentUser?.id || currentUser?.username || "hoi-vien",
+        authorRole: currentUser?.role || "MEMBER",
+        authorPhone: currentUser?.phone || "",
         imageUrl: formImageUrl,
+        thumbnail: formImageUrl,
         pin: cadrePin || "ccbeasup",
+        userRole: currentUser?.role || "GUEST",
       };
 
       const res = await fetch(url, {
         method,
         headers: {
           "Content-Type": "application/json",
-          "x-admin-role": "CADRE",
+          "x-admin-role": currentUser?.role === "SUPER_ADMIN" ? "CADRE" : "MEMBER",
+          "x-user-role": currentUser?.role || "GUEST",
         },
         body: JSON.stringify(payload),
       });
 
       const json = await res.json();
       if (json.success) {
-        setSubmitSuccess(isEdit ? "Cập nhật bản tin thành công!" : "Đăng tải bản tin mới thành công!");
-        await fetchNews();
+        if (currentUser?.role === "SUPER_ADMIN") {
+          setSubmitSuccess(isEdit ? "Cập nhật bản tin thành công!" : "Đã phát hành bản tin tuyên truyền thành công!");
+        } else {
+          setSubmitSuccess("✓ Đã gửi bài viết thành công! Bài viết đang chờ Ban Thường trực Hội CCB Xã Ea Súp phê duyệt.");
+        }
+        await fetchNews(currentUser);
         setTimeout(() => {
           setIsCadreModalOpen(false);
           setSubmitSuccess("");
-        }, 1200);
+        }, 1500);
       } else {
         setSubmitError(json.message || "Không thể lưu bài viết!");
       }
@@ -255,17 +287,82 @@ export default function HomePage() {
     }
   };
 
-  // Xóa bản tin
+  // Phê duyệt bài viết (Cán bộ xã)
+  const handleApproveArticle = async (articleId: string, articleTitle: string) => {
+    if (!confirm(`Đồng chí có chắc chắn muốn PHÊ DUYỆT và XUẤT BẢN bài viết: "${articleTitle}"?`)) return;
+    try {
+      const res = await fetch("/api/news", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-role": "CADRE",
+          "x-user-role": "SUPER_ADMIN",
+        },
+        body: JSON.stringify({
+          id: articleId,
+          action: "approve",
+          pin: cadrePin || "ccbeasup",
+          userRole: "SUPER_ADMIN",
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        alert("✅ Đã phê duyệt và xuất bản bài viết thành công!");
+        await fetchNews(currentUser);
+      } else {
+        alert("⚠️ Lỗi: " + (json.message || "Không thể phê duyệt!"));
+      }
+    } catch {
+      alert("Lỗi kết nối máy chủ khi phê duyệt bài viết!");
+    }
+  };
+
+  // Từ chối bài viết (Cán bộ xã)
+  const handleRejectArticle = async (articleId: string, articleTitle: string) => {
+    const reason = prompt(`Nhập lý do từ chối bài viết "${articleTitle}" (để phản hồi cho tác giả):`, "Nội dung chưa phù hợp tiêu chí tuyên truyền của Hội");
+    if (reason === null) return;
+    try {
+      const res = await fetch("/api/news", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-role": "CADRE",
+          "x-user-role": "SUPER_ADMIN",
+        },
+        body: JSON.stringify({
+          id: articleId,
+          action: "reject",
+          rejectionReason: reason,
+          pin: cadrePin || "ccbeasup",
+          userRole: "SUPER_ADMIN",
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        alert("Đã từ chối bài viết!");
+        await fetchNews(currentUser);
+      } else {
+        alert("⚠️ Lỗi: " + (json.message || "Không thể từ chối!"));
+      }
+    } catch {
+      alert("Lỗi kết nối máy chủ khi từ chối bài viết!");
+    }
+  };
+
+  // Xóa bản tin (Chỉ Cán bộ xã)
   const handleDeleteArticle = async (id: string) => {
     if (!confirm("Đồng chí có chắc chắn muốn xóa bản tin tuyên truyền này?")) return;
     try {
       const res = await fetch(`/api/news?id=${id}&pin=${cadrePin || "ccbeasup"}`, {
         method: "DELETE",
-        headers: { "x-admin-role": "CADRE" },
+        headers: {
+          "x-admin-role": "CADRE",
+          "x-user-role": "SUPER_ADMIN",
+        },
       });
       const json = await res.json();
       if (json.success) {
-        await fetchNews();
+        await fetchNews(currentUser);
       } else {
         alert(json.message || "Không thể xóa bài viết!");
       }
@@ -330,133 +427,227 @@ export default function HomePage() {
             </p>
           </div>
 
-          {/* Nút dành cho Cán bộ Xã đăng bài mới — CHỈ HIỂN THỊ KHI ĐÃ ĐĂNG NHẬP VAI TRÒ CÁN BỘ XÃ (SUPER_ADMIN) */}
-          {currentUser?.role === "SUPER_ADMIN" && (
-            <div className="flex items-center gap-2 shrink-0">
-              <button
-                type="button"
-                onClick={handleOpenCreateModal}
-                className="inline-flex items-center gap-2 px-3.5 py-1.5 sm:px-4 sm:py-2 bg-moss-green hover:bg-moss-green-dark text-white text-xs sm:text-sm font-bold rounded shadow-xs transition"
-                title="Chỉ cán bộ xã mới có quyền tạo mới bản tin tuyên truyền"
-              >
-                <span>➕</span>
-                <span>Đăng Bản Tin Mới</span>
-                <span className="text-[10px] bg-amber-400 text-stone-900 px-1.5 py-0.5 rounded font-extrabold uppercase">
-                  Cán bộ xã
-                </span>
-              </button>
-            </div>
-          )}
+          {/* Cụm Nút Tác vụ & Tạo tin bài (Phân quyền Hybrid RBAC + ABAC) */}
+          <div className="flex items-center gap-2 shrink-0 flex-wrap">
+            {/* Nút gửi tin bài dành cho Hội viên / Chi hội trưởng / Cán bộ xã */}
+            <button
+              type="button"
+              onClick={handleOpenCreateModal}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 sm:px-4 sm:py-2 bg-moss-green hover:bg-moss-green-dark text-white text-xs sm:text-sm font-bold rounded shadow-xs transition cursor-pointer active:scale-98"
+              title="Đăng tin bài mới hoặc gửi phản ánh chi hội"
+            >
+              <span>{currentUser?.role === "SUPER_ADMIN" ? "➕" : "✍️"}</span>
+              <span>
+                {currentUser?.role === "SUPER_ADMIN"
+                  ? "Đăng Bản Tin Mới"
+                  : currentUser?.role === "BRANCH_LEADER"
+                  ? "Gửi Tin Bài Chi Hội"
+                  : currentUser?.role === "MEMBER"
+                  ? "Gửi Bài Viết CCB"
+                  : "Gửi Tin Bài Phản Ánh"}
+              </span>
+              <span className="text-[10px] bg-amber-400 text-stone-900 px-1.5 py-0.5 rounded font-extrabold uppercase">
+                {currentUser?.role === "SUPER_ADMIN"
+                  ? "Cán bộ xã"
+                  : currentUser?.role === "BRANCH_LEADER"
+                  ? "Chi hội"
+                  : currentUser?.role === "MEMBER"
+                  ? "Hội viên"
+                  : "CCB"}
+              </span>
+            </button>
+          </div>
         </div>
+
+        {/* Thanh Tab Lọc Trạng Thái Tin Bài (Hiển thị khi là Cán bộ xã hoặc có bài viết) */}
+        {currentUser?.role === "SUPER_ADMIN" && (
+          <div className="flex items-center gap-2 mb-5 overflow-x-auto pb-1 text-xs sm:text-sm">
+            <span className="font-bold text-stone-600 text-xs shrink-0">Bộ lọc cán bộ:</span>
+            <button
+              type="button"
+              onClick={() => setArticleTab("ALL")}
+              className={`px-3 py-1 rounded-full font-bold transition cursor-pointer shrink-0 ${
+                articleTab === "ALL"
+                  ? "bg-moss-green text-white shadow-xs"
+                  : "bg-stone-200/80 hover:bg-stone-300 text-deep-text"
+              }`}
+            >
+              Tất cả ({articles.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setArticleTab("APPROVED")}
+              className={`px-3 py-1 rounded-full font-bold transition cursor-pointer shrink-0 ${
+                articleTab === "APPROVED"
+                  ? "bg-moss-green text-white shadow-xs"
+                  : "bg-stone-200/80 hover:bg-stone-300 text-deep-text"
+              }`}
+            >
+              Đã xuất bản ({articles.filter((a) => a.status === "APPROVED").length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setArticleTab("PENDING_APPROVAL")}
+              className={`px-3 py-1 rounded-full font-bold transition cursor-pointer flex items-center gap-1.5 shrink-0 ${
+                articleTab === "PENDING_APPROVAL"
+                  ? "bg-amber-600 text-white shadow-xs"
+                  : "bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300"
+              }`}
+            >
+              <span>Chờ phê duyệt</span>
+              {articles.filter((a) => a.status === "PENDING_APPROVAL").length > 0 && (
+                <span className="px-1.5 py-0.2 bg-flag-red text-white text-[10px] font-black rounded-full animate-pulse">
+                  {articles.filter((a) => a.status === "PENDING_APPROVAL").length}
+                </span>
+              )}
+            </button>
+          </div>
+        )}
 
         {loadingNews ? (
           <div className="text-center py-12 text-deep-muted font-medium">
             Đang tải dữ liệu bản tin tuyên truyền...
           </div>
-        ) : articles.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-lg border border-stone-200">
-            <p className="text-deep-muted mb-3">Hiện chưa có bản tin tuyên truyền nào.</p>
-            <button
-              onClick={handleOpenCreateModal}
-              className="px-4 py-2 bg-moss-green text-white text-sm rounded font-bold"
-            >
-              ➕ Cán bộ xã đăng bản tin đầu tiên
-            </button>
-          </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {articles.map((item) => (
-              <article
-                key={item.id}
-                className="bg-white border-2 border-stone-200 rounded-lg overflow-hidden hover:border-moss-green transition shadow-xs flex flex-col justify-between group"
-              >
-                <div>
-                  {/* Ảnh minh họa bài viết */}
-                  <div className="h-40 w-full overflow-hidden relative bg-stone-100">
-                    <img
-                      src={item.imageUrl ? (item.imageUrl.startsWith('/') ? `${basePath}${item.imageUrl}` : item.imageUrl) : `${basePath}/images/hero-military-bg.webp`}
-                      alt={item.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = `${basePath}/images/hero-military-bg.webp`;
-                      }}
-                    />
-                    <div className="absolute top-2.5 left-2.5">
-                      <span className="px-2.5 py-1 rounded text-[11px] font-bold uppercase bg-moss-green text-white shadow-xs">
-                        {item.category}
-                      </span>
-                    </div>
-                  </div>
+          (() => {
+            const filteredArticles = articles.filter((a) => {
+              if (currentUser?.role === "SUPER_ADMIN") {
+                if (articleTab === "APPROVED") return a.status === "APPROVED";
+                if (articleTab === "PENDING_APPROVAL") return a.status === "PENDING_APPROVAL";
+              }
+              return true;
+            });
 
-                  {/* Nội dung tóm tắt */}
-                  <div className="p-4 space-y-2">
-                    <div className="flex items-center justify-between text-xs text-deep-muted">
-                      <span>📅 {item.date}</span>
-                      <span>👁️ {item.views || 100} lượt xem</span>
-                    </div>
-                    <Link href={`/tin-tuc/${item.id}`} className="block">
-                      <h3 className="text-base font-bold text-deep-text leading-snug line-clamp-2 group-hover:text-moss-green transition">
-                        {item.title}
-                      </h3>
-                    </Link>
-                    <p className="text-xs text-deep-muted leading-relaxed line-clamp-3">
-                      {item.summary}
-                    </p>
-                  </div>
+            if (filteredArticles.length === 0) {
+              return (
+                <div className="text-center py-12 bg-white rounded-lg border border-stone-200">
+                  <p className="text-deep-muted mb-3">
+                    {articleTab === "PENDING_APPROVAL"
+                      ? "Hiện không có bản tin nào đang chờ phê duyệt."
+                      : "Hiện chưa có bản tin tuyên truyền nào phù hợp."}
+                  </p>
+                  <button
+                    onClick={handleOpenCreateModal}
+                    className="px-4 py-2 bg-moss-green text-white text-sm rounded font-bold hover:bg-moss-green-dark transition cursor-pointer"
+                  >
+                    ➕ Đăng / Gửi bài viết mới
+                  </button>
                 </div>
+              );
+            }
 
-                {/* Chân thẻ bài viết: Nút xem chi tiết & Cụm Quản trị Cán bộ */}
-                <div className="p-4 pt-0">
-                  <div className="pt-3 border-t border-stone-100 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
+            return (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {filteredArticles.map((item) => (
+                  <article
+                    key={item.id}
+                    className="bg-white border-2 border-stone-200 rounded-lg overflow-hidden hover:border-moss-green transition shadow-xs flex flex-col justify-between group"
+                  >
+                    <div>
+                      {/* Bọc Link vào Ảnh đại diện Thumbnail với hiệu ứng hover zoom */}
                       <Link
                         href={`/tin-tuc/${item.id}`}
-                        className="text-xs font-bold text-moss-green hover:underline flex items-center gap-1"
+                        className="block h-40 w-full overflow-hidden relative bg-stone-100 cursor-pointer"
+                        title={item.title}
                       >
-                        <span>Đọc tiếp</span>
-                        <span>→</span>
+                        <img
+                          src={
+                            item.imageUrl || item.thumbnail
+                              ? (item.imageUrl || item.thumbnail)!.startsWith("/")
+                                ? `${basePath}${item.imageUrl || item.thumbnail}`
+                                : item.imageUrl || item.thumbnail
+                              : `${basePath}/images/hero-military-bg.webp`
+                          }
+                          alt={item.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = `${basePath}/images/hero-military-bg.webp`;
+                          }}
+                        />
+                        <div className="absolute top-2.5 left-2.5 flex flex-wrap gap-1 pointer-events-none">
+                          <span className="px-2.5 py-1 rounded text-[11px] font-bold uppercase bg-moss-green text-white shadow-xs">
+                            {item.category}
+                          </span>
+                          {/* Badge trạng thái phê duyệt */}
+                          {item.status === "PENDING_APPROVAL" && (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-amber-500 text-stone-900 shadow-xs">
+                              ⏳ Chờ xã duyệt
+                            </span>
+                          )}
+                          {item.status === "REJECTED" && (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-red-600 text-white shadow-xs">
+                              ❌ Từ chối
+                            </span>
+                          )}
+                        </div>
                       </Link>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          const url = `https://ccb.easupso.com/tin-tuc/${item.id}`;
-                          const zaloUrl = `https://sp.zalo.me/share_inline?link=${encodeURIComponent(url)}&title=${encodeURIComponent(item.title)}&desc=${encodeURIComponent(item.summary)}`;
-                          window.open(zaloUrl, "_blank", "width=600,height=600,noopener,noreferrer");
-                        }}
-                        className="text-[11px] px-2 py-0.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded font-bold transition flex items-center gap-1 cursor-pointer"
-                        title="Chia sẻ trực tiếp lên Zalo hoặc nhóm Chi hội CCB"
-                      >
-                        <span>📲 Zalo</span>
-                      </button>
+
+                      {/* Bọc Link vào Tiêu đề bài viết */}
+                      <div className="p-4 space-y-2">
+                        <div className="flex items-center justify-between text-xs text-deep-muted">
+                          <span>📅 {item.date}</span>
+                          <span>👁️ {item.views || 100} lượt xem</span>
+                        </div>
+                        <Link href={`/tin-tuc/${item.id}`} className="block">
+                          <h3 className="text-base font-bold text-deep-text leading-snug line-clamp-2 group-hover:text-moss-green group-hover:underline transition cursor-pointer">
+                            {item.title}
+                          </h3>
+                        </Link>
+                        <p className="text-xs text-deep-muted leading-relaxed line-clamp-3">
+                          {item.summary}
+                        </p>
+                      </div>
                     </div>
 
-                    {/* Nút Cán bộ xã Sửa / Xóa (Chỉ hiển thị cho SUPER_ADMIN) */}
+                    {/* Chân thẻ bài viết: ĐÃ LOẠI BỎ 'Đọc tiếp →' & 'Zalo'. Chỉ hiển thị cụm Quản trị/Phê duyệt cho Cán bộ xã */}
                     {currentUser?.role === "SUPER_ADMIN" && (
-                      <div className="flex items-center gap-1.5 opacity-90 group-hover:opacity-100">
-                        <button
-                          type="button"
-                          onClick={() => handleOpenEditModal(item)}
-                          className="text-[11px] px-2 py-1 bg-amber-50 hover:bg-amber-100 text-bronze-gold font-bold rounded border border-amber-300 transition cursor-pointer"
-                          title="Chỉnh sửa bản tin (Dành cho cán bộ xã)"
-                        >
-                          ✏️ Sửa
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteArticle(item.id)}
-                          className="text-[11px] px-2 py-1 bg-red-50 hover:bg-red-100 text-flag-red font-bold rounded border border-red-200 transition cursor-pointer"
-                          title="Xóa bản tin (Dành cho cán bộ xã)"
-                        >
-                          🗑️
-                        </button>
+                      <div className="p-4 pt-0">
+                        <div className="pt-2.5 border-t border-stone-100 flex items-center justify-end gap-1.5 opacity-90 group-hover:opacity-100 flex-wrap">
+                          {/* Phê duyệt & Từ chối nhanh cho bài PENDING_APPROVAL */}
+                          {item.status === "PENDING_APPROVAL" && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => handleApproveArticle(item.id, item.title)}
+                                className="text-[11px] px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded shadow-2xs transition cursor-pointer"
+                                title="Phê duyệt và xuất bản bài viết công khai"
+                              >
+                                ✓ Duyệt bài
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleRejectArticle(item.id, item.title)}
+                                className="text-[11px] px-2 py-1 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold rounded border border-stone-300 transition cursor-pointer"
+                                title="Từ chối xuất bản bài viết"
+                              >
+                                ✕ Từ chối
+                              </button>
+                            </>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditModal(item)}
+                            className="text-[11px] px-2 py-1 bg-amber-50 hover:bg-amber-100 text-bronze-gold font-bold rounded border border-amber-300 transition cursor-pointer"
+                            title="Chỉnh sửa bản tin (Dành cho cán bộ xã)"
+                          >
+                            ✏️ Sửa
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteArticle(item.id)}
+                            className="text-[11px] px-2 py-1 bg-red-50 hover:bg-red-100 text-flag-red font-bold rounded border border-red-200 transition cursor-pointer"
+                            title="Xóa bản tin (Dành cho cán bộ xã)"
+                          >
+                            🗑️
+                          </button>
+                        </div>
                       </div>
                     )}
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
+                  </article>
+                ))}
+              </div>
+            );
+          })()
         )}
       </section>
 
@@ -580,22 +771,30 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* MODAL 2: TẠO MỚI / CHỈNH SỬA BẢN TIN (CHỈ DÀNH CHO CÁN BỘ XÃ) */}
+      {/* MODAL 2: TẠO MỚI / CHỈNH SỬA BẢN TIN (HYBRID RBAC + ABAC) */}
       {isCadreModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
           <div className="bg-white text-deep-text w-full max-w-2xl max-h-[92vh] rounded-lg shadow-2xl border-4 border-bronze-gold flex flex-col overflow-hidden">
             {/* Header Modal */}
             <div className="bg-bronze-gold text-white p-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-lg">🏛️</span>
+                <span className="text-lg">
+                  {currentUser?.role === "SUPER_ADMIN" ? "🏛️" : "✍️"}
+                </span>
                 <h3 className="font-bold text-base sm:text-lg uppercase">
-                  {isEditingArticle ? "Chỉnh Sửa Bản Tin Tuyên Truyền" : "Đăng Tải Bản Tin Mới (Cán Bộ Xã)"}
+                  {isEditingArticle
+                    ? "Chỉnh Sửa Bản Tin Tuyên Truyền"
+                    : currentUser?.role === "SUPER_ADMIN"
+                    ? "Đăng Tải Bản Tin Mới (Cán Bộ Xã)"
+                    : currentUser?.role === "BRANCH_LEADER"
+                    ? "Gửi Tin Bài Chi Hội (Chờ Xã Duyệt)"
+                    : "Gửi Bài Viết / Phản Ánh CCB (Chờ Xã Duyệt)"}
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setIsCadreModalOpen(false)}
-                className="w-8 h-8 flex items-center justify-center rounded hover:bg-white/20 text-white font-bold text-lg"
+                className="w-8 h-8 flex items-center justify-center rounded hover:bg-white/20 text-white font-bold text-lg cursor-pointer"
               >
                 ✕
               </button>
@@ -603,8 +802,8 @@ export default function HomePage() {
 
             {/* Nội dung form */}
             <div className="p-6 overflow-y-auto space-y-4">
-              {!isCadreVerified ? (
-                /* Bước xác thực quyền Cán bộ Xã */
+              {!isCadreVerified && currentUser?.role === "SUPER_ADMIN" ? (
+                /* Bước xác thực quyền Cán bộ Xã bằng PIN nếu chưa xác thực */
                 <form onSubmit={handleVerifyCadre} className="space-y-4 py-4 text-center">
                   <div className="w-16 h-16 rounded-full bg-amber-100 text-bronze-gold mx-auto flex items-center justify-center text-3xl">
                     🔒
@@ -643,13 +842,13 @@ export default function HomePage() {
                     <button
                       type="button"
                       onClick={() => setIsCadreModalOpen(false)}
-                      className="px-4 py-2 border border-stone-300 rounded text-sm font-semibold hover:bg-stone-100"
+                      className="px-4 py-2 border border-stone-300 rounded text-sm font-semibold hover:bg-stone-100 cursor-pointer"
                     >
                       Hủy bỏ
                     </button>
                     <button
                       type="submit"
-                      className="px-5 py-2 bg-moss-green hover:bg-moss-green-dark text-white text-sm font-bold rounded shadow-xs"
+                      className="px-5 py-2 bg-moss-green hover:bg-moss-green-dark text-white text-sm font-bold rounded shadow-xs cursor-pointer"
                     >
                       Xác thực quyền cán bộ →
                     </button>
@@ -658,21 +857,33 @@ export default function HomePage() {
               ) : (
                 /* Form nhập liệu Bản tin */
                 <form onSubmit={handleSaveArticle} className="space-y-4">
-                  <div className="p-2.5 bg-emerald-50 border border-emerald-300 rounded text-xs text-moss-green font-semibold flex items-center gap-2">
-                    <span>✓</span>
-                    <span>Đã xác thực tư cách Cán bộ Thường trực Hội CCB Xã Ea Súp</span>
-                  </div>
+                  {currentUser?.role === "SUPER_ADMIN" ? (
+                    <div className="p-2.5 bg-emerald-50 border border-emerald-300 rounded text-xs text-moss-green font-semibold flex items-center gap-2">
+                      <span>✓</span>
+                      <span>Đã xác thực tư cách Cán bộ Thường trực Hội CCB Xã Ea Súp</span>
+                    </div>
+                  ) : (
+                    <div className="p-3 bg-amber-50 border border-amber-300 rounded text-xs text-amber-900 leading-relaxed">
+                      <p className="font-bold flex items-center gap-1.5 mb-1 text-bronze-gold">
+                        <span>📢</span>
+                        <span>QUY TRÌNH DUYỆT BÀI THEO ĐIỀU LỆ HỘI:</span>
+                      </p>
+                      <p>
+                        Bài viết của đồng chí sẽ được chuyển lên Ban Thường trực Hội CCB Xã Ea Súp thẩm tra và phê duyệt trước khi xuất bản. Sau khi đã gửi đi, bài viết sẽ ở trạng thái <strong className="text-amber-800">Chờ phê duyệt</strong> và không thể tự ý sửa đổi.
+                      </p>
+                    </div>
+                  )}
 
                   <div>
                     <label className="block text-xs font-bold text-deep-text uppercase mb-1">
-                      Tiêu đề bản tin <span className="text-flag-red">*</span>:
+                      Tiêu đề bài viết / bản tin <span className="text-flag-red">*</span>:
                     </label>
                     <input
                       type="text"
                       required
                       value={formTitle}
                       onChange={(e) => setFormTitle(e.target.value)}
-                      placeholder="VD: Hội CCB xã tổ chức sơ kết quý I và phát động phong trào thi đua..."
+                      placeholder="VD: Chi hội Thôn 2 tổ chức sinh hoạt chuyên đề về gương CCB làm kinh tế giỏi..."
                       className="w-full px-3.5 py-2 border-2 border-stone-300 rounded text-sm font-medium focus:border-moss-green focus:outline-none"
                     />
                   </div>
@@ -697,7 +908,7 @@ export default function HomePage() {
 
                     <div>
                       <label className="block text-xs font-bold text-deep-text uppercase mb-1">
-                        Cơ quan phát hành / Tác giả:
+                        Người gửi / Tác giả bài viết:
                       </label>
                       <input
                         type="text"
@@ -717,7 +928,7 @@ export default function HomePage() {
                       rows={2}
                       value={formSummary}
                       onChange={(e) => setFormSummary(e.target.value)}
-                      placeholder="Tóm tắt 1-2 câu ngắn gọn hiển thị trên thẻ bản tin..."
+                      placeholder="Tóm tắt 1-2 câu ngắn gọn làm nổi bật nội dung cốt lõi của bài..."
                       className="w-full px-3.5 py-2 border-2 border-stone-300 rounded text-sm focus:border-moss-green focus:outline-none"
                     />
                   </div>
@@ -731,7 +942,7 @@ export default function HomePage() {
                       rows={6}
                       value={formContent}
                       onChange={(e) => setFormContent(e.target.value)}
-                      placeholder="Nhập nội dung đầy đủ của bản tin tuyên truyền..."
+                      placeholder="Nhập nội dung đầy đủ của bài viết hoặc phản ánh..."
                       className="w-full px-3.5 py-2 border-2 border-stone-300 rounded text-sm focus:border-moss-green focus:outline-none leading-relaxed"
                     />
                   </div>
@@ -765,15 +976,19 @@ export default function HomePage() {
                     <button
                       type="button"
                       onClick={() => setIsCadreModalOpen(false)}
-                      className="px-4 py-2 border border-stone-300 rounded text-sm font-semibold hover:bg-stone-100"
+                      className="px-4 py-2 border border-stone-300 rounded text-sm font-semibold hover:bg-stone-100 cursor-pointer"
                     >
                       Hủy bỏ
                     </button>
                     <button
                       type="submit"
-                      className="px-5 py-2 bg-moss-green hover:bg-moss-green-dark text-white text-sm font-bold rounded shadow-xs"
+                      className="px-5 py-2 bg-moss-green hover:bg-moss-green-dark text-white text-sm font-bold rounded shadow-xs cursor-pointer transition active:scale-98"
                     >
-                      {isEditingArticle ? "Lưu thay đổi bản tin" : "Phát hành bản tin ngay"}
+                      {isEditingArticle
+                        ? "Lưu thay đổi bản tin"
+                        : currentUser?.role === "SUPER_ADMIN"
+                        ? "Phát hành bản tin ngay"
+                        : "Gửi bài lên Thường trực Xã phê duyệt →"}
                     </button>
                   </div>
                 </form>

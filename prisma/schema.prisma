@@ -88,6 +88,14 @@ enum RegistrationStatus {
   REJECTED // Bị từ chối (có lý do)
 }
 
+/// 7. Trạng thái phê duyệt tin bài (Hybrid RBAC + ABAC)
+enum ArticleStatus {
+  DRAFT
+  PENDING_APPROVAL // Bài mới gửi từ Hội viên / Chi hội trưởng
+  APPROVED         // Cán bộ xã đã duyệt và xuất bản
+  REJECTED         // Cán bộ xã từ chối
+}
+
 // ==============================================================================
 // 1. TÀI KHOẢN NGƯỜI DÙNG & HỆ THỐNG (USER)
 // ==============================================================================
@@ -109,6 +117,10 @@ model User {
   // Liên kết địa bàn quản lý thôn/buôn
   hamletId String?
   hamlet   Hamlet? @relation("HamletUsers", fields: [hamletId], references: [id], onDelete: SetNull)
+
+  // Liên kết bài viết & tin bài tuyên truyền (RBAC + ABAC)
+  articles         Article[] @relation("AuthorArticles")
+  reviewedArticles Article[] @relation("ReviewerArticles")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -525,3 +537,34 @@ model Notification {
   @@index([isRead])
   @@map("notifications")
 }
+
+// ==============================================================================
+// 10. BẢN TIN TUYÊN TRUYỀN & PHẢN ÁNH HỘI VIÊN (ARTICLE / POST)
+// Phân quyền Hybrid RBAC + ABAC:
+// - Hội viên & Chi hội trưởng tạo bài mới (luôn ở trạng thái PENDING_APPROVAL)
+// - Cán bộ xã (SUPER_ADMIN) có toàn quyền Phê duyệt, Từ chối, Chỉnh sửa, Xuất bản
+// ==============================================================================
+
+model Article {
+  id           String        @id @default(cuid())
+  title        String
+  slug         String        @unique
+  summary      String?       @db.Text
+  content      String        @db.Text
+  thumbnail    String?
+  category     String        // Nghĩa tình đồng đội, Kinh tế CCB, Hoạt động Hội...
+  status       ArticleStatus @default(PENDING_APPROVAL)
+  authorId     String
+  author       User          @relation("AuthorArticles", fields: [authorId], references: [id], onDelete: Cascade)
+  reviewedById String?       // Cán bộ xã duyệt/sửa
+  reviewedBy   User?         @relation("ReviewerArticles", fields: [reviewedById], references: [id], onDelete: SetNull)
+  views        Int           @default(0)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([status])
+  @@index([authorId])
+  @@index([category])
+  @@map("articles")
+}
+

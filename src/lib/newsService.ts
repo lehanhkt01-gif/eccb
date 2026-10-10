@@ -1,16 +1,30 @@
 import fs from "fs/promises";
 import path from "path";
 
+export type ArticleStatus = "DRAFT" | "PENDING_APPROVAL" | "APPROVED" | "REJECTED";
+
 export interface Article {
   id: string;
   title: string;
+  slug?: string;
   category: string;
   date: string;
   author: string;
+  authorId?: string;
+  authorRole?: string;
+  authorPhone?: string;
   summary: string;
   content: string;
   imageUrl?: string;
+  thumbnail?: string;
+  status: ArticleStatus;
+  reviewedById?: string;
+  reviewedByName?: string;
+  reviewedAt?: string;
+  rejectionReason?: string;
   views?: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 const DATA_FILE_PATH = path.join(process.cwd(), "src", "data", "news.json");
@@ -21,7 +35,14 @@ const DATA_FILE_PATH = path.join(process.cwd(), "src", "data", "news.json");
 export async function getAllNews(): Promise<Article[]> {
   try {
     const raw = await fs.readFile(DATA_FILE_PATH, "utf-8");
-    return JSON.parse(raw);
+    const list: Article[] = JSON.parse(raw);
+    // Chuẩn hóa status mặc định APPROVED nếu chưa có
+    return list.map((item) => ({
+      ...item,
+      status: item.status || "APPROVED",
+      thumbnail: item.thumbnail || item.imageUrl,
+      imageUrl: item.imageUrl || item.thumbnail,
+    }));
   } catch (error) {
     console.error("Lỗi khi đọc file news.json:", error);
     return [];
@@ -29,11 +50,11 @@ export async function getAllNews(): Promise<Article[]> {
 }
 
 /**
- * Lấy chi tiết bản tin theo id
+ * Lấy chi tiết bản tin theo id hoặc slug
  */
-export async function getNewsById(id: string): Promise<Article | null> {
+export async function getNewsById(idOrSlug: string): Promise<Article | null> {
   const articles = await getAllNews();
-  const found = articles.find((a) => a.id === id);
+  const found = articles.find((a) => a.id === idOrSlug || a.slug === idOrSlug);
   return found || null;
 }
 
