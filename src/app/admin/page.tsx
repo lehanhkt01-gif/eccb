@@ -3,28 +3,28 @@
 import React, { useState } from "react";
 import Link from "next/link";
 
-// 20 Thôn, Buôn xã Ea Súp với trạng thái cảnh báo chi tiết
+// 20 Thôn, Buôn xã Ea Súp với trạng thái cảnh báo chi tiết (20 Chi hội trưởng chuẩn xác)
 const HAMLET_STATUS_DATA = [
-  { code: "THON_01", name: "Thôn 1", leader: "Trần Văn Định", phone: "0912111001", members: 30, debt: "2.61 tỷ", overdue: "5.2 triệu", hasOverdue: true, dilapidatedHouse: 0, status: "warning" },
-  { code: "THON_02", name: "Thôn 2", leader: "Nguyễn Văn Hùng", phone: "0912111002", members: 32, debt: "2.75 tỷ", overdue: "0 đ", hasOverdue: false, dilapidatedHouse: 0, status: "good" },
-  { code: "THON_03", name: "Thôn 3", leader: "Lê Đức Thọ", phone: "0912111003", members: 28, debt: "2.40 tỷ", overdue: "6.1 triệu", hasOverdue: true, dilapidatedHouse: 1, status: "alert" },
-  { code: "THON_04", name: "Thôn 4", leader: "Phạm Hồng Thái", phone: "0912111004", members: 31, debt: "2.68 tỷ", overdue: "0 đ", hasOverdue: false, dilapidatedHouse: 0, status: "good" },
-  { code: "THON_05", name: "Thôn 5", leader: "Hoàng Văn Nam", phone: "0912111005", members: 29, debt: "2.55 tỷ", overdue: "0 đ", hasOverdue: false, dilapidatedHouse: 0, status: "good" },
-  { code: "THON_06", name: "Thôn 6", leader: "Vũ Đình Cường", phone: "0912111006", members: 33, debt: "2.82 tỷ", overdue: "0 đ", hasOverdue: false, dilapidatedHouse: 0, status: "good" },
-  { code: "THON_07", name: "Thôn 7", leader: "Đỗ Xuân Bách", phone: "0912111007", members: 30, debt: "2.60 tỷ", overdue: "4.8 triệu", hasOverdue: true, dilapidatedHouse: 0, status: "warning" },
-  { code: "THON_08", name: "Thôn 8", leader: "Bùi Văn Thành", phone: "0912111008", members: 34, debt: "2.90 tỷ", overdue: "0 đ", hasOverdue: false, dilapidatedHouse: 0, status: "good" },
-  { code: "THON_09", name: "Thôn 9", leader: "Ngô Quang Hưng", phone: "0912111009", members: 27, debt: "2.35 tỷ", overdue: "0 đ", hasOverdue: false, dilapidatedHouse: 0, status: "good" },
-  { code: "THON_10", name: "Thôn 10", leader: "Đinh Văn Quyết", phone: "0912111010", members: 31, debt: "2.65 tỷ", overdue: "0 đ", hasOverdue: false, dilapidatedHouse: 0, status: "good" },
-  { code: "THON_11", name: "Thôn 11", leader: "Lương Thế Vinh", phone: "0912111011", members: 30, debt: "2.58 tỷ", overdue: "0 đ", hasOverdue: false, dilapidatedHouse: 1, status: "alert" },
-  { code: "THON_12", name: "Thôn 12", leader: "Trịnh Đình Dũng", phone: "0912111012", members: 29, debt: "2.50 tỷ", overdue: "5.5 triệu", hasOverdue: true, dilapidatedHouse: 0, status: "warning" },
-  { code: "THON_13", name: "Thôn 13", leader: "Đặng Hữu Phúc", phone: "0912111013", members: 32, debt: "2.72 tỷ", overdue: "0 đ", hasOverdue: false, dilapidatedHouse: 0, status: "good" },
-  { code: "THON_HOABINH", name: "Thôn Hòa Bình", leader: "Phan Văn Khải", phone: "0912111014", members: 35, debt: "3.05 tỷ", overdue: "0 đ", hasOverdue: false, dilapidatedHouse: 0, status: "good" },
-  { code: "THON_THANGLOI", name: "Thôn Thắng Lợi", leader: "Dương Minh Châu", phone: "0912111015", members: 33, debt: "2.85 tỷ", overdue: "0 đ", hasOverdue: false, dilapidatedHouse: 0, status: "good" },
-  { code: "THON_DOANKET", name: "Thôn Đoàn Kết", leader: "Nguyễn Tiến Lực", phone: "0912111016", members: 30, debt: "2.60 tỷ", overdue: "4.9 triệu", hasOverdue: true, dilapidatedHouse: 0, status: "warning" },
-  { code: "THON_BINHLOI", name: "Thôn Bình Lợi", leader: "Tạ Quang Bửu", phone: "0912111017", members: 28, debt: "2.42 tỷ", overdue: "0 đ", hasOverdue: false, dilapidatedHouse: 0, status: "good" },
-  { code: "BUON_A", name: "Buôn A", leader: "Y Dhăm Mlô", phone: "0912111018", members: 26, debt: "2.25 tỷ", overdue: "0 đ", hasOverdue: false, dilapidatedHouse: 1, status: "alert" },
-  { code: "BUON_B", name: "Buôn B", leader: "Y Blô Kbuôr", phone: "0912111019", members: 25, debt: "2.18 tỷ", overdue: "4.3 triệu", hasOverdue: true, dilapidatedHouse: 1, status: "alert" },
-  { code: "BUON_C", name: "Buôn C", leader: "Y Khen Niê", phone: "0912111020", members: 27, debt: "2.36 tỷ", overdue: "0 đ", hasOverdue: false, dilapidatedHouse: 1, status: "alert" },
+  { code: "BUON_A", name: "Buôn A", leader: "Y Nô Rcăm", phone: "0982257421", members: 26, debt: "2.25 tỷ", overdue: "0 đ", hasOverdue: false, dilapidatedHouse: 1, status: "alert" },
+  { code: "BUON_B", name: "Buôn B", leader: "Đoàn Hữu Tiến", phone: "0935833737", members: 25, debt: "2.18 tỷ", overdue: "4.3 triệu", hasOverdue: true, dilapidatedHouse: 1, status: "alert" },
+  { code: "BUON_C", name: "Buôn C", leader: "Y Dyơng Êban", phone: "0839931193", members: 27, debt: "2.36 tỷ", overdue: "0 đ", hasOverdue: false, dilapidatedHouse: 1, status: "alert" },
+  { code: "THON_HOABINH", name: "Thôn Hòa Bình", leader: "Lê Văn Hồng", phone: "0977979709", members: 35, debt: "3.05 tỷ", overdue: "0 đ", hasOverdue: false, dilapidatedHouse: 0, status: "good" },
+  { code: "THON_THANGLOI", name: "Thôn Thắng Lợi", leader: "Nguyễn Văn Đông", phone: "0828838929", members: 33, debt: "2.85 tỷ", overdue: "0 đ", hasOverdue: false, dilapidatedHouse: 0, status: "good" },
+  { code: "THON_DOANKET", name: "Thôn Đoàn Kết", leader: "Nguyễn Văn Sơn", phone: "0913779468", members: 30, debt: "2.60 tỷ", overdue: "4.9 triệu", hasOverdue: true, dilapidatedHouse: 0, status: "warning" },
+  { code: "THON_BINHLOI", name: "Thôn Bình Lợi", leader: "Lục Văn Cường", phone: "0338561794", members: 28, debt: "2.42 tỷ", overdue: "0 đ", hasOverdue: false, dilapidatedHouse: 0, status: "good" },
+  { code: "THON_01", name: "Thôn 1", leader: "Hồ Sỹ Tuấn", phone: "0986042302", members: 30, debt: "2.61 tỷ", overdue: "5.2 triệu", hasOverdue: true, dilapidatedHouse: 0, status: "warning" },
+  { code: "THON_02", name: "Thôn 2", leader: "Nguyễn Đức Lợi", phone: "0356912318", members: 32, debt: "2.75 tỷ", overdue: "0 đ", hasOverdue: false, dilapidatedHouse: 0, status: "good" },
+  { code: "THON_03", name: "Thôn 3", leader: "Nguyễn Văn Dũng", phone: "0342302292", members: 28, debt: "2.40 tỷ", overdue: "6.1 triệu", hasOverdue: true, dilapidatedHouse: 1, status: "alert" },
+  { code: "THON_04", name: "Thôn 4", leader: "Nguyễn Phú Bốn", phone: "0367875231", members: 31, debt: "2.68 tỷ", overdue: "0 đ", hasOverdue: false, dilapidatedHouse: 0, status: "good" },
+  { code: "THON_05", name: "Thôn 5", leader: "Vũ Văn Đạt", phone: "0327560358", members: 29, debt: "2.55 tỷ", overdue: "0 đ", hasOverdue: false, dilapidatedHouse: 0, status: "good" },
+  { code: "THON_06", name: "Thôn 6", leader: "Đỗ Thị Lan", phone: "0343800948", members: 33, debt: "2.82 tỷ", overdue: "0 đ", hasOverdue: false, dilapidatedHouse: 0, status: "good" },
+  { code: "THON_07", name: "Thôn 7", leader: "Nguyễn Văn Minh", phone: "0975384025", members: 30, debt: "2.60 tỷ", overdue: "4.8 triệu", hasOverdue: true, dilapidatedHouse: 0, status: "warning" },
+  { code: "THON_08", name: "Thôn 8", leader: "Trần Thanh Hùng", phone: "0397508052", members: 34, debt: "2.90 tỷ", overdue: "0 đ", hasOverdue: false, dilapidatedHouse: 0, status: "good" },
+  { code: "THON_09", name: "Thôn 9", leader: "Trần Văn Cảnh", phone: "0342869974", members: 27, debt: "2.35 tỷ", overdue: "0 đ", hasOverdue: false, dilapidatedHouse: 0, status: "good" },
+  { code: "THON_10", name: "Thôn 10", leader: "Nguyễn Lai", phone: "0986911610", members: 31, debt: "2.65 tỷ", overdue: "0 đ", hasOverdue: false, dilapidatedHouse: 0, status: "good" },
+  { code: "THON_11", name: "Thôn 11", leader: "Huỳnh Công Dũng", phone: "0359326437", members: 30, debt: "2.58 tỷ", overdue: "0 đ", hasOverdue: false, dilapidatedHouse: 1, status: "alert" },
+  { code: "THON_12", name: "Thôn 12", leader: "Triệu Đức Quyên", phone: "0857603535", members: 29, debt: "2.50 tỷ", overdue: "5.5 triệu", hasOverdue: true, dilapidatedHouse: 0, status: "warning" },
+  { code: "THON_13", name: "Thôn 13", leader: "Hoàng Văn Tuyên", phone: "0984594812", members: 32, debt: "2.72 tỷ", overdue: "0 đ", hasOverdue: false, dilapidatedHouse: 0, status: "good" },
 ];
 
 // Phân bổ thời kỳ chiến đấu (Tremor Style)

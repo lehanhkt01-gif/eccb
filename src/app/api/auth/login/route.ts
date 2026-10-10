@@ -75,46 +75,48 @@ export async function POST(req: Request) {
       }
     }
 
-    // 3. KIỂM TRA TÀI KHOẢN CHI HỘI TRƯỞNG (chihoi_thon_01, ...)
-    if (cleanInputLower.startsWith("chihoi_")) {
-      const isPasswordValid = password === adminDefaultPassword;
-      if (isPasswordValid) {
-        // Phân giải thôn tương ứng từ username
-        const branchKey = cleanInputLower.replace("chihoi_", "");
-        const hamletMap: Record<string, { code: string; name: string; leader: string }> = {
-          thon_01: { code: "THON_01", name: "Thôn 1", leader: "Trần Văn Định" },
-          thon_02: { code: "THON_02", name: "Thôn 2", leader: "Nguyễn Văn Hùng" },
-          thon_03: { code: "THON_03", name: "Thôn 3", leader: "Lê Đức Thọ" },
-          thon_04: { code: "THON_04", name: "Thôn 4", leader: "Phạm Hồng Thái" },
-          thon_05: { code: "THON_05", name: "Thôn 5", leader: "Hoàng Văn Nam" },
-          thon_06: { code: "THON_06", name: "Thôn 6", leader: "Vũ Đình Cường" },
-          thon_07: { code: "THON_07", name: "Thôn 7", leader: "Đỗ Xuân Bách" },
-          thon_08: { code: "THON_08", name: "Thôn 8", leader: "Bùi Văn Thành" },
-          thon_09: { code: "THON_09", name: "Thôn 9", leader: "Ngô Quang Hưng" },
-          thon_10: { code: "THON_10", name: "Thôn 10", leader: "Đinh Văn Quyết" },
-          thon_11: { code: "THON_11", name: "Thôn 11", leader: "Lương Thế Vinh" },
-          thon_12: { code: "THON_12", name: "Thôn 12", leader: "Trịnh Đình Dũng" },
-          thon_13: { code: "THON_13", name: "Thôn 13", leader: "Đặng Hữu Phúc" },
-          thon_hoabinh: { code: "THON_HOABINH", name: "Thôn Hòa Bình", leader: "Phan Văn Khải" },
-          thon_thangloi: { code: "THON_THANGLOI", name: "Thôn Thắng Lợi", leader: "Dương Minh Châu" },
-          thon_doanket: { code: "THON_DOANKET", name: "Thôn Đoàn Kết", leader: "Nguyễn Tiến Lực" },
-          thon_binhloi: { code: "THON_BINHLOI", name: "Thôn Bình Lợi", leader: "Tạ Quang Bửu" },
-          buon_a: { code: "BUON_A", name: "Buôn A", leader: "Y Dhăm Mlô" },
-          buon_b: { code: "BUON_B", name: "Buôn B", leader: "Y Blô Kbuôr" },
-          buon_c: { code: "BUON_C", name: "Buôn C", leader: "Y Khen Niê" },
-        };
-        const branchInfo = hamletMap[branchKey] || {
-          code: `THON_${branchKey.toUpperCase()}`,
-          name: `Thôn ${branchKey.toUpperCase()}`,
-          leader: `Chi hội trưởng ${branchKey.toUpperCase()}`,
-        };
+    // 3. KIỂM TRA TÀI KHOẢN CHI HỘI TRƯỞNG (chihoi_thon_01, ...) HOẶC ĐĂNG NHẬP BẰNG SỐ CCCD CỦA CHI HỘI TRƯỞNG
+    const hamletMap: Record<string, { code: string; name: string; leader: string; phone: string; cccd: string }> = {
+      thon_01: { code: "THON_01", name: "Thôn 1", leader: "Hồ Sỹ Tuấn", phone: "0986042302", cccd: "0986042302" },
+      thon_02: { code: "THON_02", name: "Thôn 2", leader: "Nguyễn Đức Lợi", phone: "0356912318", cccd: "049068000884" },
+      thon_03: { code: "THON_03", name: "Thôn 3", leader: "Nguyễn Văn Dũng", phone: "0342302292", cccd: "034079011156" },
+      thon_04: { code: "THON_04", name: "Thôn 4", leader: "Nguyễn Phú Bốn", phone: "0367875231", cccd: "038065009462" },
+      thon_05: { code: "THON_05", name: "Thôn 5", leader: "Vũ Văn Đạt", phone: "0327560358", cccd: "034065009537" },
+      thon_06: { code: "THON_06", name: "Thôn 6", leader: "Đỗ Thị Lan", phone: "0343800948", cccd: "033155002814" },
+      thon_07: { code: "THON_07", name: "Thôn 7", leader: "Nguyễn Văn Minh", phone: "0975384025", cccd: "024055000072" },
+      thon_08: { code: "THON_08", name: "Thôn 8", leader: "Trần Thanh Hùng", phone: "0397508052", cccd: "048069000332" },
+      thon_09: { code: "THON_09", name: "Thôn 9", leader: "Trần Văn Cảnh", phone: "0342869974", cccd: "066089001142" },
+      thon_10: { code: "THON_10", name: "Thôn 10", leader: "Nguyễn Lai", phone: "0986911610", cccd: "048068000489" },
+      thon_11: { code: "THON_11", name: "Thôn 11", leader: "Huỳnh Công Dũng", phone: "0359326437", cccd: "049060000688" },
+      thon_12: { code: "THON_12", name: "Thôn 12", leader: "Triệu Đức Quyên", phone: "0857603535", cccd: "006089000161" },
+      thon_13: { code: "THON_13", name: "Thôn 13", leader: "Hoàng Văn Tuyên", phone: "0984594812", cccd: "004077000098" },
+      thon_hoabinh: { code: "THON_HOABINH", name: "Thôn Hòa Bình", leader: "Lê Văn Hồng", phone: "0977979709", cccd: "0420670022" },
+      thon_thangloi: { code: "THON_THANGLOI", name: "Thôn Thắng Lợi", leader: "Nguyễn Văn Đông", phone: "0828838929", cccd: "025065000445" },
+      thon_doanket: { code: "THON_DOANKET", name: "Thôn Đoàn Kết", leader: "Nguyễn Văn Sơn", phone: "0913779468", cccd: "040059000718" },
+      thon_binhloi: { code: "THON_BINHLOI", name: "Thôn Bình Lợi", leader: "Lục Văn Cường", phone: "0338561794", cccd: "004082002052" },
+      buon_a: { code: "BUON_A", name: "Buôn A", leader: "Y Nô Rcăm", phone: "0982257421", cccd: "0982257421" },
+      buon_b: { code: "BUON_B", name: "Buôn B", leader: "Đoàn Hữu Tiến", phone: "0935833737", cccd: "034050005833" },
+      buon_c: { code: "BUON_C", name: "Buôn C", leader: "Y Dyơng Êban", phone: "0839931193", cccd: "0839931193" },
+    };
 
+    // Kiểm tra đăng nhập dạng alias: chihoi_...
+    if (cleanInputLower.startsWith("chihoi_")) {
+      const branchKey = cleanInputLower.replace("chihoi_", "");
+      const branchInfo = hamletMap[branchKey];
+      const isPasswordValid =
+        password === adminDefaultPassword ||
+        password === "123456" ||
+        (branchInfo && password === branchInfo.phone);
+
+      if (isPasswordValid && branchInfo) {
         return NextResponse.json({
           success: true,
           role: "BRANCH_LEADER",
           user: {
-            username: cleanInputLower,
+            username: branchInfo.cccd,
+            cccd: branchInfo.cccd,
             fullName: `Đ/c ${branchInfo.leader}`,
+            phone: branchInfo.phone,
             role: "BRANCH_LEADER",
             hamletCode: branchInfo.code,
             hamletName: branchInfo.name,
@@ -128,67 +130,130 @@ export async function POST(req: Request) {
       }
     }
 
-    // 4. KIỂM TRA TÀI KHOẢN HỘI VIÊN (ĐĂNG NHẬP BẰNG SỐ CCCD 12 SỐ)
-    const isCccdFormat = /^\d{12}$/.test(cleanInput);
-
-    // Tìm kiếm hội viên theo CCCD
-    let memberData: {
-      id?: string;
-      cccd: string;
-      fullName: string;
-      phone?: string | null;
-      hamletName?: string | null;
-      hamlet?: { name: string } | null;
-      user?: { passwordHash?: string | null } | null;
-    } | null = null;
-
+    // 4. KIỂM TRA TÀI KHOẢN QUA CSDL PRISMA (HỖ TRỢ CCCD, USERNAME HOẶC SỐ ĐIỆN THOẠI)
+    let dbUser: any = null;
     try {
-      memberData = await prisma.member.findUnique({
-        where: { cccd: cleanInput },
-        include: { user: true, hamlet: true },
+      dbUser = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { username: cleanInput },
+            { phone: cleanInput },
+            { member: { cccd: cleanInput } },
+          ],
+        },
+        include: {
+          hamlet: true,
+          member: {
+            include: { hamlet: true },
+          },
+        },
       });
     } catch {
-      // Fallback tìm trong memberStore
+      // Fallback
     }
 
-    if (!memberData) {
-      const allMembers = getStoredMembers();
-      const localMem = allMembers.find((m) => m.cccd === cleanInput);
-      if (localMem) {
-        memberData = {
-          id: localMem.id,
-          cccd: localMem.cccd,
-          fullName: localMem.fullName,
-          phone: localMem.phone,
-          hamletName: localMem.hamletName,
-        };
+    // Nếu tìm thấy User trong Database
+    if (dbUser) {
+      let isPassValid = false;
+      if (dbUser.passwordHash) {
+        isPassValid = await bcrypt.compare(password, dbUser.passwordHash);
+      }
+      // Hỗ trợ mật khẩu khởi tạo: SĐT của CHT, 123456 hoặc ADMIN/MEMBER password từ .env
+      if (!isPassValid) {
+        const userPhone = dbUser.phone || dbUser.member?.phone || "";
+        isPassValid =
+          password === userPhone ||
+          password === "123456" ||
+          password === adminDefaultPassword ||
+          password === memberDefaultPassword;
+      }
+
+      if (isPassValid) {
+        const role = dbUser.role || (dbUser.member?.associationRole === "Chi hội trưởng" ? "BRANCH_LEADER" : "MEMBER");
+        const hamletName = dbUser.hamlet?.name || dbUser.member?.hamlet?.name || "Hội CCB Xã Ea Súp";
+        const hamletCode = dbUser.hamlet?.code || dbUser.member?.hamlet?.code || "";
+
+        return NextResponse.json({
+          success: true,
+          role,
+          user: {
+            id: dbUser.id,
+            username: dbUser.username,
+            cccd: dbUser.member?.cccd || dbUser.username,
+            fullName: dbUser.fullName,
+            phone: dbUser.phone || dbUser.member?.phone || "",
+            role,
+            hamletCode,
+            hamletName,
+            memberId: dbUser.memberId || dbUser.member?.id,
+          },
+        });
+      } else {
+        return NextResponse.json(
+          { success: false, message: "Mật khẩu không chính xác. Mật khẩu khởi tạo là Số điện thoại của đồng chí." },
+          { status: 401 }
+        );
       }
     }
 
-    if (memberData || isCccdFormat) {
-      // Xác thực mật khẩu hội viên
-      let isMemberPassValid = false;
+    // 5. FALLBACK CHI HỘI TRƯỞNG THEO DANH SÁCH 20 ĐỒNG CHÍ (KHI CHẠY LOCAL HOẶC CHƯA SEED DB)
+    const matchedCht = Object.values(hamletMap).find(
+      (h) => h.cccd === cleanInput || h.phone === cleanInput
+    );
 
-      if (memberData?.user?.passwordHash) {
-        isMemberPassValid = await bcrypt.compare(password, memberData.user.passwordHash);
-      }
+    if (matchedCht) {
+      const isChtPassValid =
+        password === matchedCht.phone ||
+        password === "123456" ||
+        password === adminDefaultPassword;
 
-      // So sánh với MEMBER_DEFAULT_PASSWORD từ file .env
-      if (!isMemberPassValid && memberDefaultPassword) {
-        isMemberPassValid = password === memberDefaultPassword;
+      if (isChtPassValid) {
+        return NextResponse.json({
+          success: true,
+          role: "BRANCH_LEADER",
+          user: {
+            username: matchedCht.cccd,
+            cccd: matchedCht.cccd,
+            fullName: `Đ/c ${matchedCht.leader}`,
+            phone: matchedCht.phone,
+            role: "BRANCH_LEADER",
+            hamletCode: matchedCht.code,
+            hamletName: matchedCht.name,
+          },
+        });
+      } else {
+        return NextResponse.json(
+          {
+            success: false,
+            message: `Mật khẩu Chi hội trưởng không chính xác. Mật khẩu khởi tạo là Số điện thoại (${matchedCht.phone}).`,
+          },
+          { status: 401 }
+        );
       }
+    }
+
+    // 6. FALLBACK HỘI VIÊN BẰNG CCCD (TÌM TRONG MEMBER STORE)
+    const isCccdFormat = /^\d{10,12}$/.test(cleanInput);
+    const allMembers = getStoredMembers();
+    const localMem = allMembers.find((m) => m.cccd === cleanInput);
+
+    if (localMem || isCccdFormat) {
+      const isMemberPassValid =
+        password === memberDefaultPassword ||
+        password === "123456" ||
+        (localMem && password === localMem.phone);
 
       if (isMemberPassValid) {
         return NextResponse.json({
           success: true,
           role: "MEMBER",
           user: {
-            username: memberData ? memberData.cccd : cleanInput,
-            cccd: memberData ? memberData.cccd : cleanInput,
-            fullName: memberData ? memberData.fullName : "Hội viên Cựu Chiến Binh",
-            phone: memberData ? memberData.phone : "",
-            hamletName: memberData?.hamlet?.name || memberData?.hamletName || "Hội CCB Xã Ea Súp",
-            memberId: memberData ? memberData.id : cleanInput,
+            username: localMem ? localMem.cccd : cleanInput,
+            cccd: localMem ? localMem.cccd : cleanInput,
+            fullName: localMem ? localMem.fullName : "Hội viên Cựu Chiến Binh",
+            phone: localMem ? localMem.phone : "",
+            hamletName: localMem?.hamletName || "Hội CCB Xã Ea Súp",
+            memberId: localMem ? localMem.id : cleanInput,
             role: "MEMBER",
           },
         });
@@ -196,12 +261,13 @@ export async function POST(req: Request) {
         return NextResponse.json(
           {
             success: false,
-            message: "Mật khẩu Hội viên không chính xác. Mật khẩu mặc định được quy định trong cấu hình bảo mật.",
+            message: "Mật khẩu Hội viên không chính xác. Mật khẩu mặc định là số điện thoại hoặc mã quy định.",
           },
           { status: 401 }
         );
       }
     }
+
 
     return NextResponse.json(
       {

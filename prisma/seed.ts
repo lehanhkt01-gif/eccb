@@ -11,33 +11,198 @@ import {
   PolicyStatus,
   FundLoanStatus,
   AttendanceMethod,
+  MemberStatus,
+  RegistrationStatus,
 } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
-// Danh sách chuẩn xác 20 Thôn, Buôn xã Ea Súp
+// Danh sách chuẩn xác 20 Thôn, Buôn xã Ea Súp với Chi hội trưởng thực tế
 const HAMLET_DEFS = [
-  { code: "THON_01", name: "Thôn 1", leader: "Trần Văn Định", phone: "0912111001" },
-  { code: "THON_02", name: "Thôn 2", leader: "Nguyễn Văn Hùng", phone: "0912111002" },
-  { code: "THON_03", name: "Thôn 3", leader: "Lê Đức Thọ", phone: "0912111003" },
-  { code: "THON_04", name: "Thôn 4", leader: "Phạm Hồng Thái", phone: "0912111004" },
-  { code: "THON_05", name: "Thôn 5", leader: "Hoàng Văn Nam", phone: "0912111005" },
-  { code: "THON_06", name: "Thôn 6", leader: "Vũ Đình Cường", phone: "0912111006" },
-  { code: "THON_07", name: "Thôn 7", leader: "Đỗ Xuân Bách", phone: "0912111007" },
-  { code: "THON_08", name: "Thôn 8", leader: "Bùi Văn Thành", phone: "0912111008" },
-  { code: "THON_09", name: "Thôn 9", leader: "Ngô Quang Hưng", phone: "0912111009" },
-  { code: "THON_10", name: "Thôn 10", leader: "Đinh Văn Quyết", phone: "0912111010" },
-  { code: "THON_11", name: "Thôn 11", leader: "Lương Thế Vinh", phone: "0912111011" },
-  { code: "THON_12", name: "Thôn 12", leader: "Trịnh Đình Dũng", phone: "0912111012" },
-  { code: "THON_13", name: "Thôn 13", leader: "Đặng Hữu Phúc", phone: "0912111013" },
-  { code: "THON_HOABINH", name: "Thôn Hòa Bình", leader: "Phan Văn Khải", phone: "0912111014" },
-  { code: "THON_THANGLOI", name: "Thôn Thắng Lợi", leader: "Dương Minh Châu", phone: "0912111015" },
-  { code: "THON_DOANKET", name: "Thôn Đoàn Kết", leader: "Nguyễn Tiến Lực", phone: "0912111016" },
-  { code: "THON_BINHLOI", name: "Thôn Bình Lợi", leader: "Tạ Quang Bửu", phone: "0912111017" },
-  { code: "BUON_A", name: "Buôn A", leader: "Y Dhăm Mlô", phone: "0912111018" },
-  { code: "BUON_B", name: "Buôn B", leader: "Y Blô Kbuôr", phone: "0912111019" },
-  { code: "BUON_C", name: "Buôn C", leader: "Y Khen Niê", phone: "0912111020" },
+  { code: "THON_01", name: "Thôn 1", leader: "Hồ Sỹ Tuấn", phone: "0986042302" },
+  { code: "THON_02", name: "Thôn 2", leader: "Nguyễn Đức Lợi", phone: "0356912318" },
+  { code: "THON_03", name: "Thôn 3", leader: "Nguyễn Văn Dũng", phone: "0342302292" },
+  { code: "THON_04", name: "Thôn 4", leader: "Nguyễn Phú Bốn", phone: "0367875231" },
+  { code: "THON_05", name: "Thôn 5", leader: "Vũ Văn Đạt", phone: "0327560358" },
+  { code: "THON_06", name: "Thôn 6", leader: "Đỗ Thị Lan", phone: "0343800948" },
+  { code: "THON_07", name: "Thôn 7", leader: "Nguyễn Văn Minh", phone: "0975384025" },
+  { code: "THON_08", name: "Thôn 8", leader: "Trần Thanh Hùng", phone: "0397508052" },
+  { code: "THON_09", name: "Thôn 9", leader: "Trần Văn Cảnh", phone: "0342869974" },
+  { code: "THON_10", name: "Thôn 10", leader: "Nguyễn Lai", phone: "0986911610" },
+  { code: "THON_11", name: "Thôn 11", leader: "Huỳnh Công Dũng", phone: "0359326437" },
+  { code: "THON_12", name: "Thôn 12", leader: "Triệu Đức Quyên", phone: "0857603535" },
+  { code: "THON_13", name: "Thôn 13", leader: "Hoàng Văn Tuyên", phone: "0984594812" },
+  { code: "THON_HOABINH", name: "Thôn Hòa Bình", leader: "Lê Văn Hồng", phone: "0977979709" },
+  { code: "THON_THANGLOI", name: "Thôn Thắng Lợi", leader: "Nguyễn Văn Đông", phone: "0828838929" },
+  { code: "THON_DOANKET", name: "Thôn Đoàn Kết", leader: "Nguyễn Văn Sơn", phone: "0913779468" },
+  { code: "THON_BINHLOI", name: "Thôn Bình Lợi", leader: "Lục Văn Cường", phone: "0338561794" },
+  { code: "BUON_A", name: "Buôn A", leader: "Y Nô Rcăm", phone: "0982257421" },
+  { code: "BUON_B", name: "Buôn B", leader: "Đoàn Hữu Tiến", phone: "0935833737" },
+  { code: "BUON_C", name: "Buôn C", leader: "Y Dyơng Êban", phone: "0839931193" },
+];
+
+export const CHT_LIST = [
+  {
+    hamletName: "Buôn A",
+    fullName: "Y Nô Rcăm",
+    dob: "1986-03-17",
+    hometown: "Xã Ea Súp, tỉnh Đắk Lắk",
+    cccd: "0982257421",
+    phone: "0982257421",
+  },
+  {
+    hamletName: "Buôn B",
+    fullName: "Đoàn Hữu Tiến",
+    dob: "1950-03-20",
+    hometown: "Xã Tây Thái Ninh, tỉnh Hưng Yên",
+    cccd: "034050005833",
+    phone: "0935833737",
+  },
+  {
+    hamletName: "Buôn C",
+    fullName: "Y Dyơng Êban",
+    dob: "1993-06-15",
+    hometown: "Xã Ea Súp, tỉnh Đắk Lắk",
+    cccd: "0839931193",
+    phone: "0839931193",
+  },
+  {
+    hamletName: "Thôn Hòa Bình",
+    fullName: "Lê Văn Hồng",
+    dob: "1967-01-01",
+    hometown: "Huyện Cẩm Xuyên, tỉnh Hà Tĩnh",
+    cccd: "0420670022",
+    phone: "0977979709",
+  },
+  {
+    hamletName: "Thôn Thắng Lợi",
+    fullName: "Nguyễn Văn Đông",
+    dob: "1965-05-19",
+    hometown: "Huyện Cẩm Khê, tỉnh Phú Thọ",
+    cccd: "025065000445",
+    phone: "0828838929",
+  },
+  {
+    hamletName: "Thôn Đoàn Kết",
+    fullName: "Nguyễn Văn Sơn",
+    dob: "1959-06-20",
+    hometown: "Xã Kim Liên, huyện Nam Đàn, tỉnh Nghệ An",
+    cccd: "040059000718",
+    phone: "0913779468",
+  },
+  {
+    hamletName: "Thôn Bình Lợi",
+    fullName: "Lục Văn Cường",
+    dob: "1982-06-04",
+    hometown: "Huyện Thông Nông, tỉnh Cao Bằng",
+    cccd: "004082002052",
+    phone: "0338561794",
+  },
+  {
+    hamletName: "Thôn 1",
+    fullName: "Hồ Sỹ Tuấn",
+    dob: "1964-10-15",
+    hometown: "Xã Quỳnh Hậu, huyện Quỳnh Lưu, tỉnh Nghệ An",
+    cccd: "0986042302",
+    phone: "0986042302",
+  },
+  {
+    hamletName: "Thôn 2",
+    fullName: "Nguyễn Đức Lợi",
+    dob: "1968-05-21",
+    hometown: "Huyện Thăng Bình, tỉnh Quảng Nam",
+    cccd: "049068000884",
+    phone: "0356912318",
+  },
+  {
+    hamletName: "Thôn 3",
+    fullName: "Nguyễn Văn Dũng",
+    dob: "1979-02-20",
+    hometown: "Vũ Thư, tỉnh Thái Bình",
+    cccd: "034079011156",
+    phone: "0342302292",
+  },
+  {
+    hamletName: "Thôn 4",
+    fullName: "Nguyễn Phú Bốn",
+    dob: "1965-05-18",
+    hometown: "Thọ Xuân, tỉnh Thanh Hóa",
+    cccd: "038065009462",
+    phone: "0367875231",
+  },
+  {
+    hamletName: "Thôn 5",
+    fullName: "Vũ Văn Đạt",
+    dob: "1965-07-14",
+    hometown: "Xã Vũ Phúc, TP. Thái Bình, tỉnh Thái Bình",
+    cccd: "034065009537",
+    phone: "0327560358",
+  },
+  {
+    hamletName: "Thôn 6",
+    fullName: "Đỗ Thị Lan",
+    dob: "1955-10-20",
+    hometown: "Kim Động, tỉnh Hưng Yên",
+    cccd: "033155002814",
+    phone: "0343800948",
+  },
+  {
+    hamletName: "Thôn 7",
+    fullName: "Nguyễn Văn Minh",
+    dob: "1955-10-14",
+    hometown: "Hiệp Hòa, tỉnh Bắc Giang",
+    cccd: "024055000072",
+    phone: "0975384025",
+  },
+  {
+    hamletName: "Thôn 8",
+    fullName: "Trần Thanh Hùng",
+    dob: "1969-10-10",
+    hometown: "Quận Ngũ Hành Sơn, TP. Đà Nẵng",
+    cccd: "048069000332",
+    phone: "0397508052",
+  },
+  {
+    hamletName: "Thôn 9",
+    fullName: "Trần Văn Cảnh",
+    dob: "1989-06-14",
+    hometown: "Xã Ea Súp, tỉnh Đắk Lắk (Chi hội 5 cũ)",
+    cccd: "066089001142",
+    phone: "0342869974",
+  },
+  {
+    hamletName: "Thôn 10",
+    fullName: "Nguyễn Lai",
+    dob: "1968-06-10",
+    hometown: "Tây Hồ, TP. Đà Nẵng",
+    cccd: "048068000489",
+    phone: "0986911610",
+  },
+  {
+    hamletName: "Thôn 11",
+    fullName: "Huỳnh Công Dũng",
+    dob: "1960-01-01",
+    hometown: "Huyện Thăng Bình, tỉnh Quảng Nam",
+    cccd: "049060000688",
+    phone: "0359326437",
+  },
+  {
+    hamletName: "Thôn 12",
+    fullName: "Triệu Đức Quyên",
+    dob: "1989-06-05",
+    hometown: "Tỉnh Cao Bằng (Chi hội 15 cũ)",
+    cccd: "006089000161",
+    phone: "0857603535",
+  },
+  {
+    hamletName: "Thôn 13",
+    fullName: "Hoàng Văn Tuyên",
+    dob: "1977-04-24",
+    hometown: "Xã Trường Hà, huyện Hà Quảng, tỉnh Cao Bằng",
+    cccd: "004077000098",
+    phone: "0984594812",
+  },
 ];
 
 const LAST_NAMES = ["Nguyễn", "Trần", "Lê", "Phạm", "Hoàng", "Huỳnh", "Phan", "Vũ", "Võ", "Đặng", "Bùi", "Đỗ", "Hồ", "Ngô", "Dương", "Y", "H"];
@@ -144,24 +309,8 @@ async function main() {
     console.log(`✅ Đã tạo Super Admin: ${admin.fullName} (${admin.email})`);
   }
 
-  // 3. TẠO 20 TÀI KHOẢN CHI HỘI TRƯỞNG
-  for (let i = 0; i < HAMLET_DEFS.length; i++) {
-    const h = HAMLET_DEFS[i];
-    const username = `chihoi_${h.code.toLowerCase()}`;
-    await prisma.user.create({
-      data: {
-        username,
-        passwordHash: adminPasswordHash,
-        fullName: h.leader,
-        email: `${username}@easupso.com`,
-        phone: h.phone,
-        role: Role.BRANCH_LEADER,
-        hamletId: hamletMap[h.code],
-        isActive: true,
-      },
-    });
-  }
-  console.log(`✅ Đã tạo 20 tài khoản Chi hội trưởng tương ứng 20 thôn buôn.`);
+  // 3. TẠO 20 TÀI KHOẢN CHI HỘI TRƯỞNG CHUẨN XÁC THEO DANH SÁCH THỰC TẾ
+  await seedBranchLeaders();
 
   // 4. TẠO 20 TỔ TK&VV DƯ NỢ ỦY THÁC 52.18 TỶ ĐỒNG (NỢ QUÁ HẠN 0,06%)
   // Tổng dư nợ: 52.180.000.000 VNĐ
@@ -449,7 +598,7 @@ async function main() {
         memberId: mem.id,
         attendedAt: new Date("2026-03-20T14:35:00Z"),
         method: i % 4 === 0 ? AttendanceMethod.MANUAL_CHECKIN : AttendanceMethod.QR_SCAN,
-        verifiedBy: i % 4 === 0 ? "Trần Văn Định - Chi hội trưởng" : null,
+        verifiedBy: i % 4 === 0 ? "Hồ Sỹ Tuấn - Chi hội trưởng" : null,
       },
     });
   }
@@ -459,11 +608,136 @@ async function main() {
   console.log("🎉 SEED DỮ LIỆU HOÀN TẤT THÀNH CÔNG VƯỢT TRỘI!");
   console.log("   • Tổng số thôn buôn: 20 Thôn, Buôn chuẩn xác xã Ea Súp");
   console.log("   • 02 Super Admin: lehanhkt01@gmail.com, trunghieuktkt@gmail.com (Mật khẩu từ ADMIN_DEFAULT_PASSWORD trong .env)");
-  console.log("   • 20 Tài khoản Chi hội trưởng: (chihoi_thon_01 -> chihoi_buon_c)");
+  console.log("   • 20 Tài khoản Chi hội trưởng: Đăng nhập bằng CCCD (Mật khẩu mặc định: SĐT CHT)");
   console.log("   • 612 Tài khoản Hội viên: Đăng nhập bằng số CCCD 12 số (Mật khẩu từ MEMBER_DEFAULT_PASSWORD trong .env)");
   console.log("   • Quỹ nội bộ: 1,3 tỷ đồng (Lãi suất 0%) & Lịch sử đóng quỹ hội");
   console.log("   • 20 Tổ TK&VV NHCSXH: 52,18 tỷ đồng (Nợ quá hạn 0,06% = 31,3 triệu)");
   console.log("==================================================================");
+}
+
+/**
+ * Hàm độc lập: Xóa toàn bộ Chi hội trưởng giả lập và nạp 20 Chi hội trưởng chuẩn xác
+ */
+export async function seedBranchLeaders() {
+  console.log("\n--- BẮT ĐẦU DỌN DẸP CHI HỘI TRƯỞNG CŨ ---");
+  // 1. Xóa các tài khoản CHT cũ (role = BRANCH_LEADER), giữ nguyên SUPER_ADMIN
+  await prisma.user.deleteMany({
+    where: { role: Role.BRANCH_LEADER },
+  });
+
+  console.log("--- NẠP 20 CHI HỘI TRƯỞNG THỰC TẾ XÃ EA SÚP ---");
+  for (const item of CHT_LIST) {
+    // Tìm thôn buôn tương ứng
+    const hamlet = await prisma.hamlet.findFirst({
+      where: {
+        OR: [
+          { name: { contains: item.hamletName, mode: "insensitive" } },
+          { name: item.hamletName },
+        ],
+      },
+    });
+
+    if (!hamlet) {
+      console.warn(`⚠️ Không tìm thấy thôn/buôn: ${item.hamletName}`);
+      continue;
+    }
+
+    // Hash mật khẩu khởi tạo (mặc định lấy theo số điện thoại)
+    const passwordHash = await bcrypt.hash(item.phone, 10);
+
+    // 2. Tạo hoặc cập nhật hồ sơ Hội viên (Member) cho Chi hội trưởng
+    const member = await prisma.member.upsert({
+      where: { cccd: item.cccd },
+      update: {
+        fullName: item.fullName,
+        birthDate: new Date(item.dob),
+        hometown: item.hometown,
+        phone: item.phone,
+        hamletId: hamlet.id,
+        associationRole: "Chi hội trưởng",
+        status: MemberStatus.ACTIVE,
+        registrationStatus: RegistrationStatus.APPROVED,
+        branchApproved: true,
+        adminApproved: true,
+      },
+      create: {
+        cccd: item.cccd,
+        idCardNumber: item.cccd,
+        fullName: item.fullName,
+        birthDate: new Date(item.dob),
+        hometown: item.hometown,
+        phone: item.phone,
+        hamletId: hamlet.id,
+        associationRole: "Chi hội trưởng",
+        status: MemberStatus.ACTIVE,
+        registrationStatus: RegistrationStatus.APPROVED,
+        branchApproved: true,
+        adminApproved: true,
+      },
+    });
+
+    // 3. Tạo tài khoản User đăng nhập bằng CCCD
+    await prisma.user.upsert({
+      where: { username: item.cccd },
+      update: {
+        fullName: item.fullName,
+        role: Role.BRANCH_LEADER,
+        hamletId: hamlet.id,
+        memberId: member.id,
+        phone: item.phone,
+        passwordHash,
+        isActive: true,
+      },
+      create: {
+        username: item.cccd,
+        passwordHash,
+        fullName: item.fullName,
+        phone: item.phone,
+        role: Role.BRANCH_LEADER,
+        hamletId: hamlet.id,
+        memberId: member.id,
+        isActive: true,
+      },
+    });
+
+    // 3.1. Đồng thời tạo alias username chihoi_... để tương thích ngược
+    const aliasUsername = `chihoi_${hamlet.code.toLowerCase()}`;
+    await prisma.user.upsert({
+      where: { username: aliasUsername },
+      update: {
+        fullName: item.fullName,
+        role: Role.BRANCH_LEADER,
+        hamletId: hamlet.id,
+        memberId: member.id,
+        phone: item.phone,
+        passwordHash,
+        isActive: true,
+      },
+      create: {
+        username: aliasUsername,
+        passwordHash,
+        fullName: item.fullName,
+        email: `${aliasUsername}@easupso.com`,
+        phone: item.phone,
+        role: Role.BRANCH_LEADER,
+        hamletId: hamlet.id,
+        memberId: member.id,
+        isActive: true,
+      },
+    });
+
+    // 4. Cập nhật thông tin Chi hội trưởng vào bảng Hamlet
+    await prisma.hamlet.update({
+      where: { id: hamlet.id },
+      data: {
+        branchLeaderName: item.fullName,
+        branchLeaderPhone: item.phone,
+        branchLeaderId: member.id,
+      },
+    });
+
+    console.log(`✓ Đã nạp Chi hội trưởng: ${item.fullName} - ${item.hamletName} (CCCD: ${item.cccd}, SĐT: ${item.phone})`);
+  }
 }
 
 main()

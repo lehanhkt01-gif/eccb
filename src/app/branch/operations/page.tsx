@@ -43,28 +43,28 @@ function resolveBranchHamlet(user: AuthUser | null) {
   return HAMLETS[0];
 }
 
-// Dữ liệu mẫu 20 thôn buôn xã Ea Súp
+// Dữ liệu mẫu 20 thôn buôn xã Ea Súp (20 Chi hội trưởng chuẩn xác)
 const HAMLETS = [
-  { code: "THON_01", name: "Thôn 1", leader: "Trần Văn Định" },
-  { code: "THON_02", name: "Thôn 2", leader: "Nguyễn Văn Hùng" },
-  { code: "THON_03", name: "Thôn 3", leader: "Lê Đức Thọ" },
-  { code: "THON_04", name: "Thôn 4", leader: "Phạm Hồng Thái" },
-  { code: "THON_05", name: "Thôn 5", leader: "Hoàng Văn Nam" },
-  { code: "THON_06", name: "Thôn 6", leader: "Vũ Đình Cường" },
-  { code: "THON_07", name: "Thôn 7", leader: "Đỗ Xuân Bách" },
-  { code: "THON_08", name: "Thôn 8", leader: "Bùi Văn Thành" },
-  { code: "THON_09", name: "Thôn 9", leader: "Ngô Quang Hưng" },
-  { code: "THON_10", name: "Thôn 10", leader: "Đinh Văn Quyết" },
-  { code: "THON_11", name: "Thôn 11", leader: "Lương Thế Vinh" },
-  { code: "THON_12", name: "Thôn 12", leader: "Trịnh Đình Dũng" },
-  { code: "THON_13", name: "Thôn 13", leader: "Đặng Hữu Phúc" },
-  { code: "THON_HOABINH", name: "Thôn Hòa Bình", leader: "Nguyễn Văn Tuấn" },
-  { code: "THON_THANGLOI", name: "Thôn Thắng Lợi", leader: "Phan Văn Minh" },
-  { code: "THON_DOANKET", name: "Thôn Đoàn Kết", leader: "Võ Văn Kiệt" },
-  { code: "THON_BINHLOI", name: "Thôn Bình Lợi", leader: "Trịnh Văn Bô" },
-  { code: "BUON_A", name: "Buôn A", leader: "Y Dhăm Kpơr" },
-  { code: "BUON_B", name: "Buôn B", leader: "Y Bhiu Niê" },
-  { code: "BUON_C", name: "Buôn C", leader: "Y Siu Mlô" },
+  { code: "BUON_A", name: "Buôn A", leader: "Y Nô Rcăm" },
+  { code: "BUON_B", name: "Buôn B", leader: "Đoàn Hữu Tiến" },
+  { code: "BUON_C", name: "Buôn C", leader: "Y Dyơng Êban" },
+  { code: "THON_HOABINH", name: "Thôn Hòa Bình", leader: "Lê Văn Hồng" },
+  { code: "THON_THANGLOI", name: "Thôn Thắng Lợi", leader: "Nguyễn Văn Đông" },
+  { code: "THON_DOANKET", name: "Thôn Đoàn Kết", leader: "Nguyễn Văn Sơn" },
+  { code: "THON_BINHLOI", name: "Thôn Bình Lợi", leader: "Lục Văn Cường" },
+  { code: "THON_01", name: "Thôn 1", leader: "Hồ Sỹ Tuấn" },
+  { code: "THON_02", name: "Thôn 2", leader: "Nguyễn Đức Lợi" },
+  { code: "THON_03", name: "Thôn 3", leader: "Nguyễn Văn Dũng" },
+  { code: "THON_04", name: "Thôn 4", leader: "Nguyễn Phú Bốn" },
+  { code: "THON_05", name: "Thôn 5", leader: "Vũ Văn Đạt" },
+  { code: "THON_06", name: "Thôn 6", leader: "Đỗ Thị Lan" },
+  { code: "THON_07", name: "Thôn 7", leader: "Nguyễn Văn Minh" },
+  { code: "THON_08", name: "Thôn 8", leader: "Trần Thanh Hùng" },
+  { code: "THON_09", name: "Thôn 9", leader: "Trần Văn Cảnh" },
+  { code: "THON_10", name: "Thôn 10", leader: "Nguyễn Lai" },
+  { code: "THON_11", name: "Thôn 11", leader: "Huỳnh Công Dũng" },
+  { code: "THON_12", name: "Thôn 12", leader: "Triệu Đức Quyên" },
+  { code: "THON_13", name: "Thôn 13", leader: "Hoàng Văn Tuyên" },
 ];
 
 // Dữ liệu nghiệp vụ mẫu sinh động ban đầu nếu localStorage chưa có
@@ -72,7 +72,7 @@ const INITIAL_OPERATIONS_DATA: MemberMovementRecord[] = [
   {
     id: "mov_init_1",
     memberId: "M001",
-    memberName: "Trần Văn Định",
+    memberName: "Đặng Văn Hảo",
     memberCccd: "066052000101",
     hamletName: "Thôn 1",
     type: "DECEASED",

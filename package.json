@@ -6,7 +6,9 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "seed": "tsx --env-file=.env prisma/seed.ts",
+    "seed:cht": "tsx --env-file=.env prisma/seed-cht.ts"
   },
   "prisma": {
     "seed": "tsx --env-file=.env prisma/seed.ts"

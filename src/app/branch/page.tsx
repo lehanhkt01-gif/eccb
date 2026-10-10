@@ -15,28 +15,28 @@ import {
 import NotificationBell from "@/components/NotificationBell";
 import DualApprovalModal from "@/components/DualApprovalModal";
 
-// Dữ liệu 20 Thôn, Buôn xã Ea Súp
+// Dữ liệu 20 Thôn, Buôn xã Ea Súp (20 Chi hội trưởng chuẩn xác)
 const HAMLETS = [
-  { code: "THON_01", name: "Thôn 1", leader: "Trần Văn Định", phone: "0912111001", total: 30 },
-  { code: "THON_02", name: "Thôn 2", leader: "Nguyễn Văn Hùng", phone: "0912111002", total: 32 },
-  { code: "THON_03", name: "Thôn 3", leader: "Lê Đức Thọ", phone: "0912111003", total: 28 },
-  { code: "THON_04", name: "Thôn 4", leader: "Phạm Hồng Thái", phone: "0912111004", total: 31 },
-  { code: "THON_05", name: "Thôn 5", leader: "Hoàng Văn Nam", phone: "0912111005", total: 29 },
-  { code: "THON_06", name: "Thôn 6", leader: "Vũ Đình Cường", phone: "0912111006", total: 33 },
-  { code: "THON_07", name: "Thôn 7", leader: "Đỗ Xuân Bách", phone: "0912111007", total: 30 },
-  { code: "THON_08", name: "Thôn 8", leader: "Bùi Văn Thành", phone: "0912111008", total: 34 },
-  { code: "THON_09", name: "Thôn 9", leader: "Ngô Quang Hưng", phone: "0912111009", total: 27 },
-  { code: "THON_10", name: "Thôn 10", leader: "Đinh Văn Quyết", phone: "0912111010", total: 31 },
-  { code: "THON_11", name: "Thôn 11", leader: "Lương Thế Vinh", phone: "0912111011", total: 30 },
-  { code: "THON_12", name: "Thôn 12", leader: "Trịnh Đình Dũng", phone: "0912111012", total: 29 },
-  { code: "THON_13", name: "Thôn 13", leader: "Đặng Hữu Phúc", phone: "0912111013", total: 32 },
-  { code: "THON_HOABINH", name: "Thôn Hòa Bình", leader: "Phan Văn Khải", phone: "0912111014", total: 35 },
-  { code: "THON_THANGLOI", name: "Thôn Thắng Lợi", leader: "Dương Minh Châu", phone: "0912111015", total: 33 },
-  { code: "THON_DOANKET", name: "Thôn Đoàn Kết", leader: "Nguyễn Tiến Lực", phone: "0912111016", total: 30 },
-  { code: "THON_BINHLOI", name: "Thôn Bình Lợi", leader: "Tạ Quang Bửu", phone: "0912111017", total: 28 },
-  { code: "BUON_A", name: "Buôn A", leader: "Y Dhăm Mlô", phone: "0912111018", total: 26 },
-  { code: "BUON_B", name: "Buôn B", leader: "Y Blô Kbuôr", phone: "0912111019", total: 25 },
-  { code: "BUON_C", name: "Buôn C", leader: "Y Khen Niê", phone: "0912111020", total: 27 },
+  { code: "BUON_A", name: "Buôn A", leader: "Y Nô Rcăm", phone: "0982257421", total: 26 },
+  { code: "BUON_B", name: "Buôn B", leader: "Đoàn Hữu Tiến", phone: "0935833737", total: 25 },
+  { code: "BUON_C", name: "Buôn C", leader: "Y Dyơng Êban", phone: "0839931193", total: 27 },
+  { code: "THON_HOABINH", name: "Thôn Hòa Bình", leader: "Lê Văn Hồng", phone: "0977979709", total: 35 },
+  { code: "THON_THANGLOI", name: "Thôn Thắng Lợi", leader: "Nguyễn Văn Đông", phone: "0828838929", total: 33 },
+  { code: "THON_DOANKET", name: "Thôn Đoàn Kết", leader: "Nguyễn Văn Sơn", phone: "0913779468", total: 30 },
+  { code: "THON_BINHLOI", name: "Thôn Bình Lợi", leader: "Lục Văn Cường", phone: "0338561794", total: 28 },
+  { code: "THON_01", name: "Thôn 1", leader: "Hồ Sỹ Tuấn", phone: "0986042302", total: 30 },
+  { code: "THON_02", name: "Thôn 2", leader: "Nguyễn Đức Lợi", phone: "0356912318", total: 32 },
+  { code: "THON_03", name: "Thôn 3", leader: "Nguyễn Văn Dũng", phone: "0342302292", total: 28 },
+  { code: "THON_04", name: "Thôn 4", leader: "Nguyễn Phú Bốn", phone: "0367875231", total: 31 },
+  { code: "THON_05", name: "Thôn 5", leader: "Vũ Văn Đạt", phone: "0327560358", total: 29 },
+  { code: "THON_06", name: "Thôn 6", leader: "Đỗ Thị Lan", phone: "0343800948", total: 33 },
+  { code: "THON_07", name: "Thôn 7", leader: "Nguyễn Văn Minh", phone: "0975384025", total: 30 },
+  { code: "THON_08", name: "Thôn 8", leader: "Trần Thanh Hùng", phone: "0397508052", total: 34 },
+  { code: "THON_09", name: "Thôn 9", leader: "Trần Văn Cảnh", phone: "0342869974", total: 27 },
+  { code: "THON_10", name: "Thôn 10", leader: "Nguyễn Lai", phone: "0986911610", total: 31 },
+  { code: "THON_11", name: "Thôn 11", leader: "Huỳnh Công Dũng", phone: "0359326437", total: 30 },
+  { code: "THON_12", name: "Thôn 12", leader: "Triệu Đức Quyên", phone: "0857603535", total: 29 },
+  { code: "THON_13", name: "Thôn 13", leader: "Hoàng Văn Tuyên", phone: "0984594812", total: 32 },
 ];
 
 // Danh bạ mẫu 30 hội viên Thôn 1
@@ -62,7 +62,7 @@ interface MemberItem {
 }
 
 const INITIAL_MEMBERS: MemberItem[] = [
-  { id: "M01", fullName: "Trần Văn Định", birthYear: 1952, militaryRank: "Đại úy", period: "Kháng chiến chống Mỹ", isPartyMember: true, partyBadge: "50 năm", isPolicy: true, policyType: "Thương binh 3/4", phone: "0912111001", hasPaidFund: true, present: true },
+  { id: "M01", fullName: "Hồ Sỹ Tuấn", birthYear: 1964, militaryRank: "Đại úy", period: "Biên giới phía Bắc", isPartyMember: true, partyBadge: "30 năm", isPolicy: false, phone: "0986042302", hasPaidFund: true, present: true },
   { id: "M02", fullName: "Nguyễn Văn Hùng", birthYear: 1958, militaryRank: "Thượng úy", period: "Biên giới Tây Nam", isPartyMember: true, partyBadge: "40 năm", isPolicy: true, policyType: "Bệnh binh", phone: "0912111002", economicModel: "Trang trại mít Thái 3ha", hasPaidFund: true, present: true },
   { id: "M03", fullName: "Lê Đức Thọ", birthYear: 1961, militaryRank: "Trung úy", period: "Biên giới phía Bắc", isPartyMember: true, partyBadge: "30 năm", isPolicy: false, phone: "0912111003", economicModel: "Lúa ST25 hữu cơ 2ha", hasPaidFund: true, present: true },
   { id: "M04", fullName: "Phạm Hồng Thái", birthYear: 1954, militaryRank: "Thiếu tá", period: "Kháng chiến chống Mỹ", isPartyMember: true, partyBadge: "45 năm", isPolicy: true, policyType: "Nhiễm chất độc Da cam", phone: "0912111004", hasPaidFund: true, present: true },

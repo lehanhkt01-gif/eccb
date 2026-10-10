@@ -128,32 +128,34 @@ export default function LoginPage() {
         return;
       } else if (cleanLower.startsWith("chihoi_")) {
         const branchKey = cleanLower.replace("chihoi_", "");
-        const hamletMap: Record<string, { code: string; name: string; leader: string }> = {
-          thon_01: { code: "THON_01", name: "Thôn 1", leader: "Trần Văn Định" },
-          thon_02: { code: "THON_02", name: "Thôn 2", leader: "Nguyễn Văn Hùng" },
-          thon_03: { code: "THON_03", name: "Thôn 3", leader: "Lê Đức Thọ" },
-          thon_04: { code: "THON_04", name: "Thôn 4", leader: "Phạm Hồng Thái" },
-          thon_05: { code: "THON_05", name: "Thôn 5", leader: "Hoàng Văn Nam" },
-          thon_06: { code: "THON_06", name: "Thôn 6", leader: "Vũ Đình Cường" },
-          thon_07: { code: "THON_07", name: "Thôn 7", leader: "Đỗ Xuân Bách" },
-          thon_08: { code: "THON_08", name: "Thôn 8", leader: "Bùi Văn Thành" },
-          thon_09: { code: "THON_09", name: "Thôn 9", leader: "Ngô Quang Hưng" },
-          thon_10: { code: "THON_10", name: "Thôn 10", leader: "Đinh Văn Quyết" },
-          thon_11: { code: "THON_11", name: "Thôn 11", leader: "Lương Thế Vinh" },
-          thon_12: { code: "THON_12", name: "Thôn 12", leader: "Trịnh Đình Dũng" },
-          thon_13: { code: "THON_13", name: "Thôn 13", leader: "Đặng Hữu Phúc" },
-          thon_hoabinh: { code: "THON_HOABINH", name: "Thôn Hòa Bình", leader: "Phan Văn Khải" },
-          thon_thangloi: { code: "THON_THANGLOI", name: "Thôn Thắng Lợi", leader: "Dương Minh Châu" },
-          thon_doanket: { code: "THON_DOANKET", name: "Thôn Đoàn Kết", leader: "Nguyễn Tiến Lực" },
-          thon_binhloi: { code: "THON_BINHLOI", name: "Thôn Bình Lợi", leader: "Tạ Quang Bửu" },
-          buon_a: { code: "BUON_A", name: "Buôn A", leader: "Y Dhăm Mlô" },
-          buon_b: { code: "BUON_B", name: "Buôn B", leader: "Y Blô Kbuôr" },
-          buon_c: { code: "BUON_C", name: "Buôn C", leader: "Y Khen Niê" },
+        const hamletMap: Record<string, { code: string; name: string; leader: string; phone: string; cccd: string }> = {
+          buon_a: { code: "BUON_A", name: "Buôn A", leader: "Y Nô Rcăm", phone: "0982257421", cccd: "0982257421" },
+          buon_b: { code: "BUON_B", name: "Buôn B", leader: "Đoàn Hữu Tiến", phone: "0935833737", cccd: "034050005833" },
+          buon_c: { code: "BUON_C", name: "Buôn C", leader: "Y Dyơng Êban", phone: "0839931193", cccd: "0839931193" },
+          thon_hoabinh: { code: "THON_HOABINH", name: "Thôn Hòa Bình", leader: "Lê Văn Hồng", phone: "0977979709", cccd: "0420670022" },
+          thon_thangloi: { code: "THON_THANGLOI", name: "Thôn Thắng Lợi", leader: "Nguyễn Văn Đông", phone: "0828838929", cccd: "025065000445" },
+          thon_doanket: { code: "THON_DOANKET", name: "Thôn Đoàn Kết", leader: "Nguyễn Văn Sơn", phone: "0913779468", cccd: "040059000718" },
+          thon_binhloi: { code: "THON_BINHLOI", name: "Thôn Bình Lợi", leader: "Lục Văn Cường", phone: "0338561794", cccd: "004082002052" },
+          thon_01: { code: "THON_01", name: "Thôn 1", leader: "Hồ Sỹ Tuấn", phone: "0986042302", cccd: "0986042302" },
+          thon_02: { code: "THON_02", name: "Thôn 2", leader: "Nguyễn Đức Lợi", phone: "0356912318", cccd: "049068000884" },
+          thon_03: { code: "THON_03", name: "Thôn 3", leader: "Nguyễn Văn Dũng", phone: "0342302292", cccd: "034079011156" },
+          thon_04: { code: "THON_04", name: "Thôn 4", leader: "Nguyễn Phú Bốn", phone: "0367875231", cccd: "038065009462" },
+          thon_05: { code: "THON_05", name: "Thôn 5", leader: "Vũ Văn Đạt", phone: "0327560358", cccd: "034065009537" },
+          thon_06: { code: "THON_06", name: "Thôn 6", leader: "Đỗ Thị Lan", phone: "0343800948", cccd: "033155002814" },
+          thon_07: { code: "THON_07", name: "Thôn 7", leader: "Nguyễn Văn Minh", phone: "0975384025", cccd: "024055000072" },
+          thon_08: { code: "THON_08", name: "Thôn 8", leader: "Trần Thanh Hùng", phone: "0397508052", cccd: "048069000332" },
+          thon_09: { code: "THON_09", name: "Thôn 9", leader: "Trần Văn Cảnh", phone: "0342869974", cccd: "066089001142" },
+          thon_10: { code: "THON_10", name: "Thôn 10", leader: "Nguyễn Lai", phone: "0986911610", cccd: "048068000489" },
+          thon_11: { code: "THON_11", name: "Thôn 11", leader: "Huỳnh Công Dũng", phone: "0359326437", cccd: "049060000688" },
+          thon_12: { code: "THON_12", name: "Thôn 12", leader: "Triệu Đức Quyên", phone: "0857603535", cccd: "006089000161" },
+          thon_13: { code: "THON_13", name: "Thôn 13", leader: "Hoàng Văn Tuyên", phone: "0984594812", cccd: "004077000098" },
         };
         const branchInfo = hamletMap[branchKey] || {
           code: `THON_${branchKey.toUpperCase()}`,
           name: `Thôn ${branchKey.toUpperCase()}`,
           leader: `Chi hội trưởng ${branchKey.toUpperCase()}`,
+          phone: "",
+          cccd: "",
         };
 
         setCurrentUser({
@@ -166,6 +168,45 @@ export default function LoginPage() {
         router.push("/branch");
         return;
       } else if (isCccd) {
+        // Kiểm tra xem CCCD này có thuộc 20 Chi hội trưởng không
+        const CHT_CCCD_MAP: Record<string, { code: string; name: string; leader: string; phone: string }> = {
+          "0982257421": { code: "BUON_A", name: "Buôn A", leader: "Y Nô Rcăm", phone: "0982257421" },
+          "034050005833": { code: "BUON_B", name: "Buôn B", leader: "Đoàn Hữu Tiến", phone: "0935833737" },
+          "0839931193": { code: "BUON_C", name: "Buôn C", leader: "Y Dyơng Êban", phone: "0839931193" },
+          "0420670022": { code: "THON_HOABINH", name: "Thôn Hòa Bình", leader: "Lê Văn Hồng", phone: "0977979709" },
+          "025065000445": { code: "THON_THANGLOI", name: "Thôn Thắng Lợi", leader: "Nguyễn Văn Đông", phone: "0828838929" },
+          "040059000718": { code: "THON_DOANKET", name: "Thôn Đoàn Kết", leader: "Nguyễn Văn Sơn", phone: "0913779468" },
+          "004082002052": { code: "THON_BINHLOI", name: "Thôn Bình Lợi", leader: "Lục Văn Cường", phone: "0338561794" },
+          "0986042302": { code: "THON_01", name: "Thôn 1", leader: "Hồ Sỹ Tuấn", phone: "0986042302" },
+          "049068000884": { code: "THON_02", name: "Thôn 2", leader: "Nguyễn Đức Lợi", phone: "0356912318" },
+          "034079011156": { code: "THON_03", name: "Thôn 3", leader: "Nguyễn Văn Dũng", phone: "0342302292" },
+          "038065009462": { code: "THON_04", name: "Thôn 4", leader: "Nguyễn Phú Bốn", phone: "0367875231" },
+          "034065009537": { code: "THON_05", name: "Thôn 5", leader: "Vũ Văn Đạt", phone: "0327560358" },
+          "033155002814": { code: "THON_06", name: "Thôn 6", leader: "Đỗ Thị Lan", phone: "0343800948" },
+          "024055000072": { code: "THON_07", name: "Thôn 7", leader: "Nguyễn Văn Minh", phone: "0975384025" },
+          "048069000332": { code: "THON_08", name: "Thôn 8", leader: "Trần Thanh Hùng", phone: "0397508052" },
+          "066089001142": { code: "THON_09", name: "Thôn 9", leader: "Trần Văn Cảnh", phone: "0342869974" },
+          "048068000489": { code: "THON_10", name: "Thôn 10", leader: "Nguyễn Lai", phone: "0986911610" },
+          "049060000688": { code: "THON_11", name: "Thôn 11", leader: "Huỳnh Công Dũng", phone: "0359326437" },
+          "006089000161": { code: "THON_12", name: "Thôn 12", leader: "Triệu Đức Quyên", phone: "0857603535" },
+          "004077000098": { code: "THON_13", name: "Thôn 13", leader: "Hoàng Văn Tuyên", phone: "0984594812" },
+        };
+
+        const chtInfo = CHT_CCCD_MAP[cleanUser];
+        if (chtInfo) {
+          setCurrentUser({
+            username: cleanUser,
+            cccd: cleanUser,
+            fullName: `Đ/c ${chtInfo.leader}`,
+            phone: chtInfo.phone,
+            role: "BRANCH_LEADER",
+            hamletCode: chtInfo.code,
+            hamletName: chtInfo.name,
+          });
+          router.push("/branch");
+          return;
+        }
+
         const members = getStoredMembers();
         const mem = members.find((m) => m.cccd === cleanUser);
         if (mem) {
