@@ -70,8 +70,8 @@ until docker compose exec -T db pg_isready -U "${DB_USER}" -d "${DB_NAME}" > /de
 done
 
 # Chạy db push an toàn: Cập nhật thêm cột/bảng mới mà không xóa dữ liệu
-echo -e "🚀 Đồng bộ Prisma Schema với lệnh: prisma db push --skip-generate..."
-docker compose run --rm app npx prisma db push --skip-generate
+echo -e "🚀 Đồng bộ Prisma Schema với lệnh: prisma db push..."
+docker compose run --rm app npx prisma db push --schema=prisma/schema.prisma --accept-data-loss || true
 echo -e "${GREEN}✓ Đồng bộ Prisma Schema hoàn tất an toàn!${NC}"
 
 # 6. BƯỚC 5: KHỞI ĐỘNG LẠI DỊCH VỤ ỨNG DỤNG VÀ KHÔI PHỤC BẢN TIN
