@@ -146,7 +146,7 @@ export default function MemberPortalPage() {
 
   const handleLogout = () => {
     logout();
-    router.push("/");
+    window.location.href = "/";
   };
 
   if (!currentUser || !member) {

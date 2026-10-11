@@ -150,7 +150,7 @@ export default function BranchMobilePage() {
 
   const handleLogout = () => {
     logout();
-    router.push("/");
+    window.location.href = "/";
   };
   const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"home" | "attendance" | "fund" | "media" | "members">("home");

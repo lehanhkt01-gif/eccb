@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import NotificationBell from "@/components/NotificationBell";
-import { getCurrentUser, AuthUser, AUTH_CHANGE_EVENT } from "@/lib/authSession";
+import { getCurrentUser, AuthUser, AUTH_CHANGE_EVENT, logout } from "@/lib/authSession";
 
 export default function AdminLayout({
   children,
@@ -30,6 +30,11 @@ export default function AdminLayout({
     window.addEventListener(AUTH_CHANGE_EVENT, handleAuth);
     return () => window.removeEventListener(AUTH_CHANGE_EVENT, handleAuth);
   }, []);
+
+  const handleLogout = () => {
+    logout();
+    window.location.href = "/";
+  };
 
   const cleanName = (currentUser?.fullName || "Đặng Trung Hiếu")
     .replace(/^(đ\/c|đồng chí)\s+/i, "")
@@ -135,12 +140,14 @@ export default function AdminLayout({
               <span className="hidden sm:inline">Trang chủ</span>
             </Link>
 
-            <Link
-              href="/login"
-              className="px-2.5 sm:px-3 py-1.5 bg-flag-red hover:bg-flag-red-light text-white text-xs font-bold rounded border border-amber-400/30 shadow-xs transition"
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="px-2.5 sm:px-3 py-1.5 bg-flag-red hover:bg-red-800 active:scale-95 text-white text-xs font-bold rounded border border-amber-400/30 shadow-xs transition cursor-pointer"
+              title="Đăng xuất hoàn toàn và trở về Trang chủ"
             >
               Đăng Xuất
-            </Link>
+            </button>
           </div>
         </div>
       </header>

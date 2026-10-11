@@ -62,11 +62,7 @@ export default function Header({
     logout();
     setCurrentUser(null);
     setMenuOpen(false);
-    if (pathname !== "/") {
-      router.push("/");
-    } else {
-      router.refresh();
-    }
+    window.location.href = "/";
   };
 
   // Format tên hiển thị sạch không chứa tiền tố: "Họ và Tên"

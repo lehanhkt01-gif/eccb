@@ -153,7 +153,7 @@ export default function BranchOperationsPage() {
 
   const handleLogout = () => {
     logout();
-    router.push("/");
+    window.location.href = "/";
   };
 
   const [members, setMembers] = useState<MemberRecord[]>([]);
