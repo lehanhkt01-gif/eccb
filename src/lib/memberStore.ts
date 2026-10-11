@@ -1355,6 +1355,107 @@ export function rejectMember(id: string, reason: string): boolean {
   return rejectMemberDual(id, reason, "Ban Thường trực Hội CCB Xã Ea Súp").success;
 }
 
+/**
+ * CHỈ ĐỊNH HỘI VIÊN LÀM CHI HỘI TRƯỞNG
+ * Quy tắc:
+ * 1. Hội viên ở chi hội nào thì chỉ được chỉ định làm Chi hội trưởng của chi hội đó.
+ * 2. Chi hội trưởng cũ của thôn buôn đó sẽ chuyển về làm Hội viên.
+ * 3. Đồng bộ cập nhật vào danh sách MemberStore và tài khoản Chi hội trưởng.
+ */
+export function assignBranchLeader(memberId: string): {
+  success: boolean;
+  message: string;
+  targetMember?: MemberRecord;
+  oldLeader?: MemberRecord;
+} {
+  const currentList = getStoredMembers();
+  const target = currentList.find(
+    (m) => m.id === memberId || m.cccd === memberId
+  );
+
+  if (!target) {
+    return { success: false, message: "Không tìm thấy hồ sơ hội viên trong hệ thống." };
+  }
+
+  const hamletName = target.hamletName;
+  if (!hamletName) {
+    return { success: false, message: "Hội viên chưa có thông tin chi hội thôn/buôn sinh hoạt." };
+  }
+
+  // Tìm Chi hội trưởng hiện tại của thôn buôn này (nếu có)
+  const oldLeader = currentList.find(
+    (m) =>
+      m.hamletName === hamletName &&
+      m.associationRole === "Chi hội trưởng" &&
+      m.id !== target.id &&
+      m.cccd !== target.cccd
+  );
+
+  // Cập nhật vai trò:
+  // - Hội viên mục tiêu -> "Chi hội trưởng"
+  // - CHT cũ (nếu có) -> "Hội viên"
+  const updatedList = currentList.map((m) => {
+    if (m.hamletName === hamletName) {
+      if (m.id === target.id || m.cccd === target.cccd) {
+        return {
+          ...m,
+          associationRole: "Chi hội trưởng",
+        };
+      } else if (m.associationRole === "Chi hội trưởng") {
+        return {
+          ...m,
+          associationRole: "Hội viên",
+        };
+      }
+    }
+    return m;
+  });
+
+  saveStoredMembers(updatedList);
+
+  // Đồng bộ cập nhật tài khoản Chi hội trưởng trong permissions state nếu có
+  try {
+    const permKey = "eccb_permissions_state_v3";
+    const permRaw = localStorage.getItem(permKey) || localStorage.getItem("eccb_permissions_state_v1");
+    if (permRaw) {
+      const permObj = JSON.parse(permRaw);
+      if (permObj.branches && Array.isArray(permObj.branches)) {
+        permObj.branches = permObj.branches.map((b: any) => {
+          if (b.unit.toLowerCase().includes(hamletName.toLowerCase())) {
+            return {
+              ...b,
+              fullName: target.fullName,
+              phone: target.phone,
+              username: target.cccd,
+            };
+          }
+          return b;
+        });
+        localStorage.setItem(permKey, JSON.stringify(permObj));
+      }
+    }
+  } catch {}
+
+  // Tạo thông báo chuông cho Thường trực Xã
+  try {
+    createNotification({
+      targetRole: "SUPER_ADMIN",
+      hamletName,
+      title: `Chỉ định Chi hội trưởng: ${target.fullName}`,
+      content: `Ban Thường trực Hội CCB Xã đã chỉ định đ/c ${target.fullName} làm Chi hội trưởng ${hamletName}${oldLeader ? ` (thay thế đ/c ${oldLeader.fullName})` : ""}.`,
+      type: "STATUS_CHANGE",
+      linkUrl: "/admin/members",
+    });
+  } catch {}
+
+  return {
+    success: true,
+    message: `Đã chỉ định đồng chí [${target.fullName}] làm Chi hội trưởng ${hamletName} thành công!`,
+    targetMember: target,
+    oldLeader,
+  };
+}
+
 const MOVEMENTS_STORAGE_KEY = "eccb-easup_movements_v1";
 
 export function getStoredMovements(): MemberMovementRecord[] {

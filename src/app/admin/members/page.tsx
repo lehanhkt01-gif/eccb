@@ -21,6 +21,7 @@ import {
   approveMember,
   rejectMember,
   updateStoredMember,
+  assignBranchLeader,
   HAMLET_LIST,
 } from "@/lib/memberStore";
 
@@ -119,6 +120,53 @@ export default function AdminMembersPage() {
     const updated = currentList.map((m) => m.id === id ? { ...m, status: "CHO_XA_PHE_DUYET" as const, rejectionReason: undefined } : m);
     setMembers(updated);
     showToast(`🔄 Đã chuyển hồ sơ đ/c ${fullName} về trạng thái Chờ Thường trực Xã phê duyệt!`);
+  };
+
+  // Xử lý chỉ định Chi hội trưởng (hội viên ở chi hội nào thì chỉ được chỉ định chi hội trưởng ở chi hội đó)
+  const handleAssignBranchLeader = async (m: MemberRecord) => {
+    const currentLeader = activeMembers.find(
+      (x) => x.hamletName === m.hamletName && x.associationRole === "Chi hội trưởng" && x.cccd !== m.cccd
+    );
+    const leaderNote = currentLeader
+      ? `\n(Chi hội trưởng hiện tại [${currentLeader.fullName}] sẽ chuyển về vai trò Hội viên)`
+      : "";
+
+    const confirm = window.confirm(
+      `⭐ QUYẾT ĐỊNH CHỈ ĐỊNH CHI HỘI TRƯỞNG\n\n` +
+      `Đồng chí có chắc chắn muốn chỉ định:\n` +
+      `👤 Đồng chí: ${m.fullName}\n` +
+      `🆔 Số CCCD: ${m.cccd}\n` +
+      `🏘️ Đơn vị sinh hoạt: ${m.hamletName}\n\n` +
+      `đảm nhiệm chức danh CHI HỘI TRƯỞNG của ${m.hamletName}?${leaderNote}\n\n` +
+      `* Lưu ý: Hội viên ở chi hội nào chỉ được chỉ định làm Chi hội trưởng tại đúng chi hội đó.`
+    );
+
+    if (!confirm) return;
+
+    // 1. Cập nhật trong LocalStore & kích hoạt event đồng bộ
+    const res = assignBranchLeader(m.id);
+    if (res.success) {
+      showToast(`⭐ ${res.message}`);
+      const updated = getStoredMembers();
+      setMembers(updated);
+
+      // 2. Gửi request đồng bộ CSDL PostgreSQL qua API
+      try {
+        await fetch("/api/admin/assign-branch-leader", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            memberId: m.id,
+            cccd: m.cccd,
+            hamletName: m.hamletName,
+          }),
+        });
+      } catch (err) {
+        console.error("Lỗi đồng bộ DB:", err);
+      }
+    } else {
+      alert(`⚠️ ${res.message}`);
+    }
   };
 
   // Xử lý lưu chỉnh sửa 35 trường thông tin
@@ -1419,7 +1467,7 @@ export default function AdminMembersPage() {
 
                       {/* Thao tác */}
                       <td className="py-3 px-3 text-center">
-                        <div className="flex items-center justify-center gap-1.5">
+                        <div className="flex items-center justify-center gap-1.5 flex-wrap">
                           <button
                             onClick={() => setActiveModalMember(m)}
                             className="px-2.5 py-1 bg-stone-100 hover:bg-stone-200 text-deep-text font-bold text-xs rounded border border-stone-300 transition"
@@ -1427,12 +1475,33 @@ export default function AdminMembersPage() {
                           >
                             👁️ Chi tiết
                           </button>
+
+                          {/* Nút chỉ định làm Chi hội trưởng */}
+                          {m.associationRole === "Chi hội trưởng" ? (
+                            <span
+                              className="px-2 py-1 bg-amber-50 text-amber-800 border border-amber-300 rounded text-xs font-bold flex items-center gap-1 shadow-2xs select-none"
+                              title={`Đồng chí hiện đang là Chi hội trưởng của ${m.hamletName}`}
+                            >
+                              <span>⭐</span>
+                              <span>Đang là CHT</span>
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => handleAssignBranchLeader(m)}
+                              className="px-2.5 py-1 bg-amber-700 hover:bg-amber-800 active:scale-95 text-white font-bold text-xs rounded border border-amber-500 shadow-2xs transition flex items-center gap-1 cursor-pointer"
+                              title={`Chỉ định đồng chí ${m.fullName} làm Chi hội trưởng ${m.hamletName}`}
+                            >
+                              <span>⭐</span>
+                              <span>Chỉ định CHT</span>
+                            </button>
+                          )}
+
                           <button
                             onClick={() => {
                               setEditingMember({ ...m });
                               setEditTab("personal");
                             }}
-                            className="border border-[#244023] text-[#244023] hover:bg-[#244023] hover:text-white px-2.5 py-1 rounded text-xs font-medium transition flex items-center gap-1 shadow-2xs"
+                            className="border border-[#244023] text-[#244023] hover:bg-[#244023] hover:text-white px-2.5 py-1 rounded text-xs font-medium transition flex items-center gap-1 shadow-2xs cursor-pointer"
                             title="Chỉnh sửa 35 trường thông tin hồ sơ"
                           >
                             <span>✏️</span>
@@ -1441,7 +1510,7 @@ export default function AdminMembersPage() {
                           <button
                             onClick={() => exportDocx(m)}
                             disabled={isExporting}
-                            className="px-2.5 py-1 bg-moss-green hover:bg-moss-green-light text-white font-bold text-xs rounded transition flex items-center gap-1"
+                            className="px-2.5 py-1 bg-moss-green hover:bg-moss-green-light text-white font-bold text-xs rounded transition flex items-center gap-1 cursor-pointer"
                             title="Xuất file Word Mẫu 02 chuẩn Nghị định 30"
                           >
                             <span>📄</span>

@@ -51,7 +51,7 @@ async function main() {
       cccd: { notIn: WHITELIST_CCCD },
       OR: [
         { fullName: { in: ["Đặng Hữu Phúc", "Nguyễn Đình Quảng", "Nguyễn Văn Hùng", "Lê Bá Tùng"] } },
-        { cccd: { in: ["066067000113", "066068001234", "066058000102"] } },
+        { cccd: { in: ["066067000113", "066068001234", "066058000102", "066055009876"] } },
       ],
     },
   });
@@ -91,7 +91,7 @@ async function main() {
           {
             OR: [
               { memberId: { in: mockMemberIds } },
-              { username: { in: ["066067000113", "066068001234", "066058000102"] } },
+              { username: { in: ["066067000113", "066068001234", "066058000102", "066055009876"] } },
             ],
           },
         ],

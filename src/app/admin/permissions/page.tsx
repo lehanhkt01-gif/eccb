@@ -68,7 +68,7 @@ const INITIAL_BRANCH_LEADERS: AccountItem[] = [
   { id: "bl_20", fullName: "Hoàng Văn Tuyên", unit: "Chi hội Thôn 13", username: "004077000098", phone: "0984594812", role: "BRANCH_LEADER", isActive: true, passwordStatus: "MẶC_ĐỊNH" },
 ];
 
-const STORAGE_KEY_PERMISSIONS = "eccb_permissions_state_v1";
+const STORAGE_KEY_PERMISSIONS = "eccb_permissions_state_v3";
 
 export default function PermissionsManagementPage() {
   const [activeTab, setActiveTab] = useState<"cadre" | "branch" | "member">("cadre");
@@ -100,37 +100,83 @@ export default function PermissionsManagementPage() {
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  // Nạp danh sách 612 hội viên từ memberStore và localStorage
-  useEffect(() => {
+  // Nạp danh sách hội viên chính thức từ memberStore và localStorage
+  const syncPermissionsData = () => {
+    // 1. Lấy danh sách hội viên chính thức (CHỈ HỘI VIÊN CHÍNH THỨC, KHÔNG LẤY HỒ SƠ ẢO)
+    const officialMembers = getStoredMembers().filter(
+      (m) => m.status === "CHINH_THUC" || (m.status as any) === "ACTIVE"
+    );
+    const validCccdSet = new Set(officialMembers.map((m) => m.cccd));
+    const FAKE_CCCD_SET = new Set(["066068001234", "066055009876", "066067000113", "066058000102"]);
+
+    let loadedAdmins = INITIAL_ADMINS;
+    let loadedBranches = INITIAL_BRANCH_LEADERS;
+    let loadedMembers: AccountItem[] = [];
+
     try {
+      // Dọn sạch các key cache cũ chứa dữ liệu ảo
+      localStorage.removeItem("eccb_permissions_state_v1");
+      localStorage.removeItem("eccb_permissions_state_v2");
+
       const stored = localStorage.getItem(STORAGE_KEY_PERMISSIONS);
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (parsed.admins) setAdminAccounts(parsed.admins);
-        if (parsed.branches) setBranchAccounts(parsed.branches);
-        if (parsed.members) {
-          setMemberAccounts(parsed.members);
-          return;
+        if (parsed.admins && Array.isArray(parsed.admins)) loadedAdmins = parsed.admins;
+        if (parsed.branches && Array.isArray(parsed.branches)) loadedBranches = parsed.branches;
+        if (parsed.members && Array.isArray(parsed.members)) {
+          // LỌC SẠCH 100% CÁC HỘI VIÊN ẢO VÀ CHỈ GIỮ CÁC HỘI VIÊN CHÍNH THỨC HỢP LỆ
+          loadedMembers = parsed.members.filter(
+            (m: AccountItem) => !FAKE_CCCD_SET.has(m.username) && validCccdSet.has(m.username)
+          );
         }
       }
     } catch {
       // Bỏ qua lỗi parse
     }
 
-    // Khởi tạo từ danh sách 612 hội viên
-    const allMembers: MemberRecord[] = getStoredMembers();
-    const membersAsAccounts: AccountItem[] = allMembers.map((m) => ({
-      id: `mem_user_${m.id}`,
-      fullName: m.fullName,
-      unit: m.hamletName,
-      username: m.cccd, // Tên đăng nhập là số CCCD 12 số
-      phone: m.phone,
-      role: "MEMBER",
-      isActive: true,
-      passwordStatus: "MẶC_ĐỊNH",
-    }));
+    // Luôn đảm bảo số tài khoản hội viên trùng khớp chính xác 1:1 với danh sách hội viên chính thức
+    if (loadedMembers.length !== officialMembers.length) {
+      loadedMembers = officialMembers.map((m) => ({
+        id: `mem_user_${m.id}`,
+        fullName: m.fullName,
+        unit: m.hamletName,
+        username: m.cccd, // Tên đăng nhập là số CCCD 12 số
+        phone: m.phone,
+        role: "MEMBER",
+        isActive: true,
+        passwordStatus: "MẶC_ĐỊNH",
+      }));
+    }
 
-    setMemberAccounts(membersAsAccounts);
+    // Cập nhật lại thông tin Chi hội trưởng mới nhất theo thôn buôn
+    const leadersInStore = officialMembers.filter((m) => m.associationRole === "Chi hội trưởng");
+    if (leadersInStore.length > 0) {
+      loadedBranches = loadedBranches.map((br) => {
+        const matchingLeader = leadersInStore.find(
+          (l) => br.unit.toLowerCase().includes(l.hamletName.toLowerCase()) || l.hamletName.toLowerCase().includes(br.unit.replace("Chi hội ", "").toLowerCase())
+        );
+        if (matchingLeader) {
+          return {
+            ...br,
+            fullName: matchingLeader.fullName,
+            phone: matchingLeader.phone,
+            username: matchingLeader.cccd,
+          };
+        }
+        return br;
+      });
+    }
+
+    setAdminAccounts(loadedAdmins);
+    setBranchAccounts(loadedBranches);
+    setMemberAccounts(loadedMembers);
+    saveState(loadedAdmins, loadedBranches, loadedMembers);
+  };
+
+  useEffect(() => {
+    syncPermissionsData();
+    window.addEventListener("eccb-members-updated", syncPermissionsData);
+    return () => window.removeEventListener("eccb-members-updated", syncPermissionsData);
   }, []);
 
   // Lưu trạng thái vào localStorage khi có thay đổi
