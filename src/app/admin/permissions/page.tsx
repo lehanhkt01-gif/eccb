@@ -68,7 +68,7 @@ const INITIAL_BRANCH_LEADERS: AccountItem[] = [
   { id: "bl_20", fullName: "Hoàng Văn Tuyên", unit: "Chi hội Thôn 13", username: "004077000098", phone: "0984594812", role: "BRANCH_LEADER", isActive: true, passwordStatus: "MẶC_ĐỊNH" },
 ];
 
-const STORAGE_KEY_PERMISSIONS = "eccb_permissions_state_v3";
+const STORAGE_KEY_PERMISSIONS = "eccb_permissions_state_v6";
 
 export default function PermissionsManagementPage() {
   const [activeTab, setActiveTab] = useState<"cadre" | "branch" | "member">("cadre");
@@ -100,53 +100,54 @@ export default function PermissionsManagementPage() {
     setTimeout(() => setToastMessage(null), 3000);
   };
 
+  const FAKE_CCCD_SET = new Set([
+    "066068001234", "066055009876", "066067000113", "066058000102",
+    "066052000101", "066060000111", "066072000109", "066050100001"
+  ]);
+
   // Nạp danh sách hội viên chính thức từ memberStore và localStorage
   const syncPermissionsData = () => {
     // 1. Lấy danh sách hội viên chính thức (CHỈ HỘI VIÊN CHÍNH THỨC, KHÔNG LẤY HỒ SƠ ẢO)
     const officialMembers = getStoredMembers().filter(
-      (m) => m.status === "CHINH_THUC" || (m.status as any) === "ACTIVE"
+      (m) => (m.status === "CHINH_THUC" || (m.status as any) === "ACTIVE") &&
+             !FAKE_CCCD_SET.has(m.cccd) &&
+             !["Đặng Hữu Phúc", "Nguyễn Đình Quảng", "Nguyễn Văn Hùng", "Lê Bá Tùng", "Đặng Văn Hảo", "Lương Thế Vinh", "Ngô Quang Hưng"].includes(m.fullName)
     );
-    const validCccdSet = new Set(officialMembers.map((m) => m.cccd));
-    const FAKE_CCCD_SET = new Set(["066068001234", "066055009876", "066067000113", "066058000102"]);
 
     let loadedAdmins = INITIAL_ADMINS;
     let loadedBranches = INITIAL_BRANCH_LEADERS;
-    let loadedMembers: AccountItem[] = [];
 
     try {
       // Dọn sạch các key cache cũ chứa dữ liệu ảo
-      localStorage.removeItem("eccb_permissions_state_v1");
-      localStorage.removeItem("eccb_permissions_state_v2");
+      [
+        "eccb_permissions_state_v1",
+        "eccb_permissions_state_v2",
+        "eccb_permissions_state_v3",
+        "eccb_permissions_state_v4",
+        "eccb_permissions_state_v5"
+      ].forEach((k) => localStorage.removeItem(k));
 
       const stored = localStorage.getItem(STORAGE_KEY_PERMISSIONS);
       if (stored) {
         const parsed = JSON.parse(stored);
         if (parsed.admins && Array.isArray(parsed.admins)) loadedAdmins = parsed.admins;
         if (parsed.branches && Array.isArray(parsed.branches)) loadedBranches = parsed.branches;
-        if (parsed.members && Array.isArray(parsed.members)) {
-          // LỌC SẠCH 100% CÁC HỘI VIÊN ẢO VÀ CHỈ GIỮ CÁC HỘI VIÊN CHÍNH THỨC HỢP LỆ
-          loadedMembers = parsed.members.filter(
-            (m: AccountItem) => !FAKE_CCCD_SET.has(m.username) && validCccdSet.has(m.username)
-          );
-        }
       }
     } catch {
       // Bỏ qua lỗi parse
     }
 
-    // Luôn đảm bảo số tài khoản hội viên trùng khớp chính xác 1:1 với danh sách hội viên chính thức
-    if (loadedMembers.length !== officialMembers.length) {
-      loadedMembers = officialMembers.map((m) => ({
-        id: `mem_user_${m.id}`,
-        fullName: m.fullName,
-        unit: m.hamletName,
-        username: m.cccd, // Tên đăng nhập là số CCCD 12 số
-        phone: m.phone,
-        role: "MEMBER",
-        isActive: true,
-        passwordStatus: "MẶC_ĐỊNH",
-      }));
-    }
+    // Luôn đảm bảo số tài khoản hội viên trùng khớp chính xác 1:1 với danh sách hội viên chính thức (Tuyệt đối không có 2 hội viên ảo)
+    const loadedMembers: AccountItem[] = officialMembers.map((m) => ({
+      id: `mem_user_${m.id}`,
+      fullName: m.fullName,
+      unit: m.hamletName,
+      username: m.cccd, // Tên đăng nhập là số CCCD 12 số
+      phone: m.phone,
+      role: "MEMBER",
+      isActive: true,
+      passwordStatus: "MẶC_ĐỊNH",
+    }));
 
     // Cập nhật lại thông tin Chi hội trưởng mới nhất theo thôn buôn
     const leadersInStore = officialMembers.filter((m) => m.associationRole === "Chi hội trưởng");
@@ -292,11 +293,15 @@ export default function PermissionsManagementPage() {
     showToast(`✓ Cấp tài khoản mới thành công cho đồng chí [${newItem.fullName}].`);
   };
 
-  // Danh sách hiện tại theo Tab
+  // Danh sách hiện tại theo Tab (Đảm bảo lọc sạch 100% tài khoản ảo)
   const currentList = useMemo(() => {
     if (activeTab === "cadre") return adminAccounts;
     if (activeTab === "branch") return branchAccounts;
-    return memberAccounts;
+    return memberAccounts.filter(
+      (m) =>
+        !FAKE_CCCD_SET.has(m.username) &&
+        !["Đặng Hữu Phúc", "Nguyễn Đình Quảng", "Nguyễn Văn Hùng", "Lê Bá Tùng", "Đặng Văn Hảo", "Lương Thế Vinh", "Ngô Quang Hưng"].includes(m.fullName)
+    );
   }, [activeTab, adminAccounts, branchAccounts, memberAccounts]);
 
   // Danh sách sau khi lọc và tìm kiếm

@@ -1405,7 +1405,7 @@ export default function AdminMembersPage() {
                               Chi hội trưởng
                             </span>
                           )}
-                          {m.approvalDate && (
+                          {(m as any).isNewlyApproved && (
                             <span className="px-1.5 py-0.2 bg-emerald-100 text-emerald-800 text-[9px] font-bold rounded">
                               Mới duyệt
                             </span>

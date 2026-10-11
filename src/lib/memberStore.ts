@@ -989,7 +989,8 @@ export const OFFICIAL_BRANCH_LEADERS: MemberRecord[] = [
   },
 ];
 
-const STORAGE_KEY = "eccb_easup_members_v5";
+export const STORAGE_KEY_MEMBERS = "eccb_easup_members_v8";
+const STORAGE_KEY = STORAGE_KEY_MEMBERS;
 
 export const VALID_20_CHT_CCCD = [
   "0982257421", "034050005833", "0839931193", "0420670022", "025065000445",
@@ -998,16 +999,31 @@ export const VALID_20_CHT_CCCD = [
   "066089001142", "048068000489", "049060000688", "006089000161", "004077000098"
 ];
 
+export const BLACKLIST_FAKE_CCCD = new Set([
+  "066068001234", "066055009876", "066067000113", "066058000102",
+  "066052000101", "066060000111", "066072000109", "066050100001"
+]);
+
+export const BLACKLIST_FAKE_NAMES = new Set([
+  "Đặng Hữu Phúc", "Nguyễn Đình Quảng", "Nguyễn Văn Hùng", "Lê Bá Tùng",
+  "Đặng Văn Hảo", "Lương Thế Vinh", "Ngô Quang Hưng"
+]);
+
 export function getStoredMembers(): MemberRecord[] {
   if (typeof window === "undefined") {
     return [...OFFICIAL_BRANCH_LEADERS, ...INITIAL_MEMBERS];
   }
   try {
     // Dọn dẹp sạch cache các phiên bản cũ
-    localStorage.removeItem("eccb-easup_members_v1");
-    localStorage.removeItem("eccb-easup_members_v2");
-    localStorage.removeItem("eccb_easup_members_v3");
-    localStorage.removeItem("eccb_easup_members_v4");
+    [
+      "eccb-easup_members_v1",
+      "eccb-easup_members_v2",
+      "eccb_easup_members_v3",
+      "eccb_easup_members_v4",
+      "eccb_easup_members_v5",
+      "eccb_easup_members_v6",
+      "eccb_easup_members_v7"
+    ].forEach((k) => localStorage.removeItem(k));
 
     const raw = localStorage.getItem(STORAGE_KEY);
     let currentList: MemberRecord[] = [];
@@ -1022,16 +1038,15 @@ export function getStoredMembers(): MemberRecord[] {
       }
     }
 
-    // 1. LOẠI BỎ TOÀN BỘ CHI HỘI TRƯỞNG ẢO VÀ HỘI VIÊN ẢO (NHƯ ĐẶNG HỮU PHÚC, NGUYỄN ĐÌNH QUẢNG, LÊ BÁ TÙNG)
+    // 1. LOẠI BỎ TOÀN BỘ HỘI VIÊN ẢO VÀ DỮ LIỆU TEST (ĐẶNG HỮU PHÚC, NGUYỄN ĐÌNH QUẢNG, LÊ BÁ TÙNG...)
     const validCccdSet = new Set(VALID_20_CHT_CCCD);
     currentList = currentList.filter((m) => {
-      if (m.fullName === "Đặng Hữu Phúc" || m.cccd === "066067000113") return false;
-      if (m.id === "PENDING_001" || m.id === "PENDING_002") return false;
-      if (m.fullName === "Nguyễn Đình Quảng" && m.cccd === "066068001234") return false;
-      if (m.fullName === "Lê Bá Tùng" && m.cccd === "066055009876") return false;
-      if (m.associationRole === "Chi hội trưởng" && !validCccdSet.has(m.cccd)) {
-        return false;
-      }
+      if (BLACKLIST_FAKE_CCCD.has(m.cccd)) return false;
+      if (BLACKLIST_FAKE_NAMES.has(m.fullName)) return false;
+      if (/^(PENDING_|M00|M_NEW)/i.test(m.id)) return false;
+      if (m.associationRole === "Chi hội trưởng" && !validCccdSet.has(m.cccd)) return false;
+      // Bắt buộc: Nếu không phải 1 trong 20 CHT thì phải là người dùng tự đăng ký hợp lệ
+      if (!validCccdSet.has(m.cccd) && !(m as any).isUserCreated) return false;
       return true;
     });
 

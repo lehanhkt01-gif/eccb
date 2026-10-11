@@ -53,9 +53,9 @@ git fetch origin main
 git pull origin main
 echo -e "${GREEN}✓ Đã kéo mã nguồn mới nhất thành công.${NC}"
 
-# 4. BƯỚC 3: BUILD LẠI DOCKER IMAGE CHO APP
-echo -e "\n${YELLOW}[BƯỚC 3/5] Build Docker Image cho WebApp E-CCB...${NC}"
-docker compose build app
+# 4. BƯỚC 3: BUILD LẠI DOCKER IMAGE CHO APP (CHỐNG CACHE CŨ)
+echo -e "\n${YELLOW}[BƯỚC 3/5] Build Docker Image mới cho WebApp E-CCB (--no-cache)...${NC}"
+docker compose build --no-cache app
 echo -e "${GREEN}✓ Đã build thành công Docker image mới.${NC}"
 
 # 5. BƯỚC 4: CẬP NHẬT SCHEMA DATABASE AN TOÀN (CHẶN RESET)
@@ -74,9 +74,15 @@ echo -e "🚀 Đồng bộ Prisma Schema với lệnh: prisma db push --skip-gen
 docker compose run --rm app npx prisma db push --skip-generate
 echo -e "${GREEN}✓ Đồng bộ Prisma Schema hoàn tất an toàn!${NC}"
 
-# 6. BƯỚC 5: KHỞI ĐỘNG LẠI DỊCH VỤ ỨNG DỤNG
-echo -e "\n${YELLOW}[BƯỚC 5/5] Khởi động ứng dụng với Container mới...${NC}"
-docker compose up -d app
+# 6. BƯỚC 5: KHỞI ĐỘNG LẠI DỊCH VỤ ỨNG DỤNG VÀ KHÔI PHỤC BẢN TIN
+echo -e "\n${YELLOW}[BƯỚC 5/5] Khởi động ứng dụng với Container mới (--force-recreate)...${NC}"
+docker compose up -d --force-recreate app
+
+# Chờ app khởi động 5 giây rồi tự động kiểm tra nạp bản tin & dọn dữ liệu ảo
+sleep 5
+echo -e "🔄 Tự động khôi phục 04 bản tin tuyên truyền vào PostgreSQL..."
+docker compose exec -T app wget -qO- http://localhost:3000/api/admin/restore-news > /dev/null 2>&1 || true
+docker compose exec -T app wget -qO- --post-data="" http://localhost:3000/api/admin/clean-mock-data > /dev/null 2>&1 || true
 
 echo -e "\n${BLUE}======================================================================${NC}"
 echo -e "${GREEN}🎉 TRIỂN KHAI THÀNH CÔNG! HỆ THỐNG E-CCB EA SÚP ĐÃ HOẠT ĐỘNG ỔN ĐỊNH.${NC}"

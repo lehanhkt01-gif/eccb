@@ -91,7 +91,12 @@ export async function GET(req: NextRequest) {
       orderBy: { createdAt: "desc" },
     });
 
-    const result = dbArticles.map(mapPrismaToArticle);
+    let result = dbArticles.map(mapPrismaToArticle);
+
+    // BẢO VỆ CHỐNG MẤT BẢN TIN: Nếu danh sách rỗng khi khách/hội viên xem bài đã duyệt, tự động dùng 4 bài mẫu mặc định
+    if (result.length === 0 && (!isCadre || !filterStatus || filterStatus === "APPROVED" || filterStatus === "ALL")) {
+      result = DEFAULT_APPROVED_NEWS;
+    }
 
     // Tính toán meta
     const totalCount = await prisma.article.count();

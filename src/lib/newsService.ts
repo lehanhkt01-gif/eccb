@@ -153,37 +153,44 @@ function mapPrismaArticleToArticle(raw: any): Article {
 }
 
 /**
- * Tự động đồng bộ 04 bản tin mẫu vào CSDL PostgreSQL nếu bảng Article chưa có dữ liệu
+ * Tự động đồng bộ 04 bản tin mẫu vào CSDL PostgreSQL (Upsert bảo đảm luôn tồn tại)
  */
 export async function seedDefaultNewsIfEmpty(): Promise<void> {
   try {
-    const count = await prisma.article.count();
-    if (count === 0) {
-      console.log("Khởi tạo 4 bản tin tuyên truyền mẫu vào CSDL PostgreSQL...");
-      for (const item of DEFAULT_APPROVED_NEWS) {
-        await prisma.article.create({
-          data: {
-            id: item.id,
-            title: item.title,
-            slug: item.slug || item.id,
-            category: item.category,
-            summary: item.summary,
-            content: item.content,
-            thumbnail: item.thumbnail,
-            imageGallery: item.imageGallery || [item.thumbnail || ""],
-            status: PrismaArticleStatus.APPROVED,
-            author: item.author,
-            authorRole: item.authorRole,
-            views: item.views || 100,
-            createdAt: new Date(item.createdAt || Date.now()),
-            updatedAt: new Date(item.updatedAt || Date.now()),
-          },
-        });
-      }
-      console.log("✓ Đã nạp thành công 4 bản tin mẫu vào CSDL PostgreSQL!");
+    for (const item of DEFAULT_APPROVED_NEWS) {
+      await prisma.article.upsert({
+        where: { id: item.id },
+        update: {
+          status: PrismaArticleStatus.APPROVED,
+          title: item.title,
+          category: item.category,
+          summary: item.summary,
+          content: item.content,
+          thumbnail: item.thumbnail,
+          imageGallery: item.imageGallery || [item.thumbnail || ""],
+          views: item.views || 100,
+        },
+        create: {
+          id: item.id,
+          title: item.title,
+          slug: item.slug || item.id,
+          category: item.category,
+          summary: item.summary,
+          content: item.content,
+          thumbnail: item.thumbnail,
+          imageGallery: item.imageGallery || [item.thumbnail || ""],
+          status: PrismaArticleStatus.APPROVED,
+          author: item.author,
+          authorRole: item.authorRole,
+          views: item.views || 100,
+          createdAt: new Date(item.createdAt || Date.now()),
+          updatedAt: new Date(item.updatedAt || Date.now()),
+        },
+      });
     }
+    console.log("✓ Đã đồng bộ an toàn 4 bản tin tuyên truyền mẫu vào CSDL PostgreSQL!");
   } catch (err) {
-    console.error("Lỗi khi seed bản tin mặc định vào PostgreSQL:", err);
+    console.error("Lỗi khi seed/upsert bản tin mặc định vào PostgreSQL:", err);
   }
 }
 

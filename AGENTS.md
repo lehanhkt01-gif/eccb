@@ -109,6 +109,7 @@ Dự án phục vụ Hội Cựu Chiến Binh xã Ea Súp, mang tính trang tr�
 | **18** | **Khóa Chặt CSDL & Chống Mất Dữ Liệu VPS** | Vô hiệu hóa reset CSDL và seed tự động; Thêm Idempotent guard vào `prisma/seed.ts`; Gắn Named Volumes cố định `eccb_postgres_data` và `eccb_uploads_data`; Chuyển 100% lưu trữ bản tin sang PostgreSQL Prisma ORM; Tạo script `deploy.sh` tự động dump backup trước khi update | ✅ **Đã hoàn thành** |
 | **19** | **Dọn Dẹp Chọn Lọc Dữ Liệu Test Ảo** | Tạo `scripts/clean-mock-data.ts` và API `/api/admin/clean-mock-data`; Bảo tồn 100% bản tin Article và 20 Chi hội trưởng thật; Xóa sạch hội viên/User ảo và thông báo test cũ (chuông thông báo sạch) | ✅ **Đã hoàn thành** |
 | **20** | **Gỡ Gợi Ý Mật Khẩu & Quy Trình Duyệt 2 Cấp** | Gỡ bỏ 100% badge/text mật khẩu mặc định trên Login, Permissions, Modal; Cập nhật Enum MemberStatus (`CHO_CHI_HOI_DUYET`, `CHO_XA_PHE_DUYET`, `CHINH_THUC`, `TU_CHOI`); Phân tách 2 cấp duyệt rõ ràng; Xóa sạch hồ sơ ảo | ✅ **Đã hoàn thành** |
-| **21** | **Triển khai VPS & SSL HTTPS** | Docker compose up trên VPS Maydell, cấu hình Nginx Proxy Manager domain `ccb.easupso.com` | ⏳ *Giai đoạn kế tiếp* |
+| **21** | **Bảo vệ Bản tin, Triệt tiêu 2 Hội viên Ảo & Nút Chỉ định CHT** | Khóa chặt 4 bản tin tuyên truyền mẫu trong PostgreSQL bằng Upsert & Fallback; Triệt tiêu 100% 2 tài khoản hội viên ảo (tổng số tài khoản hội viên chuẩn xác 20:20); Gỡ bỏ nhãn 'Mới duyệt' trên 20 chi hội trưởng; Nút '⭐ Chỉ định CHT' phân quyền theo thôn buôn; Nâng cấp `deploy.sh` build `--no-cache` và `--force-recreate` | ✅ **Đã hoàn thành** |
+| **22** | **Triển khai VPS & SSL HTTPS** | Docker compose up trên VPS Maydell, cấu hình Nginx Proxy Manager domain `ccb.easupso.com` | ⏳ *Giai đoạn kế tiếp* |
 
 

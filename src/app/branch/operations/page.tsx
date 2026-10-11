@@ -9,6 +9,7 @@ import {
   MemberMovementRecord,
   MovementType,
   getStoredMembers,
+  saveStoredMembers,
   getStoredMovements,
   recordLocalMovement,
 } from "@/lib/memberStore";
@@ -377,8 +378,7 @@ export default function BranchOperationsPage() {
           approvalDate: new Date().toLocaleDateString("vi-VN"),
         };
         const updated = [newMember, ...currentList];
-        localStorage.setItem("eccb-easup_members_v2", JSON.stringify(updated));
-        window.dispatchEvent(new Event("eccb-members-updated"));
+        saveStoredMembers(updated);
       }
 
       const typeLabel =
