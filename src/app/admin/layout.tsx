@@ -74,18 +74,6 @@ export default function AdminLayout({
 
   return (
     <div className="min-h-screen bg-cream-bg text-deep-text flex flex-col">
-      {/* Top Banner Tiêu Ngữ Quân Đội */}
-      <div className="bg-flag-red text-white text-xs py-1.5 px-4 font-semibold flex items-center justify-between tracking-wide border-b border-amber-500/30">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-amber-400"></span>
-          <span>HỘI CỰU CHIẾN BINH XÃ EA SÚP — HỆ SINH THÁI EA SÚP SỐ</span>
-        </div>
-        <div className="hidden sm:flex items-center gap-3 text-amber-200 text-[11px]">
-          <span>Phiên bản 1.0.0</span>
-          <span>•</span>
-          <span className="text-white">ccb.easupso.com/admin</span>
-        </div>
-      </div>
 
       {/* Main Top Header */}
       <header className="bg-moss-green text-white border-b-4 border-bronze-gold sticky top-0 z-30 shadow-md">
@@ -224,7 +212,7 @@ export default function AdminLayout({
 
           <div className="pt-4 border-t border-stone-300 text-[11px] text-stone-500 text-center">
             E-CCB Ea Súp v1.0.0<br />
-            Phục vụ Đại hội CCB các cấp
+            Hệ thống quản lý hội viên, nghiệp vụ CCB xã Ea Súp
           </div>
         </aside>
 

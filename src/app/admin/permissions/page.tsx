@@ -148,7 +148,7 @@ export default function PermissionsManagementPage() {
   // 1. Chức năng Đặt lại mật khẩu (Reset về 12345678@ từ file .env)
   const handleResetPassword = (account: AccountItem) => {
     const confirmReset = window.confirm(
-      `Đồng chí có chắc chắn muốn đặt lại mật khẩu cho tài khoản "${account.fullName}" (${account.username}) về mật khẩu mặc định (12345678@) theo quy chuẩn .env?`
+      `Đồng chí có chắc chắn muốn đặt lại mật khẩu cho tài khoản "${account.fullName}" (${account.username}) về mật khẩu mặc định theo quy chuẩn hệ thống?`
     );
     if (!confirmReset) return;
 
@@ -171,7 +171,7 @@ export default function PermissionsManagementPage() {
       saveState(adminAccounts, branchAccounts, updated);
     }
 
-    showToast(`✓ Đã đặt lại mật khẩu thành công cho [${account.fullName}]. Mật khẩu hiện tại: 12345678@`);
+    showToast(`✓ Đã đặt lại mật khẩu thành công cho [${account.fullName}].`);
   };
 
   // 2. Chức năng Khóa / Mở khóa tài khoản
@@ -243,7 +243,7 @@ export default function PermissionsManagementPage() {
     setNewFullName("");
     setNewUsername("");
     setNewPhone("");
-    showToast(`✓ Cấp tài khoản mới thành công cho đồng chí [${newItem.fullName}]. Mật khẩu ban đầu: 12345678@`);
+    showToast(`✓ Cấp tài khoản mới thành công cho đồng chí [${newItem.fullName}].`);
   };
 
   // Danh sách hiện tại theo Tab
@@ -419,9 +419,6 @@ export default function PermissionsManagementPage() {
 
         <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end text-xs text-stone-600">
           <span>Tổng số: <strong className="text-moss-green">{filteredList.length}</strong> tài khoản</span>
-          <span className="p-1.5 bg-emerald-50 text-emerald-800 rounded font-semibold border border-emerald-200">
-            Mật khẩu mặc định: <strong>12345678@</strong>
-          </span>
         </div>
       </div>
 
@@ -514,7 +511,7 @@ export default function PermissionsManagementPage() {
                           type="button"
                           onClick={() => handleResetPassword(acc)}
                           className="px-2.5 py-1 bg-stone-100 hover:bg-stone-200 text-deep-text font-bold text-xs rounded border border-stone-300 transition flex items-center gap-1 cursor-pointer"
-                          title="Đặt lại mật khẩu về mặc định (12345678@)"
+                          title="Đặt lại mật khẩu về mặc định"
                         >
                           <span>🔄</span>
                           <span className="hidden sm:inline">Đặt lại MK</span>
@@ -708,14 +705,7 @@ export default function PermissionsManagementPage() {
                 />
               </div>
 
-              {/* Mật khẩu khởi tạo */}
-              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-stone-600">
-                <span>🔐 Mật khẩu ban đầu mặc định được cấp: </span>
-                <strong className="text-moss-green font-mono">12345678@</strong>
-                <p className="text-[11px] text-stone-500 mt-0.5">
-                  (Người dùng có thể tự đổi mật khẩu sau lần đăng nhập đầu tiên).
-                </p>
-              </div>
+
 
               <div className="pt-2 flex items-center justify-end gap-2.5">
                 <button
