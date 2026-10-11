@@ -9,7 +9,7 @@ import { getStoredMembers } from "@/lib/memberStore";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"admin" | "branch" | "member">("admin");
+  const [activeTab, setActiveTab] = useState<"admin" | "branch" | "member">("member");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
@@ -22,12 +22,12 @@ export default function LoginPage() {
       if (roleParam === "branch") {
         setActiveTab("branch");
         setUsername("chihoi_thon_01");
-      } else if (roleParam === "member") {
-        setActiveTab("member");
-        setUsername("066050100001");
       } else if (roleParam === "admin") {
         setActiveTab("admin");
         setUsername("lehanhkt01@gmail.com");
+      } else {
+        setActiveTab("member");
+        setUsername("");
       }
     }
   }, []);
@@ -36,12 +36,12 @@ export default function LoginPage() {
     setActiveTab(tab);
     setErrorMessage("");
     setPassword("");
-    if (tab === "admin") {
-      setUsername("lehanhkt01@gmail.com");
+    if (tab === "member") {
+      setUsername("");
     } else if (tab === "branch") {
       setUsername("chihoi_thon_01");
     } else {
-      setUsername("066050100001");
+      setUsername("lehanhkt01@gmail.com");
     }
   };
 
@@ -265,18 +265,18 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* 3 Tabs Phân Hệ Đăng Nhập */}
+        {/* 3 Tabs Phân Hệ Đăng Nhập: Hội viên -> Chi Hội -> Cán bộ xã */}
         <div className="grid grid-cols-3 gap-1 bg-stone-100 p-1 rounded-xl text-xs font-bold">
           <button
             type="button"
-            onClick={() => handleTabChange("admin")}
+            onClick={() => handleTabChange("member")}
             className={`py-2 px-1 rounded-lg transition text-center cursor-pointer ${
-              activeTab === "admin"
-                ? "bg-moss-green text-white shadow-xs"
+              activeTab === "member"
+                ? "bg-emerald-800 text-white shadow-xs"
                 : "text-stone-600 hover:text-moss-green"
             }`}
           >
-            🏛️ Cán bộ xã
+            🎖️ Hội Viên
           </button>
           <button
             type="button"
@@ -291,14 +291,14 @@ export default function LoginPage() {
           </button>
           <button
             type="button"
-            onClick={() => handleTabChange("member")}
+            onClick={() => handleTabChange("admin")}
             className={`py-2 px-1 rounded-lg transition text-center cursor-pointer ${
-              activeTab === "member"
-                ? "bg-emerald-800 text-white shadow-xs"
+              activeTab === "admin"
+                ? "bg-moss-green text-white shadow-xs"
                 : "text-stone-600 hover:text-moss-green"
             }`}
           >
-            🎖️ Hội Viên
+            🏛️ Cán bộ xã
           </button>
         </div>
 

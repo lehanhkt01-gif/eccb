@@ -187,30 +187,7 @@ export default function Header({
                         <p className="text-[11px] text-deep-muted">Hội CCB Xã Ea Súp</p>
                       </div>
 
-                      <Link
-                        href="/login?role=admin"
-                        onClick={() => setMenuOpen(false)}
-                        className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-cream-surface transition border-l-4 border-bronze-gold"
-                      >
-                        <span className="text-xl">🏛️</span>
-                        <div>
-                          <div className="text-moss-green font-bold text-sm">Đăng nhập Cán bộ xã</div>
-                          <div className="text-xs text-deep-muted">Bảng điều hành thường trực xã</div>
-                        </div>
-                      </Link>
-
-                      <Link
-                        href="/login?role=branch"
-                        onClick={() => setMenuOpen(false)}
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-stone-50 transition border-l-4 border-transparent hover:border-emerald-600"
-                      >
-                        <span className="text-lg">📱</span>
-                        <div>
-                          <div className="font-semibold text-deep-text text-sm">Đăng nhập Chi Hội</div>
-                          <div className="text-[11px] text-deep-muted">20 Chi hội trưởng thôn buôn</div>
-                        </div>
-                      </Link>
-
+                      {/* 1. Đăng nhập Hội Viên */}
                       <button
                         type="button"
                         onClick={() => {
@@ -221,14 +198,40 @@ export default function Header({
                             router.push("/login?role=member");
                           }
                         }}
-                        className="w-full text-left flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-emerald-50 transition border-l-4 border-transparent hover:border-flag-red cursor-pointer"
+                        className="w-full text-left flex items-center gap-3 px-4 py-3 text-sm hover:bg-emerald-50 transition border-l-4 border-moss-green cursor-pointer"
                       >
-                        <span className="text-lg">🎖️</span>
+                        <span className="text-xl">🎖️</span>
                         <div>
                           <div className="font-bold text-moss-green text-sm">Đăng nhập Hội Viên</div>
-                          <div className="text-[11px] text-stone-500">Bằng số CCCD 12 số</div>
+                          <div className="text-xs text-stone-500">Bằng số CCCD 12 số</div>
                         </div>
                       </button>
+
+                      {/* 2. Đăng nhập Chi Hội */}
+                      <Link
+                        href="/login?role=branch"
+                        onClick={() => setMenuOpen(false)}
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-stone-50 transition border-l-4 border-transparent hover:border-bronze-gold"
+                      >
+                        <span className="text-lg">📱</span>
+                        <div>
+                          <div className="font-semibold text-deep-text text-sm">Đăng nhập Chi Hội</div>
+                          <div className="text-[11px] text-deep-muted">20 Chi hội trưởng thôn buôn</div>
+                        </div>
+                      </Link>
+
+                      {/* 3. Đăng nhập Cán bộ xã */}
+                      <Link
+                        href="/login?role=admin"
+                        onClick={() => setMenuOpen(false)}
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-cream-surface transition border-l-4 border-transparent hover:border-flag-red"
+                      >
+                        <span className="text-lg">🏛️</span>
+                        <div>
+                          <div className="text-stone-700 font-semibold text-sm">Đăng nhập Cán bộ xã</div>
+                          <div className="text-xs text-deep-muted">Bảng điều hành thường trực xã</div>
+                        </div>
+                      </Link>
                     </div>
                   )}
                 </div>

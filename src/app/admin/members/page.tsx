@@ -160,8 +160,18 @@ export default function AdminMembersPage() {
       return true;
     });
 
+    // Khử trùng lặp triệt để chống nhân đôi bản ghi theo CCCD hoặc ID
+    const uniqueMap = new Map<string, MemberRecord>();
+    for (const m of list) {
+      const key = m.cccd || m.id;
+      if (!uniqueMap.has(key)) {
+        uniqueMap.set(key, m);
+      }
+    }
+    const uniqueList = Array.from(uniqueMap.values());
+
     // Ưu tiên Chi hội trưởng đứng đầu danh sách trong từng thôn buôn / toàn xã
-    return [...list].sort((a, b) => {
+    return uniqueList.sort((a, b) => {
       const isLeaderA = a.associationRole === "Chi hội trưởng" ? 1 : 0;
       const isLeaderB = b.associationRole === "Chi hội trưởng" ? 1 : 0;
       if (isLeaderA !== isLeaderB) {
@@ -1115,8 +1125,8 @@ export default function AdminMembersPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-stone-200">
-                  {filteredActiveMembers.map((m) => (
-                    <tr key={m.id} className="hover:bg-amber-50/50 transition">
+                  {filteredActiveMembers.map((m, idx) => (
+                    <tr key={`${m.cccd}_${m.id}_${idx}`} className="hover:bg-amber-50/50 transition">
                       {/* Họ tên */}
                       <td className="py-3 px-3.5 font-bold text-deep-text">
                         <div className="flex items-center gap-1.5 flex-wrap">
