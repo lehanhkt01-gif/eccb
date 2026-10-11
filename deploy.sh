@@ -53,9 +53,9 @@ git fetch origin main
 git pull origin main
 echo -e "${GREEN}✓ Đã kéo mã nguồn mới nhất thành công.${NC}"
 
-# 4. BƯỚC 3: BUILD LẠI DOCKER IMAGE CHO APP (CHỐNG CACHE CŨ)
-echo -e "\n${YELLOW}[BƯỚC 3/5] Build Docker Image mới cho WebApp E-CCB (--no-cache)...${NC}"
-docker compose build --no-cache app
+# 4. BƯỚC 3: BUILD LẠI DOCKER IMAGE CHO APP (TẬN DỤNG CACHE TĂNG TỐC)
+echo -e "\n${YELLOW}[BƯỚC 3/5] Build Docker Image mới cho WebApp E-CCB...${NC}"
+docker compose build app
 echo -e "${GREEN}✓ Đã build thành công Docker image mới.${NC}"
 
 # 5. BƯỚC 4: CẬP NHẬT SCHEMA DATABASE AN TOÀN (CHẶN RESET)
