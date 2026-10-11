@@ -25,6 +25,7 @@ import {
   HAMLET_LIST,
 } from "@/lib/memberStore";
 import MemberImportModal from "@/components/MemberImportModal";
+import * as XLSX from "xlsx";
 
 export default function AdminMembersPage() {
   const [activeTab, setActiveTab] = useState<"active" | "pending_admin" | "pending_branch" | "rejected" | "movements">("active");
@@ -654,21 +655,184 @@ export default function AdminMembersPage() {
         ],
       });
 
-      // Tạo Blob và tải file
+      // Chuẩn hóa tên file sạch dấu tiếng Việt cho Windows
+      const cleanName = m.fullName
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/đ/g, "d")
+        .replace(/Đ/g, "D")
+        .replace(/[^a-zA-Z0-9]/g, "_");
+      const filename = `Phieu_Mau_02_${cleanName}_${m.cccd}.docx`;
+
+      // Tạo Blob và tải file an toàn
       const blob = await Packer.toBlob(doc);
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `Phieu_Mau_02_${m.fullName.replace(/\s+/g, "_")}_${m.cccd}.docx`;
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 60000);
+      showToast(`📄 Đã xuất Phiếu Mẫu 02 Word đ/c ${m.fullName}`);
     } catch (err) {
       console.error("Lỗi khi xuất file docx:", err);
       alert("Đã xảy ra lỗi khi tạo file Word. Vui lòng thử lại!");
     } finally {
       setIsExporting(false);
+    }
+  };
+
+  // HÀM XUẤT FILE EXCEL (.XLSX) BẢNG TỔNG HỢP MẪU 02 27 CỘT CHUẨN CỦA HỘI CCB XÃ EA SÚP
+  const exportExcel = (memberList: MemberRecord[] = filteredActiveMembers) => {
+    try {
+      if (memberList.length === 0) {
+        alert("Không có hội viên nào trong danh sách để xuất file Excel.");
+        return;
+      }
+
+      const hamletTitle = selectedHamlet !== "all" ? selectedHamlet : "Toàn xã Ea Súp";
+      const hamletAscii = hamletTitle
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/đ/g, "d")
+        .replace(/Đ/g, "D")
+        .replace(/[^a-zA-Z0-9]/g, "_")
+        .replace(/_+/g, "_");
+
+      const today = new Date();
+      const dateStr = `${String(today.getDate()).padStart(2, "0")}/${String(today.getMonth() + 1).padStart(2, "0")}/${today.getFullYear()}`;
+      const dateFileStr = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, "0")}${String(today.getDate()).padStart(2, "0")}`;
+
+      const sheetRows: any[][] = [
+        [`HỘI CỰU CHIẾN BINH XÃ EA SÚP - CHI HỘI ${hamletTitle.toUpperCase()}`],
+        ["BẢNG TỔNG HỢP DỮ LIỆU THU THẬP THÔNG TIN HỘI VIÊN CỰU CHIẾN BINH (MẪU 02)"],
+        [`Địa bàn: ${hamletTitle}, xã Ea Súp, tỉnh Đắk Lắk | Tổng số: ${memberList.length} đồng chí | Ngày xuất: ${dateStr}`],
+        [],
+        [
+          "STT",
+          "Họ và tên",
+          "Ngày sinh",
+          "Giới tính",
+          "Số CCCD",
+          "Số điện thoại",
+          "Quê quán (mới)",
+          "Dân tộc",
+          "Tôn giáo",
+          "Ngày vào Đảng",
+          "Nơi ở hiện nay",
+          "Nhập ngũ",
+          "Đơn vị quân đội",
+          "Ngày xuất ngũ / Nghỉ hưu",
+          "Cựu quân nhân (CQN)",
+          "Chức vụ cao nhất QĐ",
+          "Cấp bậc xuất ngũ",
+          "Ngày vào Hội CCB",
+          "Chức vụ Hội đã qua",
+          "Chức vụ Hội hiện tại",
+          "Qua trường đào tạo",
+          "Trình độ văn hóa",
+          "Trình độ LLCT",
+          "Chuyên môn nghiệp vụ",
+          "Người có công / Chính sách",
+          "Danh hiệu / Khen thưởng",
+          "Ngày lập phiếu",
+        ],
+      ];
+
+      memberList.forEach((m, idx) => {
+        sheetRows.push([
+          idx + 1,
+          m.fullName,
+          m.birthDate || (m.birthYear ? String(m.birthYear) : ""),
+          m.gender || "Nam",
+          m.cccd,
+          m.phone || "",
+          m.hometown || "",
+          m.ethnicity || "Kinh",
+          m.religion || "Không",
+          m.partyJoinDate ? "Đảng viên" : "Không",
+          m.currentAddress || `${m.hamletName}, Xã Ea Súp, Tỉnh Đắk Lắk`,
+          m.enlistmentDate || "",
+          m.militaryUnit || "",
+          m.dischargeDate || "",
+          m.isCQN || m.period === "Cựu quân nhân" ? "Cựu quân nhân" : "",
+          m.militaryPosition || "",
+          m.militaryRank || "",
+          m.associationJoinDate || "",
+          "",
+          m.associationRole || "Hội viên",
+          m.militaryTraining || "",
+          m.educationLevel || "",
+          m.politicalTheory || "",
+          m.professionalSkill || "",
+          m.policyStatus || "Không",
+          m.awards || m.titles || "",
+          dateStr,
+        ]);
+      });
+
+      const ws = XLSX.utils.aoa_to_sheet(sheetRows);
+      ws["!cols"] = [
+        { wch: 6 },  // STT
+        { wch: 22 }, // Họ và tên
+        { wch: 14 }, // Ngày sinh
+        { wch: 10 }, // Giới tính
+        { wch: 18 }, // Số CCCD
+        { wch: 15 }, // SĐT
+        { wch: 32 }, // Quê quán
+        { wch: 12 }, // Dân tộc
+        { wch: 12 }, // Tôn giáo
+        { wch: 14 }, // Ngày vào Đảng
+        { wch: 35 }, // Nơi ở hiện nay
+        { wch: 14 }, // Nhập ngũ
+        { wch: 25 }, // Đơn vị quân đội
+        { wch: 22 }, // Ngày xuất ngũ
+        { wch: 18 }, // CQN
+        { wch: 20 }, // Chức vụ cao nhất QĐ
+        { wch: 16 }, // Cấp bậc xuất ngũ
+        { wch: 16 }, // Ngày vào Hội CCB
+        { wch: 18 }, // Chức vụ Hội đã qua
+        { wch: 18 }, // Chức vụ Hội hiện tại
+        { wch: 22 }, // Qua trường đào tạo
+        { wch: 16 }, // Trình độ văn hóa
+        { wch: 16 }, // Trình độ LLCT
+        { wch: 20 }, // Chuyên môn nghiệp vụ
+        { wch: 22 }, // Người có công
+        { wch: 22 }, // Khen thưởng
+        { wch: 14 }, // Ngày lập phiếu
+      ];
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Mau02_TongHop");
+      const filename = `Bang_Tong_Hop_Mau_02_${hamletAscii}_${dateFileStr}.xlsx`;
+
+      try {
+        XLSX.writeFile(wb, filename);
+        showToast(`📊 Đã xuất thành công file Excel ${filename}!`);
+      } catch (writeErr) {
+        const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+        const blob = new Blob([excelBuffer], {
+          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+        }, 60000);
+        showToast(`📊 Đã xuất thành công file Excel ${filename}!`);
+      }
+    } catch (err) {
+      console.error("Lỗi xuất file Excel:", err);
+      const hamletParam = encodeURIComponent(selectedHamlet !== "all" ? selectedHamlet : "ALL");
+      window.location.href = `/api/admin/members/export-excel?hamlet=${hamletParam}`;
     }
   };
 
@@ -695,7 +859,7 @@ export default function AdminMembersPage() {
             Quản Lý Hồ Sơ Hội Viên CCB
           </h2>
           <p className="text-sm text-deep-muted mt-0.5">
-            Cơ sở dữ liệu 35 trường thông tin • Cơ chế xét duyệt hồ sơ chi hội nộp lên • Xuất văn bản Word (.docx) chuẩn Nghị định 30/2020/NĐ-CP
+            Cơ sở dữ liệu 35 trường thông tin • Xuất bảng tổng hợp Excel (.xlsx) chuẩn Mẫu 02 • Xuất văn bản Word (.docx) chuẩn Nghị định 30/2020/NĐ-CP
           </p>
         </div>
 
@@ -710,15 +874,28 @@ export default function AdminMembersPage() {
           </button>
 
           {activeTab === "active" && (
-            <button
-              onClick={() => {
-                if (filteredActiveMembers.length > 0) exportDocx(filteredActiveMembers[0]);
-              }}
-              disabled={isExporting}
-              className="px-3.5 py-2 bg-moss-green hover:bg-moss-green-light active:scale-95 text-white text-xs sm:text-sm font-bold rounded-lg shadow-sm transition flex items-center gap-1.5 cursor-pointer"
-            >
-              <span>📄 Xuất Mẫu 02 Đầu Danh Sách</span>
-            </button>
+            <>
+              <button
+                onClick={() => exportExcel(filteredActiveMembers)}
+                className="px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 active:scale-95 text-white text-xs sm:text-sm font-bold rounded-lg shadow-sm transition flex items-center gap-1.5 cursor-pointer border border-emerald-600"
+                title="Xuất toàn bộ danh sách hội viên đang lọc ra file Excel (.xlsx) chuẩn Mẫu 02 (27 cột)"
+              >
+                <span>📊</span>
+                <span>Xuất File Excel (.xlsx)</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  if (filteredActiveMembers.length > 0) exportDocx(filteredActiveMembers[0]);
+                }}
+                disabled={isExporting}
+                className="px-3.5 py-2 bg-moss-green hover:bg-moss-green-light active:scale-95 text-white text-xs sm:text-sm font-bold rounded-lg shadow-sm transition flex items-center gap-1.5 cursor-pointer"
+                title="Xuất phiếu Mẫu 02 cá nhân dạng văn bản Word (.docx)"
+              >
+                <span>📄</span>
+                <span>Xuất Mẫu 02 Word</span>
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -1519,13 +1696,21 @@ export default function AdminMembersPage() {
                             <span>Sửa</span>
                           </button>
                           <button
+                            onClick={() => exportExcel([m])}
+                            className="px-2 py-1 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs rounded transition flex items-center gap-1 cursor-pointer border border-emerald-600 shadow-2xs"
+                            title="Xuất hồ sơ hội viên ra file Excel (.xlsx) chuẩn Mẫu 02"
+                          >
+                            <span>📊</span>
+                            <span>Excel</span>
+                          </button>
+                          <button
                             onClick={() => exportDocx(m)}
                             disabled={isExporting}
-                            className="px-2.5 py-1 bg-moss-green hover:bg-moss-green-light text-white font-bold text-xs rounded transition flex items-center gap-1 cursor-pointer"
-                            title="Xuất file Word Mẫu 02 chuẩn Nghị định 30"
+                            className="px-2 py-1 bg-moss-green hover:bg-moss-green-light text-white font-bold text-xs rounded transition flex items-center gap-1 cursor-pointer shadow-2xs"
+                            title="Xuất phiếu Word Mẫu 02 (.docx) chuẩn Nghị định 30"
                           >
                             <span>📄</span>
-                            <span>Mẫu 02</span>
+                            <span>Word</span>
                           </button>
                         </div>
                       </td>
@@ -1818,11 +2003,18 @@ export default function AdminMembersPage() {
                 )}
 
                 <button
+                  onClick={() => exportExcel([activeModalMember])}
+                  className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-sm cursor-pointer border border-emerald-600"
+                >
+                  <span>📊 Xuất File Excel (.xlsx)</span>
+                </button>
+
+                <button
                   onClick={() => exportDocx(activeModalMember)}
                   disabled={isExporting}
-                  className="px-4 py-2 bg-moss-green hover:bg-moss-green-light text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-sm"
+                  className="px-4 py-2 bg-moss-green hover:bg-moss-green-light text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-sm cursor-pointer"
                 >
-                  <span>📄 Xuất Phiếu Mẫu 02 (.docx)</span>
+                  <span>📄 Xuất Phiếu Word (.docx)</span>
                 </button>
               </div>
             </div>
