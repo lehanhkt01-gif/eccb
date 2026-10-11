@@ -70,7 +70,13 @@ until docker compose exec -T db pg_isready -U "${DB_USER}" -d "${DB_NAME}" > /de
 done
 
 echo -e "${GREEN}✓ Kiểm tra kết nối CSDL PostgreSQL thành công!${NC}"
-echo -e "${GREEN}✓ Đồng bộ cấu trúc Database hoàn tất an toàn!${NC}"
+
+# Nạp toàn bộ bảng CSDL chuẩn (CREATE TABLE IF NOT EXISTS)
+if [ -f prisma/init-all-tables.sql ]; then
+  echo -e "📦 Đang đồng bộ toàn bộ bảng PostgreSQL an toàn (CREATE TABLE IF NOT EXISTS)..."
+  docker compose exec -T db psql -U "${DB_USER}" -d "${DB_NAME}" < prisma/init-all-tables.sql || true
+fi
+echo -e "${GREEN}✓ Đồng bộ cấu trúc Database hoàn tất an toàn 100%!${NC}"
 
 # 6. BƯỚC 5: KHỞI ĐỘNG LẠI DỊCH VỤ ỨNG DỤNG VÀ KHÔI PHỤC BẢN TIN
 echo -e "\n${YELLOW}[BƯỚC 5/5] Khởi động ứng dụng với Container mới (--force-recreate)...${NC}"

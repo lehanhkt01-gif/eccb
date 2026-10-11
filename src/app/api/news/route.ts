@@ -300,12 +300,15 @@ export async function PUT(req: NextRequest) {
     }
 
     const now = new Date();
-
-    // Tìm user Cán bộ xã hợp lệ trong DB nếu có để liên kết khóa ngoại an toàn
-    const cadreUser = await prisma.user.findFirst({
-      where: { role: "SUPER_ADMIN" },
-    });
-    const safeReviewerId = cadreUser?.id || null;
+    let safeReviewerId: string | null = null;
+    try {
+      const cadreUser = await prisma.user.findFirst({
+        where: { role: "SUPER_ADMIN" },
+      });
+      safeReviewerId = cadreUser?.id || null;
+    } catch {
+      safeReviewerId = null;
+    }
 
     // 1. Phê duyệt bài viết (Hỗ trợ cơ chế 3 tầng phòng thủ)
     if (action === "approve") {
