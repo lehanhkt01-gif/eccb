@@ -177,10 +177,25 @@ export default function MemberImportModal({ isOpen, onClose, onSuccess }: Member
         selectedHamlet !== "AUTO"
           ? `Mau_Danh_Sach_CCB_${selectedHamlet.replace(/\s+/g, "_")}.xlsx`
           : "Mau_Danh_Sach_Hoi_Vien_CCB_Ea_Sup.xlsx";
-      XLSX.writeFile(wb, filename);
+
+      // Xuất chuẩn file nhị phân OpenXML Spreadsheet (.xlsx)
+      const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+      const blob = new Blob([excelBuffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
     } catch (err) {
-      console.error("Lỗi khi tải file mẫu:", err);
-      alert("Không thể tạo file mẫu Excel. Vui lòng thử lại.");
+      console.warn("Client XLSX write warning, chuyển sang tải trực tiếp từ server:", err);
+      // Fallback tải file mẫu chuẩn trực tiếp từ API server
+      const hamletParam = encodeURIComponent(selectedHamlet);
+      window.location.href = `/api/admin/members/template?hamlet=${hamletParam}`;
     }
   };
 
