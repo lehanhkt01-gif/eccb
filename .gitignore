@@ -26,6 +26,7 @@ node_modules/
 *.sql
 !prisma/init-articles.sql
 !prisma/clean-all-mocks.sql
+!prisma/init-all-tables.sql
 *.dump
 *.tar
 *.bak
