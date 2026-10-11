@@ -1063,18 +1063,18 @@ export function getStoredMembers(): MemberRecord[] {
       return { ...m, status: st };
     });
 
-    // 3. GÁN CỨNG 20 CHI HỘI TRƯỞNG THỰC TẾ VÀO ĐÚNG THÔN BUÔN CỦA MÌNH (DEDUPLICATE BẰNG MAP)
+    // 3. GÁN CỨNG 20 CHI HỘI TRƯỞNG THỰC TẾ NẾU CHƯA CÓ TRONG HỆ THỐNG (DEDUPLICATE BẰNG MAP)
     const map = new Map<string, MemberRecord>();
 
-    // Đưa 20 Chi hội trưởng thật vào Map trước tiên theo CCCD (Đảm bảo luôn chính thức)
-    for (const leader of OFFICIAL_BRANCH_LEADERS) {
-      map.set(leader.cccd, { ...leader, status: "CHINH_THUC" });
+    // Đưa các hội viên đã có trong CSDL vào Map trước tiên để bảo toàn cập nhật vai trò / thông tin
+    for (const m of currentList) {
+      map.set(m.cccd, m);
     }
 
-    // Đưa các hội viên hợp lệ khác vào Map
-    for (const m of currentList) {
-      if (!map.has(m.cccd)) {
-        map.set(m.cccd, m);
+    // Bổ sung các Chi hội trưởng mặc định nếu chưa có trong danh sách
+    for (const leader of OFFICIAL_BRANCH_LEADERS) {
+      if (!map.has(leader.cccd)) {
+        map.set(leader.cccd, { ...leader, status: "CHINH_THUC" });
       }
     }
 
@@ -1428,8 +1428,11 @@ export function assignBranchLeader(memberId: string): {
 
   // Đồng bộ cập nhật tài khoản Chi hội trưởng trong permissions state nếu có
   try {
-    const permKey = "eccb_permissions_state_v3";
-    const permRaw = localStorage.getItem(permKey) || localStorage.getItem("eccb_permissions_state_v1");
+    const permKey = "eccb_permissions_state_v6";
+    const permRaw =
+      localStorage.getItem(permKey) ||
+      localStorage.getItem("eccb_permissions_state_v3") ||
+      localStorage.getItem("eccb_permissions_state_v1");
     if (permRaw) {
       const permObj = JSON.parse(permRaw);
       if (permObj.branches && Array.isArray(permObj.branches)) {

@@ -539,9 +539,9 @@ export default function BranchMobilePage() {
     [members]
   );
 
-  // Lọc danh bạ
+  // Lọc danh bạ & Sắp xếp Chi hội trưởng lên đầu tiên
   const filteredMembers = useMemo(() => {
-    return members.filter((m) => {
+    const list = members.filter((m) => {
       const matchSearch =
         m.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         m.phone.includes(searchTerm);
@@ -553,7 +553,31 @@ export default function BranchMobilePage() {
       if (filterType === "model") return !!m.economicModel;
       return true;
     });
-  }, [members, searchTerm, filterType]);
+
+    const isMemberLeader = (m: (typeof list)[0]) => {
+      if (!m) return false;
+      if (m.rawRecord?.associationRole === "Chi hội trưởng") return true;
+      if ((m as any).associationRole === "Chi hội trưởng") return true;
+      if (
+        currentHamlet?.leader &&
+        m.fullName &&
+        m.fullName.trim().toLowerCase() === currentHamlet.leader.trim().toLowerCase()
+      ) {
+        return true;
+      }
+      return false;
+    };
+
+    // Sắp xếp: Ai là Chi hội trưởng thì luôn xếp lên trên đầu tiên, sau đó theo tên tiếng Việt
+    return list.sort((a, b) => {
+      const isLeaderA = isMemberLeader(a);
+      const isLeaderB = isMemberLeader(b);
+
+      if (isLeaderA && !isLeaderB) return -1;
+      if (!isLeaderA && isLeaderB) return 1;
+      return a.fullName.localeCompare(b.fullName, "vi");
+    });
+  }, [members, searchTerm, filterType, currentHamlet?.leader]);
 
   return (
     <div className="min-h-screen bg-cream-bg text-deep-text pb-20 select-none">
@@ -1246,18 +1270,18 @@ export default function BranchMobilePage() {
         {/* ==================================================================== */}
         {activeTab === "members" && (
           <div className="space-y-4 animate-in fade-in duration-200">
-            {/* Header Tab */}
-            <div className="flex items-center justify-between pb-2 border-b border-stone-300">
+            {/* Header Tab: Tinh gọn, trải dài hài hòa, không ngắt dòng xấu */}
+            <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-stone-300">
               <button
                 onClick={() => setActiveTab("home")}
-                className="px-3 py-1.5 bg-stone-200 rounded text-sm font-bold text-deep-text active:scale-95"
+                className="px-2.5 py-1.5 bg-stone-200 hover:bg-stone-300 rounded-lg text-xs sm:text-sm font-bold text-deep-text active:scale-95 transition shrink-0 cursor-pointer"
               >
                 ← Quay lại
               </button>
-              <h2 className="text-sm sm:text-base font-bold text-moss-green uppercase">
-                DANH SÁCH HỘI VIÊN {currentHamlet.name.toUpperCase()}
+              <h2 className="text-xs sm:text-sm font-bold text-moss-green uppercase truncate text-center flex-1">
+                Danh sách hội viên {currentHamlet.name}
               </h2>
-              <span className="text-xs font-bold text-moss-green">
+              <span className="text-xs font-bold text-moss-green shrink-0 px-2 py-1 bg-moss-green/10 rounded-md">
                 {filteredMembers.length}/{members.length} đ/c
               </span>
             </div>
@@ -1271,16 +1295,16 @@ export default function BranchMobilePage() {
                     placeholder="🔍 Tìm tên hoặc số điện thoại..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full p-2.5 bg-white border-2 border-stone-300 rounded-lg text-sm sm:text-base font-medium placeholder-stone-400 focus:border-moss-green focus:outline-none"
+                    className="w-full p-2 sm:p-2.5 bg-white border-2 border-stone-300 rounded-lg text-xs sm:text-sm font-medium placeholder-stone-400 focus:border-moss-green focus:outline-none"
                   />
                 </div>
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(true)}
-                  className="px-3 py-2.5 bg-moss-green hover:bg-moss-green-light active:bg-moss-green-dark text-white text-xs sm:text-sm font-bold rounded-lg shadow-sm border border-bronze-gold flex items-center gap-1.5 shrink-0 active:scale-95 transition"
+                  className="px-3 py-2 sm:py-2.5 bg-moss-green hover:bg-moss-green-light active:bg-moss-green-dark text-white text-xs sm:text-sm font-bold rounded-lg shadow-sm border border-bronze-gold flex items-center gap-1.5 shrink-0 active:scale-95 transition cursor-pointer"
                 >
                   <span>➕</span>
-                  <span>Thêm hội viên</span>
+                  <span className="hidden xs:inline">Thêm hội viên</span>
                 </button>
               </div>
 
@@ -1296,10 +1320,10 @@ export default function BranchMobilePage() {
                   <button
                     key={f.id}
                     onClick={() => setFilterType(f.id as "all" | "pending" | "party" | "policy" | "model")}
-                    className={`px-3 py-1.5 rounded-full whitespace-nowrap transition flex items-center gap-1 ${
+                    className={`px-3 py-1.5 rounded-full whitespace-nowrap transition flex items-center gap-1 cursor-pointer ${
                       filterType === f.id
                         ? "bg-moss-green text-white shadow-xs"
-                        : "bg-white text-stone-600 border border-stone-300"
+                        : "bg-white text-stone-600 border border-stone-300 hover:bg-stone-50"
                     }`}
                   >
                     <span>{f.label}</span>
@@ -1308,123 +1332,156 @@ export default function BranchMobilePage() {
               </div>
             </div>
 
-            {/* Danh sách hội viên với nút gọi trực tiếp & hiển thị trạng thái phê duyệt */}
-            <div className="space-y-2.5">
-              {filteredMembers.map((m) => (
-                <div
-                  key={m.id}
-                  className={`bg-white border-2 rounded-xl p-3.5 shadow-xs flex items-center justify-between gap-3 transition ${
-                    m.status === "PENDING_APPROVAL"
-                      ? "border-amber-400 bg-amber-50/40"
-                      : "border-stone-300 hover:border-moss-green"
-                  }`}
-                >
-                  <div className="space-y-1 flex-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-base sm:text-lg font-bold text-deep-text">
-                        {m.fullName}
-                      </span>
-                      <span className="text-xs text-deep-muted font-medium">
-                        ({m.birthYear})
-                      </span>
+            {/* Danh sách hội viên: Bố cục tinh gọn, hài hòa, thêm STT, CHT luôn xếp trên cùng có ⭐ */}
+            <div className="space-y-2">
+              {filteredMembers.map((m, idx) => {
+                const isLeader =
+                  (currentHamlet?.leader && m.fullName.trim().toLowerCase() === currentHamlet.leader.trim().toLowerCase()) ||
+                  m.rawRecord?.associationRole === "Chi hội trưởng" ||
+                  (m as any).associationRole === "Chi hội trưởng";
 
-                      {/* Huy hiệu trạng thái Chờ duyệt nếu là hồ sơ mới */}
-                      {m.status === "PENDING_APPROVAL" && (
-                        <span className="px-2 py-0.5 bg-amber-100 text-amber-900 border border-amber-400 text-[10px] font-bold rounded-md flex items-center gap-1 shadow-2xs">
-                          <span>⏳</span>
-                          <span>Chờ xã phê duyệt</span>
-                        </span>
-                      )}
+                return (
+                  <div
+                    key={m.id}
+                    className={`bg-white border rounded-xl p-2.5 sm:p-3 shadow-2xs transition ${
+                      isLeader
+                        ? "border-amber-400 bg-amber-50/30 ring-1 ring-amber-300 shadow-xs"
+                        : m.status === "PENDING_APPROVAL"
+                        ? "border-amber-400 bg-amber-50/40"
+                        : "border-stone-300 hover:border-moss-green"
+                    }`}
+                  >
+                    {/* HÀNG 1: STT + HỌ TÊN + NĂM SINH + BADGE & CÁC NÚT TÁC NGHIỆP TRẢI DÀI */}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        {/* Cột Số thứ tự (Chi hội trưởng có ⭐) */}
+                        <div
+                          className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-xs font-black shrink-0 border ${
+                            isLeader
+                              ? "bg-amber-500 text-white border-amber-600 shadow-2xs"
+                              : "bg-stone-100 text-stone-700 border-stone-300"
+                          }`}
+                          title={isLeader ? "Chi hội trưởng" : `Số thứ tự: ${idx + 1}`}
+                        >
+                          {isLeader ? "⭐" : idx + 1}
+                        </div>
 
-                      {m.isDeceased && (
-                        <span className="px-2 py-0.5 bg-stone-700 text-white text-[10px] font-bold rounded-md flex items-center gap-1 shadow-2xs">
-                          <span>🕊️</span>
-                          <span>Đã từ trần</span>
-                        </span>
-                      )}
+                        {/* Họ tên và năm sinh nằm trên cùng 1 hàng không bị ngắt chữ */}
+                        <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+                          <span className="text-sm sm:text-base font-bold text-deep-text truncate">
+                            {m.fullName}
+                          </span>
+                          <span className="text-xs text-stone-500 font-medium shrink-0">
+                            ({m.birthYear})
+                          </span>
 
-                      {m.isTransferred && (
-                        <span className="px-2 py-0.5 bg-blue-100 text-blue-900 border border-blue-400 text-[10px] font-bold rounded-md flex items-center gap-1 shadow-2xs">
-                          <span>🚚</span>
-                          <span>Đã chuyển đi</span>
-                        </span>
-                      )}
+                          {isLeader && (
+                            <span className="px-1.5 py-0.5 bg-amber-100 text-amber-900 border border-amber-400 text-[10px] font-bold rounded-md shrink-0 flex items-center gap-0.5 shadow-2xs">
+                              <span>⭐</span>
+                              <span>Chi hội trưởng</span>
+                            </span>
+                          )}
 
-                      {m.isExpelled && (
-                        <span className="px-2 py-0.5 bg-red-100 text-red-900 border border-red-400 text-[10px] font-bold rounded-md flex items-center gap-1 shadow-2xs">
-                          <span>⛔</span>
-                          <span>Đã xóa tên</span>
-                        </span>
-                      )}
+                          {m.status === "PENDING_APPROVAL" && (
+                            <span className="px-1.5 py-0.5 bg-amber-100 text-amber-900 border border-amber-400 text-[10px] font-bold rounded-md shrink-0">
+                              ⏳ Chờ duyệt
+                            </span>
+                          )}
 
-                      {m.isPartyMember && (
-                        <span className="px-1.5 py-0.2 bg-red-100 text-flag-red text-[10px] font-bold rounded border border-red-200">
-                          Đảng viên {m.partyBadge && `• ${m.partyBadge}`}
-                        </span>
-                      )}
+                          {m.isDeceased && (
+                            <span className="px-1.5 py-0.5 bg-stone-700 text-white text-[10px] font-bold rounded-md shrink-0">
+                              🕊️ Từ trần
+                            </span>
+                          )}
+
+                          {m.isTransferred && (
+                            <span className="px-1.5 py-0.5 bg-blue-100 text-blue-900 border border-blue-400 text-[10px] font-bold rounded-md shrink-0">
+                              🚚 Chuyển đi
+                            </span>
+                          )}
+
+                          {m.isExpelled && (
+                            <span className="px-1.5 py-0.5 bg-red-100 text-red-900 border border-red-400 text-[10px] font-bold rounded-md shrink-0">
+                              ⛔ Xóa tên
+                            </span>
+                          )}
+
+                          {m.isPartyMember && (
+                            <span className="px-1.5 py-0.5 bg-red-50 text-flag-red text-[10px] font-bold rounded border border-red-200 shrink-0">
+                              Đảng viên {m.partyBadge && `• ${m.partyBadge}`}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Cụm nút tác nghiệp tinh gọn bên phải: Tối ưu diện tích không đè chữ bên trái */}
+                      <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+                        {m.rawRecord && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => setViewingRecord(m.rawRecord || null)}
+                              className="px-2 py-1 bg-stone-100 hover:bg-stone-200 border border-stone-300 text-deep-text text-[11px] font-bold rounded-md active:scale-95 transition flex items-center gap-1 cursor-pointer"
+                              title="Xem toàn bộ hồ sơ Mẫu 02"
+                            >
+                              <span>👁️</span>
+                              <span className="hidden xs:inline">Hồ sơ</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setMovementMember(m.rawRecord || null);
+                                setMovementType("DECEASED");
+                                setMovementDate(new Date().toISOString().split("T")[0]);
+                                setMovementReason("");
+                                setMovementDestination("");
+                                setMovementDecisionNumber("");
+                                setMovementBurialPlace("");
+                                setMovementFile(null);
+                              }}
+                              className="px-2 py-1 bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 text-[11px] font-bold rounded-md active:scale-95 transition flex items-center gap-1 cursor-pointer"
+                              title="Ghi nhận biến động (Báo tử, Chuyển đi, Xóa tên, Chuyển đến)"
+                            >
+                              <span>📋</span>
+                              <span className="hidden xs:inline">Biến động</span>
+                            </button>
+                          </>
+                        )}
+                        <a
+                          href={`tel:${m.phone}`}
+                          className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center text-xs shadow-xs shrink-0 active:scale-95 transition"
+                          title={`Gọi cho đ/c ${m.fullName}`}
+                        >
+                          📞
+                        </a>
+                      </div>
                     </div>
 
-                    <div className="text-xs text-deep-muted flex flex-wrap gap-x-2 gap-y-0.5">
-                      <span>{m.militaryRank}</span>
-                      <span>•</span>
-                      <span>{m.period}</span>
+                    {/* HÀNG 2: THÔNG TIN QUÂN NGŨ, CHIẾN TRƯỜNG, CHÍNH SÁCH, MÔ HÌNH KINH TẾ (THẲNG HÀNG, KHÔNG RỜI RẠC) */}
+                    <div className="mt-1 pl-8 sm:pl-9 flex items-center gap-x-2 gap-y-0.5 text-[11px] sm:text-xs text-stone-600 flex-wrap">
+                      {m.militaryRank && <span>{m.militaryRank}</span>}
+                      {m.period && (
+                        <>
+                          <span className="text-stone-300">•</span>
+                          <span>{m.period}</span>
+                        </>
+                      )}
                       {m.policyType && (
                         <>
-                          <span>•</span>
+                          <span className="text-stone-300">•</span>
                           <span className="text-flag-red font-semibold">{m.policyType}</span>
                         </>
                       )}
+                      {m.economicModel && (
+                        <>
+                          <span className="text-stone-300">•</span>
+                          <span className="text-bronze-gold font-medium truncate">🌾 {m.economicModel}</span>
+                        </>
+                      )}
                     </div>
-
-                    {m.economicModel && (
-                      <div className="text-[11px] text-bronze-gold font-semibold">
-                        🌾 {m.economicModel}
-                      </div>
-                    )}
                   </div>
-
-                  {/* Nút hành động xem chi tiết & biến động & gọi điện thoại */}
-                  <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-                    {m.rawRecord && (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => setViewingRecord(m.rawRecord || null)}
-                          className="px-2.5 py-2 bg-stone-100 hover:bg-stone-200 border border-stone-300 text-deep-text text-xs font-bold rounded-lg active:scale-95 transition"
-                          title="Xem toàn bộ hồ sơ Mẫu 02"
-                        >
-                          👁️ Hồ sơ
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setMovementMember(m.rawRecord || null);
-                            setMovementType("DECEASED");
-                            setMovementDate(new Date().toISOString().split("T")[0]);
-                            setMovementReason("");
-                            setMovementDestination("");
-                            setMovementDecisionNumber("");
-                            setMovementBurialPlace("");
-                            setMovementFile(null);
-                          }}
-                          className="px-2.5 py-2 bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 text-xs font-bold rounded-lg active:scale-95 transition flex items-center gap-1"
-                          title="Ghi nhận biến động (Báo tử, Chuyển đi, Xóa tên, Chuyển đến)"
-                        >
-                          <span>📋</span>
-                          <span className="hidden sm:inline">Biến động</span>
-                        </button>
-                      </>
-                    )}
-                    <a
-                      href={`tel:${m.phone}`}
-                      className="w-11 h-11 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center text-lg shadow-md shrink-0 active:scale-95 transition"
-                      title={`Gọi cho đ/c ${m.fullName}`}
-                    >
-                      📞
-                    </a>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
 
               {filteredMembers.length === 0 && (
                 <div className="p-8 text-center bg-white rounded-xl border border-stone-300 text-deep-muted text-sm space-y-1">
