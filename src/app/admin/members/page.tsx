@@ -1670,157 +1670,114 @@ export default function AdminMembersPage() {
               <table className="w-full text-left text-xs sm:text-sm">
                 <thead className="bg-moss-green text-white font-bold text-xs uppercase tracking-wider">
                   <tr>
-                    <th className="py-3 px-3.5">Họ Và Tên</th>
-                    <th className="py-3 px-3">Số CCCD</th>
-                    <th className="py-3 px-3">Thôn / Buôn</th>
-                    <th className="py-3 px-3">Thời Kỳ Quân Ngũ</th>
-                    <th className="py-3 px-3">Cấp Bậc</th>
-                    <th className="py-3 px-3">Chính Sách</th>
-                    <th className="py-3 px-3">Đảng Viên</th>
-                    <th className="py-3 px-3 text-right">Dư Nợ NHCSXH</th>
-                    <th className="py-3 px-3 text-center">Thao Tác</th>
+                    <th className="py-3 px-2 text-center w-14 whitespace-nowrap">Thứ Tự</th>
+                    <th className="py-3 px-3.5 text-left whitespace-nowrap">Họ Và Tên</th>
+                    <th className="py-3 px-3 text-center w-24 whitespace-nowrap">Năm Sinh</th>
+                    <th className="py-3 px-3 text-center w-36 whitespace-nowrap">Chức Vụ</th>
+                    <th className="py-3 px-3 text-left w-36 whitespace-nowrap">Thôn / Buôn</th>
+                    <th className="py-3 px-3 text-center w-56 whitespace-nowrap">Thao Tác</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-stone-200">
-                  {filteredActiveMembers.map((m, idx) => (
-                    <tr key={`${m.cccd}_${m.id}_${idx}`} className="hover:bg-amber-50/50 transition">
-                      {/* Họ tên */}
-                      <td className="py-3 px-3.5 font-bold text-deep-text">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span>{m.fullName}</span>
-                          <span className="text-xs text-deep-muted font-normal">({m.birthYear})</span>
-                          {m.associationRole === "Chi hội trưởng" && (
-                            <span className="px-2 py-0.5 bg-[#9E1A1A] text-amber-200 text-[10px] font-bold rounded-full shadow-xs">
-                              Chi hội trưởng
-                            </span>
-                          )}
-                          {(m as any).isNewlyApproved && (
-                            <span className="px-1.5 py-0.2 bg-emerald-100 text-emerald-800 text-[9px] font-bold rounded">
-                              Mới duyệt
-                            </span>
-                          )}
-                        </div>
-                        {m.hasDilapidatedHouse && (
-                          <span className="inline-block mt-0.5 px-1.5 py-0.2 bg-red-100 text-flag-red text-[10px] font-bold rounded">
-                            🏠 Nhà dột nát
-                          </span>
-                        )}
-                      </td>
+                  {filteredActiveMembers.map((m, idx) => {
+                    const isCHT = m.associationRole === "Chi hội trưởng";
+                    return (
+                      <tr key={`${m.cccd}_${m.id}_${idx}`} className="hover:bg-amber-50/50 transition">
+                        {/* 1. Thứ tự */}
+                        <td className="py-3 px-2 text-center font-bold text-stone-500 whitespace-nowrap">
+                          {idx + 1}
+                        </td>
 
-                      {/* CCCD */}
-                      <td className="py-3 px-3 font-mono text-xs text-deep-text">
-                        {m.cccd}
-                      </td>
+                        {/* 2. Họ và tên ("Sao" ghi chú là chi hội trưởng) */}
+                        <td className="py-3 px-3.5 font-bold text-deep-text whitespace-nowrap">
+                          <div className="flex items-center gap-1.5">
+                            {isCHT && (
+                              <span className="text-amber-500 text-sm select-none" title="Chi hội trưởng">
+                                ⭐
+                              </span>
+                            )}
+                            <span className="text-sm font-bold text-deep-text">{m.fullName}</span>
+                            {(m as any).isNewlyApproved && (
+                              <span className="px-1.5 py-0.2 bg-emerald-100 text-emerald-800 text-[9px] font-bold rounded">
+                                Mới duyệt
+                              </span>
+                            )}
+                            {m.hasDilapidatedHouse && (
+                              <span className="px-1.5 py-0.2 bg-red-100 text-flag-red text-[10px] font-bold rounded">
+                                🏠 Nhà dột nát
+                              </span>
+                            )}
+                          </div>
+                        </td>
 
-                      {/* Thôn */}
-                      <td className="py-3 px-3 font-semibold text-deep-text">
-                        {m.hamletName}
-                      </td>
+                        {/* 3. Năm sinh */}
+                        <td className="py-3 px-3 text-center text-stone-700 font-semibold whitespace-nowrap">
+                          {m.birthYear || (m.birthDate ? m.birthDate.slice(-4) : "—")}
+                        </td>
 
-                      {/* Thời kỳ */}
-                      <td className="py-3 px-3 text-xs text-deep-muted">
-                        {m.period}
-                      </td>
-
-                      {/* Cấp bậc */}
-                      <td className="py-3 px-3 font-semibold text-deep-text">
-                        {m.militaryRank}
-                      </td>
-
-                      {/* Chính sách */}
-                      <td className="py-3 px-3">
-                        {m.policyStatus !== "Không" ? (
-                          <span className="px-2 py-0.5 bg-red-100 text-flag-red font-bold text-xs rounded">
-                            {m.policyStatus}
-                          </span>
-                        ) : (
-                          <span className="text-stone-400 text-xs">—</span>
-                        )}
-                      </td>
-
-                      {/* Đảng viên */}
-                      <td className="py-3 px-3">
-                        {m.partyJoinDate ? (
-                          <span className="px-2 py-0.5 bg-amber-100 text-bronze-gold font-bold text-xs rounded">
-                            {m.partyBadge ? `ĐV (${m.partyBadge})` : "Đảng viên"}
-                          </span>
-                        ) : (
-                          <span className="text-stone-400 text-xs">—</span>
-                        )}
-                      </td>
-
-                      {/* Dư nợ */}
-                      <td className="py-3 px-3 text-right font-mono font-bold text-moss-green">
-                        {m.totalDebt > 0 ? `${(m.totalDebt / 1000000).toFixed(0)} tr` : "—"}
-                      </td>
-
-                      {/* Thao tác */}
-                      <td className="py-3 px-3 text-center">
-                        <div className="flex items-center justify-center gap-1.5 flex-wrap">
-                          <button
-                            onClick={() => setActiveModalMember(m)}
-                            className="px-2.5 py-1 bg-stone-100 hover:bg-stone-200 text-deep-text font-bold text-xs rounded border border-stone-300 transition"
-                            title="Xem toàn bộ 35 trường thông tin"
-                          >
-                            👁️ Chi tiết
-                          </button>
-
-                          {/* Nút chỉ định làm Chi hội trưởng */}
-                          {m.associationRole === "Chi hội trưởng" ? (
-                            <span
-                              className="px-2 py-1 bg-amber-50 text-amber-800 border border-amber-300 rounded text-xs font-bold flex items-center gap-1 shadow-2xs select-none"
-                              title={`Đồng chí hiện đang là Chi hội trưởng của ${m.hamletName}`}
-                            >
+                        {/* 4. Chức vụ */}
+                        <td className="py-3 px-3 text-center whitespace-nowrap">
+                          {isCHT ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-amber-100 text-amber-900 border border-amber-300 font-bold text-xs rounded-full shadow-2xs">
                               <span>⭐</span>
-                              <span>Đang là CHT</span>
+                              <span>Chi hội trưởng</span>
+                            </span>
+                          ) : m.associationRole && m.associationRole !== "Hội viên" ? (
+                            <span className="inline-flex items-center px-2 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-300 font-semibold text-xs rounded-full">
+                              {m.associationRole}
                             </span>
                           ) : (
-                            <button
-                              onClick={() => handleAssignBranchLeader(m)}
-                              className="px-2.5 py-1 bg-amber-700 hover:bg-amber-800 active:scale-95 text-white font-bold text-xs rounded border border-amber-500 shadow-2xs transition flex items-center gap-1 cursor-pointer"
-                              title={`Chỉ định đồng chí ${m.fullName} làm Chi hội trưởng ${m.hamletName}`}
-                            >
-                              <span>⭐</span>
-                              <span>Chỉ định CHT</span>
-                            </button>
+                            <span className="text-stone-600 text-xs font-medium">Hội viên</span>
                           )}
+                        </td>
 
-                          <button
-                            onClick={() => {
-                              setEditingMember({ ...m });
-                              setEditTab("personal");
-                            }}
-                            className="border border-[#244023] text-[#244023] hover:bg-[#244023] hover:text-white px-2.5 py-1 rounded text-xs font-medium transition flex items-center gap-1 shadow-2xs cursor-pointer"
-                            title="Chỉnh sửa 35 trường thông tin hồ sơ"
-                          >
-                            <span>✏️</span>
-                            <span>Sửa</span>
-                          </button>
-                          <button
-                            onClick={() => exportExcel([m])}
-                            className="px-2 py-1 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs rounded transition flex items-center gap-1 cursor-pointer border border-emerald-600 shadow-2xs"
-                            title="Xuất hồ sơ hội viên ra file Excel (.xlsx) chuẩn Mẫu 02"
-                          >
-                            <span>📊</span>
-                            <span>Excel</span>
-                          </button>
-                          <button
-                            onClick={() => exportDocx(m)}
-                            disabled={isExporting}
-                            className="px-2 py-1 bg-moss-green hover:bg-moss-green-light text-white font-bold text-xs rounded transition flex items-center gap-1 cursor-pointer shadow-2xs"
-                            title="Xuất phiếu Word Mẫu 02 (.docx) chuẩn Nghị định 30"
-                          >
-                            <span>📄</span>
-                            <span>Word</span>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                        {/* 5. Thôn / Buôn */}
+                        <td className="py-3 px-3 font-semibold text-deep-text whitespace-nowrap">
+                          {m.hamletName}
+                        </td>
+
+                        {/* 6. Thao tác: Chi tiết, Sửa, Word */}
+                        <td className="py-3 px-3 text-center whitespace-nowrap">
+                          <div className="flex items-center justify-center gap-1.5">
+                            <button
+                              onClick={() => setActiveModalMember(m)}
+                              className="px-2.5 py-1 bg-stone-100 hover:bg-stone-200 text-deep-text font-bold text-xs rounded border border-stone-300 transition flex items-center gap-1 cursor-pointer shadow-2xs"
+                              title="Xem toàn bộ 35 trường thông tin"
+                            >
+                              <span>👁️</span>
+                              <span>Chi tiết</span>
+                            </button>
+
+                            <button
+                              onClick={() => {
+                                setEditingMember({ ...m });
+                                setEditTab("personal");
+                              }}
+                              className="px-2.5 py-1 bg-white hover:bg-emerald-50 text-moss-green font-bold text-xs rounded border border-moss-green transition flex items-center gap-1 cursor-pointer shadow-2xs"
+                              title="Chỉnh sửa 35 trường thông tin hồ sơ"
+                            >
+                              <span>✏️</span>
+                              <span>Sửa</span>
+                            </button>
+
+                            <button
+                              onClick={() => exportDocx(m)}
+                              disabled={isExporting}
+                              className="px-2.5 py-1 bg-moss-green hover:bg-moss-green-light active:scale-95 text-white font-bold text-xs rounded transition flex items-center gap-1 cursor-pointer shadow-2xs"
+                              title="Xuất phiếu Word Mẫu 02 (.docx) chuẩn Nghị định 30"
+                            >
+                              <span>📄</span>
+                              <span>Word</span>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
 
                   {filteredActiveMembers.length === 0 && (
                     <tr>
-                      <td colSpan={9} className="py-8 text-center text-deep-muted text-xs">
+                      <td colSpan={6} className="py-8 text-center text-deep-muted text-xs">
                         Không tìm thấy hội viên chính thức nào theo điều kiện lọc hiện tại.
                       </td>
                     </tr>
