@@ -9,7 +9,8 @@
     "lint": "eslint",
     "seed": "tsx --env-file=.env prisma/seed.ts",
     "seed:cht": "node --env-file=.env prisma/seed-cht.js",
-    "cleanup:hamlets": "npx tsx --env-file=.env prisma/cleanup-hamlets.ts"
+    "cleanup:hamlets": "npx tsx --env-file=.env prisma/cleanup-hamlets.ts",
+    "clean:mock": "npx tsx --env-file=.env scripts/clean-mock-data.ts"
   },
   "prisma": {
     "seed": "tsx --env-file=.env prisma/seed.ts"

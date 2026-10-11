@@ -1569,74 +1569,33 @@ export function recordLocalMovement(data: {
 // 10. QUẢN LÝ THÔNG BÁO & CHUÔNG BÁO TÁC VỤ (NOTIFICATIONS)
 // ==============================================================================
 
-const STORAGE_KEY_NOTIFICATIONS = "eccb_notifications_v2";
+const STORAGE_KEY_NOTIFICATIONS = "eccb_notifications_v3";
 
 export function getStoredNotifications(): NotificationRecord[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = localStorage.getItem(STORAGE_KEY_NOTIFICATIONS);
     if (!raw) {
-      // Dữ liệu mẫu thông báo hệ thống ban đầu (Hồ sơ đăng ký mới & xét duyệt 2 cấp & Bản tin mới)
-      const initialNotifs: NotificationRecord[] = [
-        {
-          id: "notif-01",
-          targetRole: "BRANCH_LEADER",
-          hamletName: "Thôn 1",
-          title: "Hồ sơ đăng ký mới: Nguyễn Đình Quảng",
-          content: "Nguyễn Đình Quảng (CCCD: 066068001234) vừa gửi hồ sơ kết nạp tại Thôn 1. Đề nghị Chi hội trưởng thẩm tra tư cách quân nhân.",
-          type: "NEW_REGISTRATION",
-          linkUrl: "/branch",
-          isRead: false,
-          createdAt: new Date().toISOString(),
-        },
-        {
-          id: "notif-news-01",
-          targetRole: "SUPER_ADMIN",
-          title: "Bản tin mới chờ duyệt: Sinh hoạt Chi hội Buôn A",
-          content: "Đồng chí Y Nô Rcăm (Chi hội trưởng Buôn A) vừa gửi bản tin 'Chi hội CCB Buôn A tổ chức sinh hoạt định kỳ quý IV'. Đề nghị Thường trực Xã thẩm định và phê duyệt.",
-          type: "NEW_ARTICLE_PENDING",
-          linkUrl: "/tin-tuc?tab=pending",
-          isRead: false,
-          createdAt: new Date().toISOString(),
-        },
-        {
-          id: "notif-02",
-          targetRole: "SUPER_ADMIN",
-          title: "Hồ sơ mới chờ duyệt: Nguyễn Đình Quảng (Thôn 1)",
-          content: "Hồ sơ đăng ký hội viên mới đang chờ Chi hội Thôn 1 thẩm tra và Thường trực Xã ra Quyết định kết nạp.",
-          type: "NEW_REGISTRATION",
-          linkUrl: "/admin/members",
-          isRead: false,
-          createdAt: new Date(Date.now() - 1800000).toISOString(),
-        },
-        {
-          id: "notif-03",
-          targetRole: "SUPER_ADMIN",
-          title: "Chi hội Thôn Thắng Lợi đã duyệt: Lê Bá Tùng",
-          content: "Chi hội trưởng Nguyễn Văn Đông đã thẩm tra đủ tư cách quân nhân cho đ/c Lê Bá Tùng. Đề nghị Thường trực Xã ra Quyết định kết nạp.",
-          type: "DUAL_APPROVAL_STEP",
-          linkUrl: "/admin/members",
-          isRead: false,
-          createdAt: new Date(Date.now() - 3600000).toISOString(),
-        },
-        {
-          id: "notif-news-02",
-          targetRole: "BRANCH_LEADER",
-          hamletName: "Buôn A",
-          title: "Bản tin chi hội đã được duyệt xuất bản",
-          content: "Bản tin của chi hội đã được Thường trực Hội CCB Xã phê duyệt và xuất bản trên Cổng thông tin điện tử.",
-          type: "ARTICLE_APPROVED",
-          linkUrl: "/tin-tuc",
-          isRead: false,
-          createdAt: new Date(Date.now() - 7200000).toISOString(),
-        },
-      ];
-      localStorage.setItem(STORAGE_KEY_NOTIFICATIONS, JSON.stringify(initialNotifs));
-      return initialNotifs;
+      // Mặc định rỗng, không sinh thông báo test ảo
+      localStorage.setItem(STORAGE_KEY_NOTIFICATIONS, JSON.stringify([]));
+      return [];
     }
     return JSON.parse(raw) as NotificationRecord[];
   } catch {
     return [];
+  }
+}
+
+export function clearAllStoredNotifications(): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.removeItem("eccb_notifications_v1");
+    localStorage.removeItem("eccb_notifications_v2");
+    localStorage.removeItem(STORAGE_KEY_NOTIFICATIONS);
+    localStorage.setItem(STORAGE_KEY_NOTIFICATIONS, JSON.stringify([]));
+    window.dispatchEvent(new CustomEvent("eccb-notifications-updated"));
+  } catch (err) {
+    console.error("Lỗi khi xóa sạch thông báo:", err);
   }
 }
 
