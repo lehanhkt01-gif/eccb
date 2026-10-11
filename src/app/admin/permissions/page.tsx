@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { getStoredMembers, MemberRecord } from "@/lib/memberStore";
+import { EA_SUP_HAMLETS } from "@/lib/constants/hamlets";
 
 export type RoleType = "SUPER_ADMIN" | "BRANCH_LEADER" | "MEMBER";
 
@@ -261,8 +262,12 @@ export default function PermissionsManagementPage() {
         item.unit.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (item.phone && item.phone.includes(searchTerm));
 
+      const cleanUnit = item.unit.replace(/^Chi hội\s+/i, "").trim();
       const matchHamlet =
-        selectedHamletFilter === "all" || item.unit.includes(selectedHamletFilter);
+        selectedHamletFilter === "all" ||
+        cleanUnit === selectedHamletFilter ||
+        item.unit === selectedHamletFilter ||
+        item.unit === `Chi hội ${selectedHamletFilter}`;
 
       return matchSearch && matchHamlet;
     });
@@ -402,15 +407,12 @@ export default function PermissionsManagementPage() {
                 setSelectedHamletFilter(e.target.value);
                 setCurrentPage(1);
               }}
-              className="w-full sm:w-48 px-3 py-2 bg-stone-50 border border-stone-300 rounded-lg text-sm text-deep-text focus:border-moss-green focus:outline-none"
+              className="w-full sm:w-52 px-3 py-2 bg-stone-50 border border-stone-300 rounded-lg text-sm text-deep-text focus:border-moss-green focus:outline-none font-medium"
             >
               <option value="all">Tất cả thôn buôn</option>
-              {Array.from({ length: 17 }, (_, i) => `Thôn ${i + 1}`).map((th) => (
+              {EA_SUP_HAMLETS.map((th) => (
                 <option key={th} value={th}>{th}</option>
               ))}
-              <option value="Buôn A">Buôn A</option>
-              <option value="Buôn B">Buôn B</option>
-              <option value="Buôn C">Buôn C</option>
             </select>
           )}
         </div>
@@ -663,16 +665,33 @@ export default function PermissionsManagementPage() {
               {/* Đơn vị trực thuộc */}
               <div>
                 <label className="text-xs font-bold text-stone-700 block mb-1 uppercase">
-                  Đơn vị trực thuộc:
+                  Đơn vị trực thuộc / Thôn Buôn:
                 </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="VD: Chi hội Thôn 1 hoặc Thường trực Hội CCB Xã"
-                  value={newUnit}
-                  onChange={(e) => setNewUnit(e.target.value)}
-                  className="w-full p-2.5 bg-stone-50 border border-stone-300 rounded-lg text-sm text-deep-text focus:border-moss-green focus:bg-white focus:outline-none"
-                />
+                {newRole === "SUPER_ADMIN" ? (
+                  <input
+                    type="text"
+                    required
+                    placeholder="VD: Thường trực Hội CCB Xã"
+                    value={newUnit}
+                    onChange={(e) => setNewUnit(e.target.value)}
+                    className="w-full p-2.5 bg-stone-50 border border-stone-300 rounded-lg text-sm text-deep-text focus:border-moss-green focus:bg-white focus:outline-none"
+                  />
+                ) : (
+                  <select
+                    value={newUnit}
+                    onChange={(e) => setNewUnit(e.target.value)}
+                    className="w-full p-2.5 bg-stone-50 border border-stone-300 rounded-lg text-sm text-deep-text focus:border-moss-green focus:bg-white focus:outline-none font-medium"
+                  >
+                    {EA_SUP_HAMLETS.map((h) => {
+                      const unitVal = newRole === "BRANCH_LEADER" ? `Chi hội ${h}` : h;
+                      return (
+                        <option key={h} value={unitVal}>
+                          {unitVal}
+                        </option>
+                      );
+                    })}
+                  </select>
+                )}
               </div>
 
               {/* Số điện thoại */}

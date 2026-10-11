@@ -145,12 +145,9 @@ export interface MemberMovementRecord {
   createdAt: string;
 }
 
-export const HAMLET_LIST = [
-  "Thôn 1", "Thôn 2", "Thôn 3", "Thôn 4", "Thôn 5", "Thôn 6", "Thôn 7",
-  "Thôn 8", "Thôn 9", "Thôn 10", "Thôn 11", "Thôn 12", "Thôn 13",
-  "Thôn Hòa Bình", "Thôn Thắng Lợi", "Thôn Đoàn Kết", "Thôn Bình Lợi",
-  "Buôn A", "Buôn B", "Buôn C"
-];
+import { EA_SUP_HAMLETS } from "./constants/hamlets";
+export { EA_SUP_HAMLETS };
+export const HAMLET_LIST = EA_SUP_HAMLETS;
 
 // Danh sách ban đầu chứa hồ sơ chính thức và 2 hồ sơ chờ duyệt mẫu
 export const INITIAL_MEMBERS: MemberRecord[] = [

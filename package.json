@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "seed": "tsx --env-file=.env prisma/seed.ts",
-    "seed:cht": "node --env-file=.env prisma/seed-cht.js"
+    "seed:cht": "node --env-file=.env prisma/seed-cht.js",
+    "cleanup:hamlets": "npx tsx --env-file=.env prisma/cleanup-hamlets.ts"
   },
   "prisma": {
     "seed": "tsx --env-file=.env prisma/seed.ts"
