@@ -305,36 +305,35 @@ export default function HomePage() {
             </p>
           </div>
 
-          {/* Cụm Nút Tác vụ & Tạo tin bài (Phân quyền Hybrid RBAC + ABAC) */}
-          <div className="flex items-center gap-2 shrink-0 flex-wrap">
-            {/* Nút gửi tin bài dành cho Hội viên / Chi hội trưởng / Cán bộ xã */}
-            <button
-              type="button"
-              onClick={handleOpenCreateModal}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 sm:px-4 sm:py-2 bg-moss-green hover:bg-moss-green-dark text-white text-xs sm:text-sm font-bold rounded shadow-xs transition cursor-pointer active:scale-98"
-              title="Đăng tin bài mới hoặc gửi phản ánh chi hội"
-            >
-              <span>{currentUser?.role === "SUPER_ADMIN" ? "➕" : "✍️"}</span>
-              <span>
-                {currentUser?.role === "SUPER_ADMIN"
-                  ? "Đăng Bản Tin Mới"
-                  : currentUser?.role === "BRANCH_LEADER"
-                  ? "Gửi Tin Bài Chi Hội"
-                  : currentUser?.role === "MEMBER"
-                  ? "Gửi Bài Viết CCB"
-                  : "Gửi Tin Bài Phản Ánh"}
-              </span>
-              <span className="text-[10px] bg-amber-400 text-stone-900 px-1.5 py-0.5 rounded font-extrabold uppercase">
-                {currentUser?.role === "SUPER_ADMIN"
-                  ? "Cán bộ xã"
-                  : currentUser?.role === "BRANCH_LEADER"
-                  ? "Chi hội"
-                  : currentUser?.role === "MEMBER"
-                  ? "Hội viên"
-                  : "CCB"}
-              </span>
-            </button>
-          </div>
+          {/* Cụm Nút Tác vụ & Tạo tin bài: Chỉ hiển thị khi ĐÃ ĐĂNG NHẬP (Cán bộ xã, Chi hội trưởng hoặc Hội viên) */}
+          {currentUser && (
+            <div className="flex items-center gap-2 shrink-0 flex-wrap">
+              <button
+                type="button"
+                onClick={handleOpenCreateModal}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 sm:px-4 sm:py-2 bg-moss-green hover:bg-moss-green-dark text-white text-xs sm:text-sm font-bold rounded shadow-xs transition cursor-pointer active:scale-98"
+                title={
+                  currentUser.role === "SUPER_ADMIN"
+                    ? "Đăng bản tin mới của Hội CCB Xã"
+                    : "Viết bản tin tuyên truyền để gửi Cán bộ xã phê duyệt"
+                }
+              >
+                <span>{currentUser.role === "SUPER_ADMIN" ? "➕" : "✍️"}</span>
+                <span>
+                  {currentUser.role === "SUPER_ADMIN"
+                    ? "Đăng Bản Tin Mới"
+                    : "Viết bản tin tuyên truyền"}
+                </span>
+                <span className="text-[10px] bg-amber-400 text-stone-900 px-1.5 py-0.5 rounded font-extrabold uppercase">
+                  {currentUser.role === "SUPER_ADMIN"
+                    ? "Cán bộ xã"
+                    : currentUser.role === "BRANCH_LEADER"
+                    ? "Chi hội"
+                    : "Hội viên"}
+                </span>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Thanh Tab Lọc Trạng Thái Tin Bài (Hiển thị khi là Cán bộ xã hoặc có bài viết) */}
@@ -404,12 +403,14 @@ export default function HomePage() {
                       ? "Hiện không có bản tin nào đang chờ phê duyệt."
                       : "Hiện chưa có bản tin tuyên truyền nào phù hợp."}
                   </p>
-                  <button
-                    onClick={handleOpenCreateModal}
-                    className="px-4 py-2 bg-moss-green text-white text-sm rounded font-bold hover:bg-moss-green-dark transition cursor-pointer"
-                  >
-                    ➕ Đăng / Gửi bài viết mới
-                  </button>
+                  {currentUser && (
+                    <button
+                      onClick={handleOpenCreateModal}
+                      className="px-4 py-2 bg-moss-green text-white text-sm rounded font-bold hover:bg-moss-green-dark transition cursor-pointer"
+                    >
+                      {currentUser.role === "SUPER_ADMIN" ? "➕ Đăng bản tin mới" : "✍️ Viết bản tin tuyên truyền"}
+                    </button>
+                  )}
                 </div>
               );
             }

@@ -369,6 +369,20 @@ export default function Header({
                               <span>Quản lý 4 nghiệp vụ biến động</span>
                             </Link>
 
+                            {onOpenCreateArticle && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setMenuOpen(false);
+                                  onOpenCreateArticle();
+                                }}
+                                className="w-full text-left flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-moss-green hover:bg-emerald-50 transition cursor-pointer"
+                              >
+                                <span className="text-lg">✍️</span>
+                                <span>Viết bản tin tuyên truyền</span>
+                              </button>
+                            )}
+
                             <Link
                               href="/"
                               onClick={() => setMenuOpen(false)}
@@ -391,6 +405,20 @@ export default function Header({
                               <span className="text-lg">🎖️</span>
                               <span>Hồ sơ &amp; Cổng thông tin Hội viên</span>
                             </Link>
+
+                            {onOpenCreateArticle && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setMenuOpen(false);
+                                  onOpenCreateArticle();
+                                }}
+                                className="w-full text-left flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-moss-green hover:bg-emerald-50 transition cursor-pointer"
+                              >
+                                <span className="text-lg">✍️</span>
+                                <span>Viết bản tin tuyên truyền</span>
+                              </button>
+                            )}
 
                             <Link
                               href="/member"

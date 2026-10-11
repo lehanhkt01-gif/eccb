@@ -308,20 +308,20 @@ function NewsContent() {
               <span>Trang chủ</span>
             </Link>
 
-            <button
-              type="button"
-              onClick={handleOpenCreateModal}
-              className="px-4 py-2 bg-flag-red hover:bg-flag-red-light text-white text-xs sm:text-sm font-bold rounded-lg shadow-sm border border-amber-300 transition flex items-center gap-1.5 active:scale-95"
-            >
-              <span>✍️</span>
-              <span>
-                {currentUser?.role === "SUPER_ADMIN"
-                  ? "Đăng Bản Tin Mới"
-                  : currentUser?.role === "BRANCH_LEADER"
-                  ? "Gửi Tin Chi Hội"
-                  : "Gửi Bài Viết CCB"}
-              </span>
-            </button>
+            {currentUser && (
+              <button
+                type="button"
+                onClick={handleOpenCreateModal}
+                className="px-4 py-2 bg-flag-red hover:bg-flag-red-light text-white text-xs sm:text-sm font-bold rounded-lg shadow-sm border border-amber-300 transition flex items-center gap-1.5 active:scale-95"
+              >
+                <span>{currentUser.role === "SUPER_ADMIN" ? "➕" : "✍️"}</span>
+                <span>
+                  {currentUser.role === "SUPER_ADMIN"
+                    ? "Đăng Bản Tin Mới"
+                    : "Viết bản tin tuyên truyền"}
+                </span>
+              </button>
+            )}
           </div>
         </div>
       </section>
@@ -444,12 +444,14 @@ function NewsContent() {
                 ? "Tất cả các bài viết do Chi hội và Hội viên gửi lên đã được xử lý đầy đủ."
                 : "Vui lòng thử chọn chuyên mục khác hoặc xóa từ khóa tìm kiếm."}
             </p>
-            <button
-              onClick={handleOpenCreateModal}
-              className="px-4 py-2 bg-moss-green text-white text-xs sm:text-sm rounded-lg font-bold hover:bg-moss-green-dark transition cursor-pointer"
-            >
-              ➕ Đăng / Gửi bài viết mới
-            </button>
+            {currentUser && (
+              <button
+                onClick={handleOpenCreateModal}
+                className="px-4 py-2 bg-moss-green text-white text-xs sm:text-sm rounded-lg font-bold hover:bg-moss-green-dark transition cursor-pointer"
+              >
+                {currentUser.role === "SUPER_ADMIN" ? "➕ Đăng bản tin mới" : "✍️ Viết bản tin tuyên truyền"}
+              </button>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

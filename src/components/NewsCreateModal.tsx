@@ -115,7 +115,7 @@ export default function NewsCreateModal({
         setAuthor("Thường trực Hội CCB xã Ea Súp");
       } else if (isBranchLeader) {
         const hamlet = currentUser?.hamletName || "Chi hội";
-        setAuthor(`Đ/c ${currentUser?.fullName || "Chi hội trưởng"} - Chi hội trưởng ${hamlet}`);
+        setAuthor(`${currentUser?.fullName || "Chi hội trưởng"} - Chi hội trưởng ${hamlet}`);
       } else if (isMember) {
         const hamlet = currentUser?.hamletName || "Chi hội cơ sở";
         setAuthor(`Hội viên ${currentUser?.fullName || "CCB"} - Chi hội ${hamlet}`);
@@ -472,15 +472,15 @@ export default function NewsCreateModal({
                   : isCadre
                   ? "Đăng Tải Bản Tin Mới (Cán Bộ Xã)"
                   : isBranchLeader
-                  ? "Gửi Tin Bài Chi Hội (Chi Hội Trưởng)"
-                  : "Gửi Tin Bài Hội Viên CCB"}
+                  ? "Viết Bản Tin Tuyên Truyền (Chi Hội Trưởng)"
+                  : "Viết Bản Tin Tuyên Truyền (Hội Viên CCB)"}
               </h3>
               <p className="text-[11px] text-stone-200 truncate">
                 {isCadre
                   ? "Ban Thường trực Hội CCB Xã Ea Súp • Toàn quyền xuất bản"
                   : isBranchLeader
-                  ? "Chi hội trưởng cơ sở • Bài viết sẽ chuyển lên Thường trực Xã phê duyệt"
-                  : "Hội viên cơ sở • Bài viết sẽ chuyển lên Thường trực Xã phê duyệt"}
+                  ? "Chi hội trưởng cơ sở • Bài viết sẽ chuyển lên Cán bộ xã phê duyệt"
+                  : "Hội viên cơ sở • Bài viết sẽ chuyển lên Cán bộ xã phê duyệt"}
               </p>
             </div>
           </div>
@@ -917,7 +917,7 @@ export default function NewsCreateModal({
               ) : isCadre ? (
                 <span>Phát hành bản tin ngay</span>
               ) : (
-                <span>Gửi bài chờ duyệt →</span>
+                <span>Gửi Cán bộ xã phê duyệt →</span>
               )}
             </button>
           </div>
