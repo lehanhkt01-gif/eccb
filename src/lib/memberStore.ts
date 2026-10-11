@@ -1369,17 +1369,16 @@ export function rejectMember(id: string, reason: string): boolean {
 }
 
 /**
- * CHỈ ĐỊNH HỘI VIÊN LÀM CHI HỘI TRƯỞNG
+ * CHỈ ĐỊNH / CẤP QUYỀN HỘI VIÊN LÀM CHI HỘI TRƯỞNG
  * Quy tắc:
- * 1. Hội viên ở chi hội nào thì chỉ được chỉ định làm Chi hội trưởng của chi hội đó.
- * 2. Chi hội trưởng cũ của thôn buôn đó sẽ chuyển về làm Hội viên.
- * 3. Đồng bộ cập nhật vào danh sách MemberStore và tài khoản Chi hội trưởng.
+ * 1. Hội viên ở chi hội nào thì được cấp quyền Chi hội trưởng của chi hội đó.
+ * 2. Một chi hội có thể có nhiều đồng chí cùng đảm nhiệm Chi hội trưởng (không hạ bệ CHT cũ).
+ * 3. Bổ sung tài khoản Chi hội trưởng vào danh sách permissions nếu chưa có.
  */
 export function assignBranchLeader(memberId: string): {
   success: boolean;
   message: string;
   targetMember?: MemberRecord;
-  oldLeader?: MemberRecord;
 } {
   const currentList = getStoredMembers();
   const target = currentList.find(
@@ -1395,38 +1394,20 @@ export function assignBranchLeader(memberId: string): {
     return { success: false, message: "Hội viên chưa có thông tin chi hội thôn/buôn sinh hoạt." };
   }
 
-  // Tìm Chi hội trưởng hiện tại của thôn buôn này (nếu có)
-  const oldLeader = currentList.find(
-    (m) =>
-      m.hamletName === hamletName &&
-      m.associationRole === "Chi hội trưởng" &&
-      m.id !== target.id &&
-      m.cccd !== target.cccd
-  );
-
-  // Cập nhật vai trò:
-  // - Hội viên mục tiêu -> "Chi hội trưởng"
-  // - CHT cũ (nếu có) -> "Hội viên"
+  // Cập nhật vai trò của hội viên mục tiêu thành "Chi hội trưởng" (BẢO TOÀN CÁC CHI HỘI TRƯỞNG KHÁC CÙNG THÔN)
   const updatedList = currentList.map((m) => {
-    if (m.hamletName === hamletName) {
-      if (m.id === target.id || m.cccd === target.cccd) {
-        return {
-          ...m,
-          associationRole: "Chi hội trưởng",
-        };
-      } else if (m.associationRole === "Chi hội trưởng") {
-        return {
-          ...m,
-          associationRole: "Hội viên",
-        };
-      }
+    if (m.id === target.id || m.cccd === target.cccd) {
+      return {
+        ...m,
+        associationRole: "Chi hội trưởng",
+      };
     }
     return m;
   });
 
   saveStoredMembers(updatedList);
 
-  // Đồng bộ cập nhật tài khoản Chi hội trưởng trong permissions state nếu có
+  // Đồng bộ bổ sung tài khoản Chi hội trưởng trong permissions state
   try {
     const permKey = "eccb_permissions_state_v6";
     const permRaw =
@@ -1436,17 +1417,38 @@ export function assignBranchLeader(memberId: string): {
     if (permRaw) {
       const permObj = JSON.parse(permRaw);
       if (permObj.branches && Array.isArray(permObj.branches)) {
-        permObj.branches = permObj.branches.map((b: any) => {
-          if (b.unit.toLowerCase().includes(hamletName.toLowerCase())) {
-            return {
-              ...b,
-              fullName: target.fullName,
-              phone: target.phone,
-              username: target.cccd,
-            };
-          }
-          return b;
-        });
+        // Kiểm tra xem đã có tài khoản CHT của đồng chí này chưa
+        const existingIdx = permObj.branches.findIndex(
+          (b: any) =>
+            b.username === target.cccd ||
+            b.phone === target.phone ||
+            (b.fullName && b.fullName.toLowerCase() === target.fullName.toLowerCase() &&
+              b.unit && b.unit.toLowerCase().includes(hamletName.toLowerCase()))
+        );
+
+        if (existingIdx !== -1) {
+          // Đã có -> Cập nhật lại thông tin mới nhất
+          permObj.branches[existingIdx] = {
+            ...permObj.branches[existingIdx],
+            fullName: target.fullName,
+            phone: target.phone,
+            username: target.phone || target.cccd,
+            role: "BRANCH_LEADER",
+            isActive: true,
+          };
+        } else {
+          // Chưa có -> Bổ sung thêm vào danh sách Chi hội trưởng
+          permObj.branches.push({
+            id: `bl_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+            fullName: target.fullName,
+            unit: `Chi hội ${hamletName.replace(/^Chi hội\s+/i, "")}`,
+            username: target.phone || target.cccd,
+            phone: target.phone,
+            role: "BRANCH_LEADER",
+            isActive: true,
+            passwordStatus: "MẶC_ĐỊNH",
+          });
+        }
         localStorage.setItem(permKey, JSON.stringify(permObj));
       }
     }
@@ -1457,8 +1459,8 @@ export function assignBranchLeader(memberId: string): {
     createNotification({
       targetRole: "SUPER_ADMIN",
       hamletName,
-      title: `Chỉ định Chi hội trưởng: ${target.fullName}`,
-      content: `Ban Thường trực Hội CCB Xã đã chỉ định đ/c ${target.fullName} làm Chi hội trưởng ${hamletName}${oldLeader ? ` (thay thế đ/c ${oldLeader.fullName})` : ""}.`,
+      title: `Cấp quyền Chi hội trưởng: ${target.fullName}`,
+      content: `Ban Thường trực Hội CCB Xã đã cấp quyền Chi hội trưởng cho đồng chí ${target.fullName} (${hamletName}).`,
       type: "STATUS_CHANGE",
       linkUrl: "/admin/members",
     });
@@ -1466,9 +1468,8 @@ export function assignBranchLeader(memberId: string): {
 
   return {
     success: true,
-    message: `Đã chỉ định đồng chí [${target.fullName}] làm Chi hội trưởng ${hamletName} thành công!`,
-    targetMember: target,
-    oldLeader,
+    message: `Đã cấp quyền Chi hội trưởng ${hamletName} cho đồng chí [${target.fullName}] thành công!`,
+    targetMember: { ...target, associationRole: "Chi hội trưởng" },
   };
 }
 

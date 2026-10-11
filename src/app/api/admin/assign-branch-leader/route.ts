@@ -46,15 +46,12 @@ export async function POST(req: Request) {
       );
     }
 
-    // 3. Chuyển tất cả Chi hội trưởng cũ của thôn này về vai trò 'Hội viên'
-    await prisma.member.updateMany({
-      where: {
-        hamletId: hamlet.id,
-        associationRole: "Chi hội trưởng",
-        id: { not: targetMember.id },
-      },
+    // 3. Cập nhật hội viên mục tiêu thành 'Chi hội trưởng' (Giữ nguyên các Chi hội trưởng khác cùng thôn)
+    await prisma.member.update({
+      where: { id: targetMember.id },
       data: {
-        associationRole: "Hội viên",
+        associationRole: "Chi hội trưởng",
+        hamletId: hamlet.id,
       },
     });
 

@@ -178,23 +178,16 @@ export default function AdminMembersPage() {
     showToast(`🔄 Đã chuyển hồ sơ đ/c ${fullName} về trạng thái Chờ Thường trực Xã phê duyệt!`);
   };
 
-  // Xử lý chỉ định Chi hội trưởng (hội viên ở chi hội nào thì chỉ được chỉ định chi hội trưởng ở chi hội đó)
+  // Xử lý chỉ định Chi hội trưởng (hội viên ở chi hội nào thì được chỉ định chi hội trưởng ở chi hội đó, một chi hội có thể có nhiều CHT)
   const handleAssignBranchLeader = async (m: MemberRecord) => {
-    const currentLeader = activeMembers.find(
-      (x) => x.hamletName === m.hamletName && x.associationRole === "Chi hội trưởng" && x.cccd !== m.cccd
-    );
-    const leaderNote = currentLeader
-      ? `\n(Chi hội trưởng hiện tại [${currentLeader.fullName}] sẽ chuyển về vai trò Hội viên)`
-      : "";
-
     const confirm = window.confirm(
-      `⭐ QUYẾT ĐỊNH CHỈ ĐỊNH CHI HỘI TRƯỞNG\n\n` +
-      `Đồng chí có chắc chắn muốn chỉ định:\n` +
+      `⭐ QUYẾT ĐỊNH CẤP QUYỀN CHI HỘI TRƯỞNG\n\n` +
+      `Đồng chí có chắc chắn muốn cấp quyền:\n` +
       `👤 Đồng chí: ${m.fullName}\n` +
       `🆔 Số CCCD: ${m.cccd}\n` +
       `🏘️ Đơn vị sinh hoạt: ${m.hamletName}\n\n` +
-      `đảm nhiệm chức danh CHI HỘI TRƯỞNG của ${m.hamletName}?${leaderNote}\n\n` +
-      `* Lưu ý: Hội viên ở chi hội nào chỉ được chỉ định làm Chi hội trưởng tại đúng chi hội đó.`
+      `đảm nhiệm chức danh CHI HỘI TRƯỞNG của ${m.hamletName}?\n\n` +
+      `* Lưu ý: Hội viên sẽ được bổ sung vào danh sách Chi hội trưởng và có huy hiệu sao vàng đánh dấu trong danh sách hội viên. Một chi hội có thể có nhiều đồng chí cùng đảm nhiệm Chi hội trưởng.`
     );
 
     if (!confirm) return;
@@ -1682,21 +1675,34 @@ export default function AdminMembersPage() {
                   {filteredActiveMembers.map((m, idx) => {
                     const isCHT = m.associationRole === "Chi hội trưởng";
                     return (
-                      <tr key={`${m.cccd}_${m.id}_${idx}`} className="hover:bg-amber-50/50 transition">
-                        {/* 1. Thứ tự */}
+                      <tr key={`${m.cccd}_${m.id}_${idx}`} className={`transition ${isCHT ? "bg-amber-50/50 hover:bg-amber-100/60" : "hover:bg-amber-50/50"}`}>
+                        {/* 1. Thứ tự (Chi hội trưởng có ⭐) */}
                         <td className="py-3 px-2 text-center font-bold text-stone-500 whitespace-nowrap">
-                          {idx + 1}
+                          {isCHT ? (
+                            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-500 text-white text-xs font-black shadow-2xs" title="Chi hội trưởng">
+                              ⭐
+                            </span>
+                          ) : (
+                            idx + 1
+                          )}
                         </td>
 
-                        {/* 2. Họ và tên ("Sao" ghi chú là chi hội trưởng) */}
+                        {/* 2. Họ và tên ("Sao" ghi chú là chi hội trưởng + badge vàng) */}
                         <td className="py-3 px-3.5 font-bold text-deep-text whitespace-nowrap">
                           <div className="flex items-center gap-1.5">
                             {isCHT && (
-                              <span className="text-amber-500 text-sm select-none" title="Chi hội trưởng">
+                              <span className="text-amber-500 text-base select-none leading-none" title="Chi hội trưởng">
                                 ⭐
                               </span>
                             )}
-                            <span className="text-sm font-bold text-deep-text">{m.fullName}</span>
+                            <span className={`text-sm ${isCHT ? "font-black text-amber-950" : "font-bold text-deep-text"}`}>
+                              {m.fullName}
+                            </span>
+                            {isCHT && (
+                              <span className="px-1.5 py-0.5 bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-bold rounded shadow-2xs">
+                                Chi hội trưởng
+                              </span>
+                            )}
                             {(m as any).isNewlyApproved && (
                               <span className="px-1.5 py-0.2 bg-emerald-100 text-emerald-800 text-[9px] font-bold rounded">
                                 Mới duyệt

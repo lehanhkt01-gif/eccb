@@ -187,23 +187,42 @@ export default function PermissionsManagementPage() {
       passwordStatus: "MẶC_ĐỊNH",
     }));
 
-    // Cập nhật lại thông tin Chi hội trưởng mới nhất theo thôn buôn
+    // Cập nhật và bổ sung tất cả Chi hội trưởng từ danh sách hội viên (Hỗ trợ 1 thôn có nhiều CHT)
     const leadersInStore = officialMembers.filter((m) => m.associationRole === "Chi hội trưởng");
-    if (leadersInStore.length > 0) {
-      loadedBranches = loadedBranches.map((br) => {
-        const matchingLeader = leadersInStore.find(
-          (l) => br.unit.toLowerCase().includes(l.hamletName.toLowerCase()) || l.hamletName.toLowerCase().includes(br.unit.replace("Chi hội ", "").toLowerCase())
-        );
-        if (matchingLeader) {
-          return {
-            ...br,
-            fullName: matchingLeader.fullName,
-            phone: matchingLeader.phone,
-            username: matchingLeader.cccd,
-          };
-        }
-        return br;
-      });
+    for (const leader of leadersInStore) {
+      const cleanHamlet = leader.hamletName.replace(/^Chi hội\s+/i, "").trim().toLowerCase();
+      const existingIdx = loadedBranches.findIndex(
+        (br) =>
+          br.username === leader.cccd ||
+          br.phone === leader.phone ||
+          (br.fullName.toLowerCase() === leader.fullName.toLowerCase() &&
+            br.unit.replace(/^Chi hội\s+/i, "").trim().toLowerCase() === cleanHamlet)
+      );
+
+      if (existingIdx !== -1) {
+        // Cập nhật thông tin mới nhất
+        loadedBranches[existingIdx] = {
+          ...loadedBranches[existingIdx],
+          fullName: leader.fullName,
+          phone: leader.phone,
+          username: leader.phone || leader.cccd,
+          unit: `Chi hội ${leader.hamletName.replace(/^Chi hội\s+/i, "")}`,
+          role: "BRANCH_LEADER",
+          isActive: true,
+        };
+      } else {
+        // Bổ sung thêm vào danh sách tài khoản Chi hội trưởng
+        loadedBranches.push({
+          id: `bl_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+          fullName: leader.fullName,
+          unit: `Chi hội ${leader.hamletName.replace(/^Chi hội\s+/i, "")}`,
+          username: leader.phone || leader.cccd,
+          phone: leader.phone,
+          role: "BRANCH_LEADER",
+          isActive: true,
+          passwordStatus: "MẶC_ĐỊNH",
+        });
+      }
     }
 
     setAdminAccounts(loadedAdmins);
@@ -308,17 +327,21 @@ export default function PermissionsManagementPage() {
         return;
       }
 
-      // 2. Cập nhật tài khoản Chi hội trưởng trong danh sách Permissions
+      // 2. Cập nhật / Bổ sung tài khoản Chi hội trưởng trong danh sách Permissions (Không ghi đè CHT khác)
       const cleanHamlet = selectedBranchHamlet.replace(/^Chi hội\s+/i, "").trim();
       const unitName = `Chi hội ${cleanHamlet}`;
 
       let updatedBranches = [...branchAccounts];
       const existingIdx = updatedBranches.findIndex(
-        (b) => b.unit.replace(/^Chi hội\s+/i, "").trim().toLowerCase() === cleanHamlet.toLowerCase()
+        (b) =>
+          b.username === selectedMemberForLeader.cccd ||
+          b.phone === selectedMemberForLeader.phone ||
+          (b.fullName.toLowerCase() === selectedMemberForLeader.fullName.toLowerCase() &&
+            b.unit.replace(/^Chi hội\s+/i, "").trim().toLowerCase() === cleanHamlet.toLowerCase())
       );
 
       const leaderAccount: AccountItem = {
-        id: existingIdx !== -1 ? updatedBranches[existingIdx].id : `bl_${Date.now()}`,
+        id: existingIdx !== -1 ? updatedBranches[existingIdx].id : `bl_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
         fullName: selectedMemberForLeader.fullName,
         unit: unitName,
         username: selectedMemberForLeader.phone || selectedMemberForLeader.cccd,
@@ -331,6 +354,7 @@ export default function PermissionsManagementPage() {
       if (existingIdx !== -1) {
         updatedBranches[existingIdx] = leaderAccount;
       } else {
+        // Bổ sung thêm vào danh sách Chi hội trưởng
         updatedBranches.push(leaderAccount);
       }
 
