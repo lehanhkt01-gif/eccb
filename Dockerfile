@@ -42,15 +42,16 @@ ENV HOSTNAME="0.0.0.0"
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# Copy tài nguyên static và standalone build
+# Copy tài nguyên static, dữ liệu và standalone build
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+COPY --from=builder --chown=nextjs:nodejs /app/src/data ./src/data
 
-# Đảm bảo các thư mục upload tồn tại và có quyền ghi cho tiến trình nextjs
-RUN mkdir -p /app/public/uploads/news /app/public/uploads/documents && \
-    chown -R nextjs:nodejs /app/public
+# Đảm bảo các thư mục upload và data tồn tại và có quyền ghi cho tiến trình nextjs
+RUN mkdir -p /app/src/data /app/public/uploads/news /app/public/uploads/documents && \
+    chown -R nextjs:nodejs /app/src/data /app/public
 
 USER nextjs
 

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs/promises";
 import path from "path";
-import { Article, ArticleStatus } from "@/lib/newsService";
+import { Article, ArticleStatus, DEFAULT_APPROVED_NEWS, getAllNews } from "@/lib/newsService";
 
 const DATA_FILE_PATH = path.join(process.cwd(), "src", "data", "news.json");
 
@@ -18,18 +18,7 @@ function slugify(text: string): string {
 }
 
 async function getArticles(): Promise<Article[]> {
-  try {
-    const raw = await fs.readFile(DATA_FILE_PATH, "utf-8");
-    const list: Article[] = JSON.parse(raw);
-    return list.map((item) => ({
-      ...item,
-      status: item.status || "APPROVED",
-      thumbnail: item.thumbnail || item.imageUrl,
-      imageUrl: item.imageUrl || item.thumbnail,
-    }));
-  } catch {
-    return [];
-  }
+  return await getAllNews();
 }
 
 async function saveArticles(articles: Article[]): Promise<void> {
