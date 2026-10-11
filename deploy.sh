@@ -69,22 +69,15 @@ until docker compose exec -T db pg_isready -U "${DB_USER}" -d "${DB_NAME}" > /de
   sleep 2
 done
 
-# Đảm bảo bảng articles và 04 bản tin luôn được nạp đầy đủ vào PostgreSQL
-if [ -f prisma/init-articles.sql ]; then
-  echo -e "📰 Khởi tạo bảng articles và nạp 04 bản tin chuẩn vào PostgreSQL..."
-  docker compose exec -T db psql -U "${DB_USER}" -d "${DB_NAME}" < prisma/init-articles.sql || true
-fi
+echo -e "${GREEN}✓ Kiểm tra kết nối CSDL PostgreSQL thành công!${NC}"
 echo -e "${GREEN}✓ Đồng bộ cấu trúc Database hoàn tất an toàn!${NC}"
 
 # 6. BƯỚC 5: KHỞI ĐỘNG LẠI DỊCH VỤ ỨNG DỤNG VÀ KHÔI PHỤC BẢN TIN
 echo -e "\n${YELLOW}[BƯỚC 5/5] Khởi động ứng dụng với Container mới (--force-recreate)...${NC}"
 docker compose up -d --force-recreate app
 
-# Chờ app khởi động 5 giây rồi tự động kiểm tra nạp bản tin & dọn dữ liệu ảo
-sleep 5
-echo -e "🔄 Tự động khôi phục 04 bản tin tuyên truyền vào PostgreSQL..."
-docker compose exec -T app wget -qO- http://localhost:3000/api/admin/restore-news > /dev/null 2>&1 || true
-docker compose exec -T app wget -qO- --post-data="" http://localhost:3000/api/admin/clean-mock-data > /dev/null 2>&1 || true
+# Bảo toàn 100% CSDL hiện tại: TUYỆT ĐỐI KHÔNG gọi bất kỳ script xóa/dọn CSDL tự động nào
+echo -e "${GREEN}✓ CSDL PostgreSQL được bảo toàn nguyên vẹn 100%. Không có bất kỳ dữ liệu nào bị can thiệp.${NC}"
 
 echo -e "\n${BLUE}======================================================================${NC}"
 echo -e "${GREEN}🎉 TRIỂN KHAI THÀNH CÔNG! HỆ THỐNG E-CCB EA SÚP ĐÃ HOẠT ĐỘNG ỔN ĐỊNH.${NC}"

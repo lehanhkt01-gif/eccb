@@ -1041,15 +1041,10 @@ export function getStoredMembers(): MemberRecord[] {
       }
     }
 
-    // 1. LOẠI BỎ TOÀN BỘ HỘI VIÊN ẢO VÀ DỮ LIỆU TEST (ĐẶNG HỮU PHÚC, NGUYỄN ĐÌNH QUẢNG, LÊ BÁ TÙNG...)
-    const validCccdSet = new Set(VALID_20_CHT_CCCD);
+    // 1. Chỉ loại bỏ danh sách blacklist các tên/CCCD ảo test cũ (nếu có)
     currentList = currentList.filter((m) => {
       if (BLACKLIST_FAKE_CCCD.has(m.cccd)) return false;
       if (BLACKLIST_FAKE_NAMES.has(m.fullName)) return false;
-      if (/^(PENDING_|M00|M_NEW)/i.test(m.id)) return false;
-      if (m.associationRole === "Chi hội trưởng" && !validCccdSet.has(m.cccd)) return false;
-      // Bắt buộc: Nếu không phải 1 trong 20 CHT thì phải là người dùng tự đăng ký hợp lệ
-      if (!validCccdSet.has(m.cccd) && !(m as any).isUserCreated) return false;
       return true;
     });
 

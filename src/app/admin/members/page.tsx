@@ -16,6 +16,7 @@ import {
 import {
   MemberRecord,
   getStoredMembers,
+  saveStoredMembers,
   getStoredMovements,
   MemberMovementRecord,
   approveMember,
@@ -48,10 +49,36 @@ export default function AdminMembersPage() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [dbSyncStatus, setDbSyncStatus] = useState<"syncing" | "synced" | "offline">("syncing");
 
-  const loadData = () => {
-    setMembers(getStoredMembers());
+  const loadData = async () => {
+    // 1. Nạp nhanh từ bộ nhớ đệm trước
+    const cached = getStoredMembers();
+    if (cached.length > 0) {
+      setMembers(cached);
+    }
     setMovements(getStoredMovements());
+
+    // 2. Đồng bộ trực tiếp 100% từ CSDL PostgreSQL của máy chủ VPS
+    try {
+      const res = await fetch("/api/admin/members", { cache: "no-store" });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && Array.isArray(data.members)) {
+          // Nếu CSDL có dữ liệu, cập nhật ngay lập tức vào màn hình và lưu cache
+          if (data.members.length > 0) {
+            setMembers(data.members);
+            saveStoredMembers(data.members);
+          }
+          setDbSyncStatus("synced");
+          return;
+        }
+      }
+      setDbSyncStatus("offline");
+    } catch (err) {
+      console.warn("Không kết nối được API CSDL, dùng dữ liệu đệm:", err);
+      setDbSyncStatus("offline");
+    }
   };
 
   useEffect(() => {
@@ -96,22 +123,48 @@ export default function AdminMembersPage() {
   );
 
   // Xử lý Cán bộ xã phê duyệt kết nạp chính thức
-  const handleConfirmApprove = () => {
+  const handleConfirmApprove = async () => {
     if (!memberToApprove) return;
     const ok = approveMember(memberToApprove.id);
     if (ok) {
       showToast(`✅ Ban Thường trực Xã đã phê duyệt kết nạp chính thức đ/c ${memberToApprove.fullName} (${memberToApprove.hamletName})!`);
+      try {
+        await fetch("/api/admin/members", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: memberToApprove.id,
+            cccd: memberToApprove.cccd,
+            updates: { adminApproved: true, status: "CHINH_THUC" },
+          }),
+        });
+      } catch (err) {
+        console.error("Lỗi đồng bộ duyệt vào PostgreSQL:", err);
+      }
       setMemberToApprove(null);
     }
   };
 
   // Xử lý từ chối hồ sơ
-  const handleConfirmReject = () => {
+  const handleConfirmReject = async () => {
     if (!memberToReject) return;
     const reason = rejectReason.trim() || "Hồ sơ chưa đủ điều kiện theo quy định của Hội";
     const ok = rejectMember(memberToReject.id, reason);
     if (ok) {
       showToast(`⚠️ Đã từ chối hồ sơ đ/c ${memberToReject.fullName}. Lý do: ${reason}`);
+      try {
+        await fetch("/api/admin/members", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: memberToReject.id,
+            cccd: memberToReject.cccd,
+            updates: { status: "TU_CHOI", rejectionReason: reason },
+          }),
+        });
+      } catch (err) {
+        console.error("Lỗi đồng bộ từ chối vào PostgreSQL:", err);
+      }
       setMemberToReject(null);
       setRejectReason("");
     }
@@ -173,7 +226,7 @@ export default function AdminMembersPage() {
   };
 
   // Xử lý lưu chỉnh sửa 35 trường thông tin
-  const handleSaveEdit = (e: React.FormEvent) => {
+  const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingMember) return;
     setIsSavingEdit(true);
@@ -181,6 +234,19 @@ export default function AdminMembersPage() {
       const res = updateStoredMember(editingMember.id, editingMember);
       if (res) {
         showToast(`✅ Đã cập nhật thành công hồ sơ đ/c ${editingMember.fullName}!`);
+        try {
+          await fetch("/api/admin/members", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              id: editingMember.id,
+              cccd: editingMember.cccd,
+              updates: editingMember,
+            }),
+          });
+        } catch (dbErr) {
+          console.error("Lỗi đồng bộ hồ sơ vào CSDL PostgreSQL:", dbErr);
+        }
         setEditingMember(null);
       } else {
         alert("Không tìm thấy hồ sơ để cập nhật.");
@@ -864,6 +930,35 @@ export default function AdminMembersPage() {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Nút Đồng bộ / Làm mới CSDL PostgreSQL */}
+          <button
+            onClick={() => {
+              setDbSyncStatus("syncing");
+              loadData();
+              showToast("🔄 Đang tải dữ liệu mới nhất từ CSDL máy chủ PostgreSQL...");
+            }}
+            className="px-3.5 py-2 bg-stone-100 hover:bg-stone-200 active:scale-95 text-deep-text text-xs sm:text-sm font-bold rounded-lg shadow-2xs border border-stone-300 transition flex items-center gap-1.5 cursor-pointer"
+            title="Đồng bộ danh sách hội viên trực tiếp từ CSDL PostgreSQL của máy chủ VPS"
+          >
+            <span>🔄</span>
+            <span>Tải Lại CSDL</span>
+          </button>
+
+          {/* Badge trạng thái CSDL */}
+          <span
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold border ${
+              dbSyncStatus === "synced"
+                ? "bg-emerald-50 text-emerald-800 border-emerald-300"
+                : dbSyncStatus === "syncing"
+                ? "bg-amber-50 text-amber-800 border-amber-300 animate-pulse"
+                : "bg-stone-100 text-stone-700 border-stone-300"
+            }`}
+            title="Trạng thái kết nối CSDL máy chủ PostgreSQL"
+          >
+            <span className={`w-2 h-2 rounded-full ${dbSyncStatus === "synced" ? "bg-emerald-600" : dbSyncStatus === "syncing" ? "bg-amber-600" : "bg-stone-500"}`}></span>
+            <span>{dbSyncStatus === "synced" ? "CSDL Máy Chủ (Trực Tuyến)" : dbSyncStatus === "syncing" ? "Đang Đồng Bộ..." : "Bộ Nhớ Đệm Cục Bộ"}</span>
+          </span>
+
           <button
             onClick={() => setIsImportModalOpen(true)}
             className="px-3.5 py-2 bg-amber-700 hover:bg-amber-800 active:scale-95 text-white text-xs sm:text-sm font-bold rounded-lg shadow-sm transition flex items-center gap-1.5 cursor-pointer border border-amber-600"
