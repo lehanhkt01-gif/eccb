@@ -58,7 +58,21 @@ export async function POST(req: NextRequest) {
 
       const cleanCccd = String(item.cccd).trim();
       const targetHamletName = (item.hamletName || "Thôn 1").toLowerCase().trim();
-      const matchedHamlet = hamletMapByName.get(targetHamletName) || dbHamlets[0];
+      let matchedHamlet = hamletMapByName.get(targetHamletName);
+      if (!matchedHamlet) {
+        try {
+          matchedHamlet = await prisma.hamlet.create({
+            data: {
+              code: `THON_${Date.now()}_${Math.random().toString(36).slice(2, 6).toUpperCase()}`,
+              name: item.hamletName || "Thôn Đoàn Kết",
+            },
+          });
+          hamletMapByName.set(targetHamletName, matchedHamlet);
+        } catch (_) {
+          const firstH = await prisma.hamlet.findFirst();
+          if (firstH) matchedHamlet = firstH;
+        }
+      }
 
       if (!matchedHamlet) continue;
 

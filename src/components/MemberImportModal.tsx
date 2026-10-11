@@ -591,12 +591,9 @@ export default function MemberImportModal({ isOpen, onClose, onSuccess }: Member
 
       const updatedList = Array.from(currentMap.values());
 
-      // 4.1. Lưu trực tiếp vào memberStore
-      saveStoredMembers(updatedList);
-
-      // 4.2. Gửi đồng bộ sang PostgreSQL backend
+      // 4.1. Gửi đồng bộ sang PostgreSQL backend máy chủ
       try {
-        await fetch("/api/admin/members/import", {
+        const importRes = await fetch("/api/admin/members/import", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -604,9 +601,16 @@ export default function MemberImportModal({ isOpen, onClose, onSuccess }: Member
             hamletName: selectedHamlet !== "AUTO" ? selectedHamlet : undefined,
           }),
         });
-      } catch (apiErr) {
-        console.warn("Đồng bộ backend PostgreSQL warning (vẫn lưu an toàn localStore):", apiErr);
+        const importJson = await importRes.json();
+        if (!importRes.ok || !importJson.success) {
+          throw new Error(importJson.message || "Không thể đồng bộ hồ sơ vào CSDL máy chủ!");
+        }
+      } catch (apiErr: any) {
+        console.warn("Lỗi đồng bộ backend PostgreSQL:", apiErr);
       }
+
+      // 4.2. Lưu vào memberStore bộ nhớ đệm
+      saveStoredMembers(updatedList);
 
       // Kích hoạt sự kiện toàn cục để UI cập nhật
       if (typeof window !== "undefined") {

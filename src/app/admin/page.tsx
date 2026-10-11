@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { getStoredMembers, MemberRecord } from "@/lib/memberStore";
+import { getStoredMembers, saveStoredMembers, MemberRecord } from "@/lib/memberStore";
 
 // 20 Thôn, Buôn xã Ea Súp với danh sách 20 Chi hội trưởng chuẩn xác thực tế
 const BASE_HAMLETS = [
@@ -33,8 +33,38 @@ export default function AdminDashboardPage() {
   const [members, setMembers] = useState<MemberRecord[]>([]);
 
   useEffect(() => {
+    // 1. Nạp nhanh từ bộ nhớ đệm
     const list = getStoredMembers();
     setMembers(list);
+
+    // 2. Tải trực tiếp 100% từ CSDL PostgreSQL của máy chủ VPS
+    const loadFromDb = async () => {
+      try {
+        const res = await fetch("/api/admin/members", { cache: "no-store" });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && Array.isArray(data.members) && data.members.length > 0) {
+            setMembers(data.members);
+            saveStoredMembers(data.members);
+          }
+        }
+      } catch (err) {
+        console.warn("Không kết nối được API CSDL, dùng dữ liệu đệm:", err);
+      }
+    };
+
+    loadFromDb();
+
+    const handleUpdate = () => {
+      const updated = getStoredMembers();
+      setMembers(updated);
+      loadFromDb();
+    };
+
+    window.addEventListener("eccb-members-updated", handleUpdate);
+    return () => {
+      window.removeEventListener("eccb-members-updated", handleUpdate);
+    };
   }, []);
 
   const totalMembers = members.length;

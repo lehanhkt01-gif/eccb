@@ -22,6 +22,15 @@ export default function AdminFundsPage() {
   useEffect(() => {
     const list = getStoredMembers();
     setMembers(list);
+
+    fetch("/api/admin/members", { cache: "no-store" })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.members) && data.members.length > 0) {
+          setMembers(data.members);
+        }
+      })
+      .catch((err) => console.warn("Lỗi tải hội viên CSDL:", err));
   }, []);
 
   const totalLoanAmount = members.reduce((sum, m) => sum + (m.totalDebt || 0), 0);
