@@ -557,86 +557,91 @@ export default function BranchMobilePage() {
 
   return (
     <div className="min-h-screen bg-cream-bg text-deep-text pb-20 select-none">
-      {/* 1. Header Cán Bộ Chi Hội */}
-      <header className="bg-moss-green text-white px-4 py-3 border-b-4 border-bronze-gold sticky top-0 z-30 shadow-md">
-        <div className="max-w-md mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <button
-              onClick={() => setActiveTab("home")}
-              className="relative w-11 h-11 rounded-full bg-white border-2 border-bronze-gold flex items-center justify-center shadow-inner overflow-hidden shrink-0 active:scale-95"
-            >
+      {/* 1. Header Cán Bộ Chi Hội: Cấu trúc 2 tầng chuẩn mực giống Hình 2 */}
+      <header className="bg-moss-green text-white border-b-2 border-bronze-gold sticky top-0 z-30 shadow-md">
+        {/* TẦNG 1: TIÊU ĐỀ NẰM TRÊN TRẢI DÀI KHÔNG BỊ BÓP MÉO */}
+        <div className="max-w-md mx-auto px-3 sm:px-4 py-2 sm:py-2.5 flex items-center justify-between">
+          <button
+            onClick={() => setActiveTab("home")}
+            className="flex items-center space-x-2.5 flex-1 min-w-0 text-left group cursor-pointer"
+            title="Về trang chủ Chi hội"
+          >
+            <div className="w-10 h-10 rounded-full border-2 border-bronze-gold bg-white shrink-0 flex items-center justify-center p-0.5 shadow overflow-hidden group-hover:scale-105 transition-transform duration-200">
               <Image
                 src="/images/logo-ccb.png"
                 alt="Logo Hội CCB Việt Nam"
                 width={40}
                 height={40}
-                className="object-contain p-0.5"
+                className="object-contain"
                 priority
               />
-            </button>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-amber-300">
-                  {currentHamlet.name}
-                </span>
-                <span className="text-[10px] bg-white/20 px-1.5 py-0.2 rounded text-emerald-100">
-                  Ea Súp Số
-                </span>
-              </div>
-              <h1 className="text-base font-bold leading-tight">
-                {currentHamlet.leader.replace(/^(đ\/c|đồng chí)\s+/i, "")}
-              </h1>
             </div>
-          </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-[10px] sm:text-[11px] font-semibold text-yellow-300 tracking-wider uppercase truncate">
+                CHI HỘI CCB {currentHamlet.name.toUpperCase()} • EA SÚP SỐ
+              </div>
+              <div className="text-xs sm:text-sm font-bold text-white tracking-wide truncate">
+                {currentHamlet.leader.replace(/^(đ\/c|đồng chí)\s+/i, "")} — CHI HỘI TRƯỞNG
+              </div>
+            </div>
+          </button>
+        </div>
 
-          {/* Cụm điều khiển bên phải: Trang chủ + Chuông thông báo + Nút Đăng xuất */}
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            {/* Nút liên kết về Trang chủ E-CCB */}
-            <Link
-              href="/"
-              className="px-2.5 sm:px-3 py-1.5 bg-white/15 hover:bg-white/25 active:scale-95 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 shadow-sm transition border border-white/20 cursor-pointer"
-              title="Trở về Trang chủ Cổng thông tin E-CCB Ea Súp"
-            >
-              <span className="text-sm">🏠</span>
-              <span className="hidden sm:inline">Trang chủ</span>
-            </Link>
-
-            {/* CHỈ DUY NHẤT CÁN BỘ XÃ (SUPER_ADMIN) MỚI ĐƯỢC PHÉP CHUYỂN THÔN */}
-            {currentUser?.role === "SUPER_ADMIN" && (
-              <select
-                value={selectedHamletCode}
-                onChange={(e) => {
-                  if (currentUser?.role !== "BRANCH_LEADER") {
-                    setSelectedHamletCode(e.target.value);
-                  }
-                }}
-                className="bg-moss-green-light border border-amber-300/40 text-white text-xs font-semibold py-1.5 px-2 rounded-lg focus:outline-none cursor-pointer"
+        {/* TẦNG 2: THANH TÁC VỤ CÁN BỘ & ĐIỀU KHIỂN TÀI KHOẢN */}
+        <div className="bg-[#1b311a] border-t border-white/10 px-3 py-1.5 relative">
+          <div className="max-w-md mx-auto flex items-center justify-between gap-2">
+            {/* Bên trái: Nút Trang chủ + Dropdown chọn thôn (nếu Super Admin) */}
+            <div className="flex items-center gap-1.5 min-w-0">
+              <Link
+                href="/"
+                className="inline-flex items-center gap-1 text-xs text-amber-200 hover:text-white font-medium px-2 py-1 rounded bg-white/5 hover:bg-white/10 border border-white/10 transition shrink-0"
+                title="Trở về Trang chủ Cổng thông tin E-CCB Ea Súp"
               >
-                {HAMLETS.map((h) => (
-                  <option key={h.code} value={h.code} className="bg-moss-green text-white">
-                    {h.name}
-                  </option>
-                ))}
-              </select>
-            )}
+                <span>🏠</span>
+                <span>Trang chủ</span>
+              </Link>
 
-            {/* CHUÔNG THÔNG BÁO XÉT DUYỆT & NGHIỆP VỤ */}
-            <NotificationBell
-              currentUser={currentUser}
-              currentHamletName={currentHamlet.name}
-              onOpenApproval={() => setIsApprovalModalOpen(true)}
-            />
+              {/* CHỈ DUY NHẤT CÁN BỘ XÃ (SUPER_ADMIN) MỚI ĐƯỢC PHÉP CHUYỂN THÔN */}
+              {currentUser?.role === "SUPER_ADMIN" && (
+                <select
+                  value={selectedHamletCode}
+                  onChange={(e) => {
+                    if (currentUser?.role !== "BRANCH_LEADER") {
+                      setSelectedHamletCode(e.target.value);
+                    }
+                  }}
+                  className="bg-[#244023] border border-amber-300/40 text-white text-[11px] font-semibold py-1 px-1.5 rounded focus:outline-none cursor-pointer max-w-[110px] truncate"
+                  title="Chuyển đổi thôn (Quyền Cán bộ Xã)"
+                >
+                  {HAMLETS.map((h) => (
+                    <option key={h.code} value={h.code} className="bg-moss-green text-white">
+                      {h.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
 
-            {/* Nút Đăng xuất */}
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="px-2.5 sm:px-3 py-1.5 bg-flag-red hover:bg-red-800 active:scale-95 text-white text-xs font-bold rounded-lg flex items-center gap-1 shadow-md transition cursor-pointer border border-red-300/40"
-              title="Đăng xuất khỏi tài khoản Chi hội trưởng"
-            >
-              <span>🚪</span>
-              <span>Đăng xuất</span>
-            </button>
+            {/* Cụm công vụ bên phải: Chuông + Nút Đăng xuất */}
+            <div className="flex items-center space-x-1.5 sm:space-x-2 ml-auto shrink-0">
+              {/* CHUÔNG THÔNG BÁO XÉT DUYỆT & NGHIỆP VỤ */}
+              <NotificationBell
+                currentUser={currentUser}
+                currentHamletName={currentHamlet.name}
+                onOpenApproval={() => setIsApprovalModalOpen(true)}
+              />
+
+              {/* Nút Đăng xuất */}
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="px-2.5 sm:px-3 py-1 bg-flag-red hover:bg-red-800 active:scale-95 text-white text-xs font-bold rounded border border-amber-400/30 shadow-xs transition cursor-pointer flex items-center gap-1 shrink-0"
+                title="Đăng xuất khỏi tài khoản Chi hội trưởng"
+              >
+                <span>🚪</span>
+                <span>Đăng xuất</span>
+              </button>
+            </div>
           </div>
         </div>
       </header>

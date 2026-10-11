@@ -918,80 +918,86 @@ export default function AdminMembersPage() {
         </div>
       )}
 
-      {/* Tiêu đề trang & Thao tác nhanh */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-stone-300">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-bold uppercase tracking-tight text-deep-text">
-            Quản Lý Hồ Sơ Hội Viên CCB
-          </h2>
-          <p className="text-sm text-deep-muted mt-0.5">
-            Cơ sở dữ liệu 35 trường thông tin • Xuất bảng tổng hợp Excel (.xlsx) chuẩn Mẫu 02 • Xuất văn bản Word (.docx) chuẩn Nghị định 30/2020/NĐ-CP
-          </p>
-        </div>
+      {/* Tiêu đề trang & Thanh công cụ tác nghiệp chuẩn mực trải dài */}
+      <div className="space-y-3 pb-3 border-b border-stone-300">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5">
+          <div className="min-w-0">
+            <h2 className="text-xl sm:text-2xl font-bold uppercase tracking-tight text-deep-text">
+              Quản Lý Hồ Sơ Hội Viên CCB
+            </h2>
+            <p className="text-xs sm:text-sm text-stone-600 mt-0.5 truncate tracking-normal">
+              Cơ sở dữ liệu 35 trường thông tin • Xuất Excel Mẫu 02 • Xuất Word NĐ 30/2020/NĐ-CP
+            </p>
+          </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Nút Đồng bộ / Làm mới CSDL PostgreSQL */}
-          <button
-            onClick={() => {
-              setDbSyncStatus("syncing");
-              loadData();
-              showToast("🔄 Đang tải dữ liệu mới nhất từ CSDL máy chủ PostgreSQL...");
-            }}
-            className="px-3.5 py-2 bg-stone-100 hover:bg-stone-200 active:scale-95 text-deep-text text-xs sm:text-sm font-bold rounded-lg shadow-2xs border border-stone-300 transition flex items-center gap-1.5 cursor-pointer"
-            title="Đồng bộ danh sách hội viên trực tiếp từ CSDL PostgreSQL của máy chủ VPS"
-          >
-            <span>🔄</span>
-            <span>Tải Lại CSDL</span>
-          </button>
+          {/* Thanh công cụ tác nghiệp ngang: trải dài từ trái sang phải, không tạo nhiều dòng */}
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 shrink-0">
+            {/* 1. Nút Làm mới / Tải lại CSDL */}
+            <button
+              onClick={() => {
+                setDbSyncStatus("syncing");
+                loadData();
+                showToast("🔄 Đang tải dữ liệu mới nhất từ CSDL máy chủ PostgreSQL...");
+              }}
+              className="px-3 py-1.5 sm:py-2 bg-stone-100 hover:bg-stone-200 active:scale-95 text-deep-text text-xs sm:text-sm font-bold rounded-lg shadow-2xs border border-stone-300 transition flex items-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap"
+              title="Đồng bộ danh sách hội viên trực tiếp từ CSDL PostgreSQL của máy chủ VPS"
+            >
+              <span>🔄</span>
+              <span>Tải Lại CSDL</span>
+            </button>
 
-          {/* Badge trạng thái CSDL */}
-          <span
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold border ${
-              dbSyncStatus === "synced"
-                ? "bg-emerald-50 text-emerald-800 border-emerald-300"
-                : dbSyncStatus === "syncing"
-                ? "bg-amber-50 text-amber-800 border-amber-300 animate-pulse"
-                : "bg-stone-100 text-stone-700 border-stone-300"
-            }`}
-            title="Trạng thái kết nối CSDL máy chủ PostgreSQL"
-          >
-            <span className={`w-2 h-2 rounded-full ${dbSyncStatus === "synced" ? "bg-emerald-600" : dbSyncStatus === "syncing" ? "bg-amber-600" : "bg-stone-500"}`}></span>
-            <span>{dbSyncStatus === "synced" ? "CSDL Máy Chủ (Trực Tuyến)" : dbSyncStatus === "syncing" ? "Đang Đồng Bộ..." : "Bộ Nhớ Đệm Cục Bộ"}</span>
-          </span>
+            {/* 2. Badge trạng thái kết nối CSDL */}
+            <span
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 sm:py-2 rounded-lg text-xs font-bold border shrink-0 whitespace-nowrap ${
+                dbSyncStatus === "synced"
+                  ? "bg-emerald-50 text-emerald-800 border-emerald-300"
+                  : dbSyncStatus === "syncing"
+                  ? "bg-amber-50 text-amber-800 border-amber-300 animate-pulse"
+                  : "bg-stone-100 text-stone-700 border-stone-300"
+              }`}
+              title="Trạng thái kết nối CSDL máy chủ PostgreSQL"
+            >
+              <span className={`w-2 h-2 rounded-full ${dbSyncStatus === "synced" ? "bg-emerald-600" : dbSyncStatus === "syncing" ? "bg-amber-600" : "bg-stone-500"}`}></span>
+              <span>{dbSyncStatus === "synced" ? "CSDL Trực Tuyến" : dbSyncStatus === "syncing" ? "Đang Đồng Bộ..." : "Bộ Nhớ Đệm"}</span>
+            </span>
 
-          <button
-            onClick={() => setIsImportModalOpen(true)}
-            className="px-3.5 py-2 bg-amber-700 hover:bg-amber-800 active:scale-95 text-white text-xs sm:text-sm font-bold rounded-lg shadow-sm transition flex items-center gap-1.5 cursor-pointer border border-amber-600"
-            title="Nhập hồ sơ hội viên đồng loạt từ file Excel/CSV theo từng chi hội thôn, buôn"
-          >
-            <span>📥</span>
-            <span>Nhập File Hội Viên</span>
-          </button>
+            {/* 3. Nút Nhập File Hội Viên */}
+            <button
+              onClick={() => setIsImportModalOpen(true)}
+              className="px-3 py-1.5 sm:py-2 bg-amber-700 hover:bg-amber-800 active:scale-95 text-white text-xs sm:text-sm font-bold rounded-lg shadow-xs transition flex items-center gap-1.5 cursor-pointer border border-amber-600 shrink-0 whitespace-nowrap"
+              title="Nhập hồ sơ hội viên đồng loạt từ file Excel/CSV theo từng chi hội thôn, buôn"
+            >
+              <span>📥</span>
+              <span>Nhập File Hội Viên</span>
+            </button>
 
-          {activeTab === "active" && (
-            <>
-              <button
-                onClick={() => exportExcel(filteredActiveMembers)}
-                className="px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 active:scale-95 text-white text-xs sm:text-sm font-bold rounded-lg shadow-sm transition flex items-center gap-1.5 cursor-pointer border border-emerald-600"
-                title="Xuất toàn bộ danh sách hội viên đang lọc ra file Excel (.xlsx) chuẩn Mẫu 02 (27 cột)"
-              >
-                <span>📊</span>
-                <span>Xuất File Excel (.xlsx)</span>
-              </button>
+            {/* 4. Nút Xuất File Excel Mẫu 02 */}
+            {activeTab === "active" && (
+              <>
+                <button
+                  onClick={() => exportExcel(filteredActiveMembers)}
+                  className="px-3 py-1.5 sm:py-2 bg-emerald-700 hover:bg-emerald-800 active:scale-95 text-white text-xs sm:text-sm font-bold rounded-lg shadow-xs transition flex items-center gap-1.5 cursor-pointer border border-emerald-600 shrink-0 whitespace-nowrap"
+                  title="Xuất toàn bộ danh sách hội viên đang lọc ra file Excel (.xlsx) chuẩn Mẫu 02 (27 cột)"
+                >
+                  <span>📊</span>
+                  <span>Xuất File Excel</span>
+                </button>
 
-              <button
-                onClick={() => {
-                  if (filteredActiveMembers.length > 0) exportDocx(filteredActiveMembers[0]);
-                }}
-                disabled={isExporting}
-                className="px-3.5 py-2 bg-moss-green hover:bg-moss-green-light active:scale-95 text-white text-xs sm:text-sm font-bold rounded-lg shadow-sm transition flex items-center gap-1.5 cursor-pointer"
-                title="Xuất phiếu Mẫu 02 cá nhân dạng văn bản Word (.docx)"
-              >
-                <span>📄</span>
-                <span>Xuất Mẫu 02 Word</span>
-              </button>
-            </>
-          )}
+                {/* 5. Nút Xuất Phiếu Word Mẫu 02 */}
+                <button
+                  onClick={() => {
+                    if (filteredActiveMembers.length > 0) exportDocx(filteredActiveMembers[0]);
+                  }}
+                  disabled={isExporting}
+                  className="px-3 py-1.5 sm:py-2 bg-moss-green hover:bg-moss-green-light active:scale-95 text-white text-xs sm:text-sm font-bold rounded-lg shadow-xs transition flex items-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap"
+                  title="Xuất phiếu Mẫu 02 cá nhân dạng văn bản Word (.docx)"
+                >
+                  <span>📄</span>
+                  <span>Xuất Mẫu 02 Word</span>
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
 

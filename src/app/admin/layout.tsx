@@ -80,74 +80,85 @@ export default function AdminLayout({
   return (
     <div className="min-h-screen bg-cream-bg text-deep-text flex flex-col">
 
-      {/* Main Top Header */}
-      <header className="bg-moss-green text-white border-b-4 border-bronze-gold sticky top-0 z-30 shadow-md">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="lg:hidden p-2 rounded bg-moss-green-light border border-amber-300/30 text-white"
-              aria-label="Toggle menu"
-            >
-              ☰
-            </button>
+      {/* Main Top Header: Chuẩn hóa 2 tầng giống Hình 2 */}
+      <header className="bg-moss-green text-white border-b-2 border-bronze-gold sticky top-0 z-30 shadow-md">
+        {/* TẦNG 1: TIÊU ĐỀ NẰM TRÊN TRẢI DÀI KHÔNG BỊ BÓP MÉO */}
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 sm:py-2.5 flex items-center gap-2.5 sm:gap-3">
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="lg:hidden p-2 rounded bg-moss-green-light border border-amber-300/30 text-white shrink-0 active:scale-95"
+            aria-label="Toggle menu"
+          >
+            ☰
+          </button>
 
-            <Link href="/admin" className="flex items-center gap-3">
-              <div className="relative w-11 h-11 rounded-full bg-white border-2 border-bronze-gold flex items-center justify-center shadow-inner overflow-hidden shrink-0">
-                <Image
-                  src="/images/logo-ccb.png"
-                  alt="Logo Hội CCB Việt Nam"
-                  width={42}
-                  height={42}
-                  className="object-contain p-0.5"
-                  priority
-                />
+          <Link href="/admin" className="flex items-center space-x-2.5 sm:space-x-3 flex-1 min-w-0 group" title="Về Trung tâm Quản trị">
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full border-2 border-bronze-gold bg-white flex-shrink-0 flex items-center justify-center p-0.5 shadow overflow-hidden group-hover:scale-105 transition-transform duration-200">
+              <Image
+                src="/images/logo-ccb.png"
+                alt="Logo Hội CCB Việt Nam"
+                width={42}
+                height={42}
+                className="object-contain"
+                priority
+              />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-[10px] sm:text-xs font-semibold text-yellow-300 tracking-wider uppercase truncate">
+                HỆ THỐNG QUẢN TRỊ TRUNG TÂM &amp; CƠ SỞ DỮ LIỆU
               </div>
-              <div>
-                <h1 className="text-base sm:text-lg font-bold uppercase tracking-tight text-white leading-tight">
-                  Thường Trực Hội CCB Xã Ea Súp
-                </h1>
-                <p className="text-[11px] text-emerald-100 font-normal">
-                  Hệ Thống Quản Trị Trung Tâm & Cơ Sở Dữ Liệu 3NF
-                </p>
+              <div className="text-xs sm:text-base font-bold text-white tracking-wide truncate">
+                THƯỜNG TRỰC HỘI CCB XÃ EA SÚP
               </div>
-            </Link>
-          </div>
+            </div>
+          </Link>
+        </div>
 
-          {/* User Profile Info & Header Actions */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            {/* Chuông Thông Báo Đồng Bộ Cán Bộ Xã */}
-            <NotificationBell currentUser={currentUser} />
-
-            {/* Khung Thông Tin Cán Bộ Chuẩn Hóa: Bỏ Đ/c, badge pill CB bo tròn tinh tế */}
-            <div className="flex items-center gap-1.5 bg-[#1e381d] hover:bg-[#254624] border border-[#B45309] px-2.5 py-1 rounded-md text-xs shadow-xs transition">
-              <span className="text-yellow-300 font-bold text-xs">⭐</span>
-              <span className="font-bold text-yellow-200 truncate max-w-[120px] sm:max-w-[160px]">
-                {cleanName}
-              </span>
-              <span className="bg-[#9E1A1A] border border-amber-400/40 text-[10.5px] font-bold text-amber-200 px-2 py-0.5 rounded-full tracking-normal shrink-0 ml-1 shadow-xs">
-                CB
-              </span>
-              <span className="text-[10px] text-amber-300 ml-0.5">▼</span>
+        {/* TẦNG 2: THANH TÁC VỤ CÁN BỘ & ĐIỀU KHIỂN TÀI KHOẢN */}
+        <div className="bg-[#1b311a] border-t border-white/10 px-3 py-1.5 relative">
+          <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
+            {/* Bên trái: Nút Trang chủ và Khẩu hiệu */}
+            <div className="flex items-center gap-2 min-w-0">
+              <Link
+                href="/"
+                className="inline-flex items-center gap-1.5 text-xs text-amber-200 hover:text-white font-medium px-2.5 py-1 rounded bg-white/5 hover:bg-white/10 border border-white/10 transition shrink-0"
+                title="Về Trang chủ Cổng thông tin E-CCB Ea Súp"
+              >
+                <span>🏠</span>
+                <span className="hidden min-[380px]:inline">Trang chủ</span>
+              </Link>
+              <div className="text-xs sm:text-sm font-serif italic text-amber-100/90 tracking-wide truncate hidden sm:block select-none">
+                Trung thành – Đoàn kết – Gương mẫu – Đổi mới
+              </div>
             </div>
 
-            <Link
-              href="/"
-              className="px-2.5 sm:px-3 py-1.5 bg-white/15 hover:bg-white/25 active:scale-95 text-white text-xs font-bold rounded flex items-center gap-1.5 border border-white/20 transition shadow-2xs"
-              title="Về Trang chủ Cổng thông tin E-CCB Ea Súp"
-            >
-              <span className="text-sm">🏠</span>
-              <span className="hidden sm:inline">Trang chủ</span>
-            </Link>
+            {/* Cụm công vụ bên phải: Chuông + Profile CB + Đăng xuất */}
+            <div className="flex items-center space-x-1.5 sm:space-x-2 ml-auto shrink-0">
+              {/* Chuông Thông Báo Đồng Bộ Cán Bộ Xã */}
+              <NotificationBell currentUser={currentUser} />
 
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="px-2.5 sm:px-3 py-1.5 bg-flag-red hover:bg-red-800 active:scale-95 text-white text-xs font-bold rounded border border-amber-400/30 shadow-xs transition cursor-pointer"
-              title="Đăng xuất hoàn toàn và trở về Trang chủ"
-            >
-              Đăng Xuất
-            </button>
+              {/* Khung Thông Tin Cán Bộ Chuẩn Hóa */}
+              <div className="flex items-center gap-1.5 bg-[#1e381d] hover:bg-[#254624] border border-[#B45309] px-2.5 py-1 rounded-md text-xs shadow-xs transition">
+                <span className="text-yellow-300 font-bold text-xs">⭐</span>
+                <span className="font-bold text-yellow-200 truncate max-w-[90px] min-[400px]:max-w-[130px] sm:max-w-[180px]">
+                  {cleanName}
+                </span>
+                <span className="bg-[#9E1A1A] border border-amber-400/40 text-[10.5px] font-bold text-amber-200 px-2 py-0.5 rounded-full tracking-normal shrink-0 ml-0.5 shadow-xs">
+                  CB
+                </span>
+              </div>
+
+              {/* Nút Đăng Xuất */}
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="px-2.5 sm:px-3 py-1 bg-flag-red hover:bg-red-800 active:scale-95 text-white text-xs font-bold rounded border border-amber-400/30 shadow-xs transition cursor-pointer flex items-center gap-1 shrink-0"
+                title="Đăng xuất hoàn toàn và trở về Trang chủ"
+              >
+                <span>🚪</span>
+                <span className="hidden min-[400px]:inline">Đăng Xuất</span>
+              </button>
+            </div>
           </div>
         </div>
       </header>
