@@ -24,6 +24,7 @@ node_modules/
 
 # Database dumps & SQL files (CHẶN TUYỆT ĐỐI RÒ RỈ DỮ LIỆU)
 *.sql
+!prisma/init-articles.sql
 *.dump
 *.tar
 *.bak
