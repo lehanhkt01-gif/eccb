@@ -84,8 +84,8 @@ export default function AdminLayout({
   return (
     <div className="min-h-screen bg-cream-bg text-deep-text flex flex-col">
 
-      {/* Main Top Header: Chuẩn hóa 2 tầng giống Hình 2 */}
-      <header className="bg-moss-green text-white border-b-2 border-bronze-gold sticky top-0 z-30 shadow-md">
+      {/* Main Top Header: Chuẩn hóa 2 tầng giống Hình 2, z-50 luôn ở trên cùng */}
+      <header className="bg-moss-green text-white border-b-2 border-bronze-gold sticky top-0 z-50 shadow-md">
         {/* TẦNG 1: TIÊU ĐỀ NẰM TRÊN TRẢI DÀI KHÔNG BỊ BÓP MÉO */}
         <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 sm:py-2.5 flex items-center gap-2.5 sm:gap-3">
           <button
@@ -169,18 +169,18 @@ export default function AdminLayout({
 
       {/* Body Content with Sidebar */}
       <div className="flex-1 flex max-w-7xl w-full mx-auto">
-        {/* Desktop Sidebar */}
+        {/* Desktop Sidebar: Khóa giữ cố định khi cuộn trang (Sticky), không che Header */}
         <aside
-          className={`lg:w-64 bg-cream-surface border-r border-stone-300 shrink-0 fixed lg:static top-0 bottom-0 left-0 z-40 transition-transform duration-200 ${
+          className={`w-64 bg-cream-surface border-r border-stone-300 shrink-0 fixed lg:sticky top-[92px] sm:top-[96px] bottom-0 left-0 z-40 transition-transform duration-200 ${
             sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
-          } w-64 p-4 flex flex-col justify-between`}
+          } p-4 flex flex-col justify-between lg:h-[calc(100vh-96px)] overflow-y-auto shadow-sm`}
         >
           <div className="space-y-6">
             <div className="lg:hidden flex items-center justify-between pb-3 border-b border-stone-300">
               <span className="font-bold text-sm text-moss-green uppercase">Danh Mục Nghiệp Vụ</span>
               <button
                 onClick={() => setSidebarOpen(false)}
-                className="p-1 font-bold text-stone-600"
+                className="p-1 font-bold text-stone-600 hover:text-flag-red cursor-pointer"
               >
                 ✕
               </button>
@@ -237,7 +237,7 @@ export default function AdminLayout({
         {sidebarOpen && (
           <div
             onClick={() => setSidebarOpen(false)}
-            className="fixed inset-0 bg-black/40 z-30 lg:hidden"
+            className="fixed inset-0 top-[92px] sm:top-[96px] bg-black/40 z-30 lg:hidden"
           />
         )}
 
