@@ -54,45 +54,14 @@ interface MemberItem {
   economicModel?: string;
   hasPaidFund: boolean;
   present: boolean;
-  status?: "PENDING_APPROVAL" | "ACTIVE" | "REJECTED";
+  status?: "CHO_CHI_HOI_DUYET" | "CHO_XA_PHE_DUYET" | "CHINH_THUC" | "TU_CHOI" | string;
   isDeceased?: boolean;
   isTransferred?: boolean;
   isExpelled?: boolean;
   rawRecord?: MemberRecord;
 }
 
-const INITIAL_MEMBERS: MemberItem[] = [
-  { id: "M01", fullName: "Hồ Sỹ Tuấn", birthYear: 1964, militaryRank: "Đại úy", period: "Biên giới phía Bắc", isPartyMember: true, partyBadge: "30 năm", isPolicy: false, phone: "0986042302", hasPaidFund: true, present: true },
-  { id: "M02", fullName: "Nguyễn Văn Hùng", birthYear: 1958, militaryRank: "Thượng úy", period: "Biên giới Tây Nam", isPartyMember: true, partyBadge: "40 năm", isPolicy: true, policyType: "Bệnh binh", phone: "0912111002", economicModel: "Trang trại mít Thái 3ha", hasPaidFund: true, present: true },
-  { id: "M03", fullName: "Lê Đức Thọ", birthYear: 1961, militaryRank: "Trung úy", period: "Biên giới phía Bắc", isPartyMember: true, partyBadge: "30 năm", isPolicy: false, phone: "0912111003", economicModel: "Lúa ST25 hữu cơ 2ha", hasPaidFund: true, present: true },
-  { id: "M04", fullName: "Phạm Hồng Thái", birthYear: 1954, militaryRank: "Thiếu tá", period: "Kháng chiến chống Mỹ", isPartyMember: true, partyBadge: "45 năm", isPolicy: true, policyType: "Nhiễm chất độc Da cam", phone: "0912111004", hasPaidFund: true, present: true },
-  { id: "M05", fullName: "Hoàng Văn Nam", birthYear: 1965, militaryRank: "Thượng sĩ", period: "Nhiệm vụ Quốc tế", isPartyMember: false, isPolicy: false, phone: "0912111005", economicModel: "Nuôi bò lai Sind vỗ béo", hasPaidFund: true, present: true },
-  { id: "M06", fullName: "Vũ Đình Cường", birthYear: 1970, militaryRank: "Trung sĩ", period: "Cựu quân nhân", isPartyMember: false, isPolicy: false, phone: "0912111006", hasPaidFund: false, present: true },
-  { id: "M07", fullName: "Đỗ Xuân Bách", birthYear: 1956, militaryRank: "Đại úy", period: "Kháng chiến chống Mỹ", isPartyMember: true, partyBadge: "40 năm", isPolicy: true, policyType: "Thương binh 4/4", phone: "0912111007", hasPaidFund: true, present: true },
-  { id: "M08", fullName: "Bùi Văn Thành", birthYear: 1963, militaryRank: "Hạ sĩ", period: "Biên giới phía Bắc", isPartyMember: false, isPolicy: false, phone: "0912111008", hasPaidFund: true, present: true },
-  { id: "M09", fullName: "Ngô Quang Hưng", birthYear: 1972, militaryRank: "Chiến sĩ", period: "Cựu quân nhân", isPartyMember: false, isPolicy: false, phone: "0912111009", economicModel: "Vườn điều ghép cao sản", hasPaidFund: true, present: true },
-  { id: "M10", fullName: "Đinh Văn Quyết", birthYear: 1959, militaryRank: "Thiếu úy", period: "Biên giới Tây Nam", isPartyMember: true, partyBadge: "30 năm", isPolicy: false, phone: "0912111010", hasPaidFund: true, present: true },
-  { id: "M11", fullName: "Lương Thế Vinh", birthYear: 1960, militaryRank: "Thượng sĩ", period: "Biên giới phía Bắc", isPartyMember: true, partyBadge: "30 năm", isPolicy: false, phone: "0912111011", hasPaidFund: true, present: true },
-  { id: "M12", fullName: "Trịnh Đình Dũng", birthYear: 1953, militaryRank: "Thượng úy", period: "Kháng chiến chống Mỹ", isPartyMember: true, partyBadge: "45 năm", isPolicy: true, policyType: "Thương binh 2/4", phone: "0912111012", hasPaidFund: true, present: true },
-  { id: "M13", fullName: "Đặng Hữu Phúc", birthYear: 1967, militaryRank: "Trung sĩ", period: "Nhiệm vụ Quốc tế", isPartyMember: false, isPolicy: false, phone: "0912111013", hasPaidFund: false, present: false },
-  { id: "M14", fullName: "Phan Văn Khải", birthYear: 1955, militaryRank: "Đại úy", period: "Kháng chiến chống Mỹ", isPartyMember: true, partyBadge: "40 năm", isPolicy: true, policyType: "Bệnh binh", phone: "0912111014", hasPaidFund: true, present: true },
-  { id: "M15", fullName: "Dương Minh Châu", birthYear: 1962, militaryRank: "Trung úy", period: "Biên giới Tây Nam", isPartyMember: true, partyBadge: "30 năm", isPolicy: false, phone: "0912111015", economicModel: "Nuôi ong mật hoa rừng OCOP", hasPaidFund: true, present: true },
-  { id: "M16", fullName: "Nguyễn Tiến Lực", birthYear: 1974, militaryRank: "Hạ sĩ", period: "Cựu quân nhân", isPartyMember: false, isPolicy: false, phone: "0912111016", hasPaidFund: true, present: true },
-  { id: "M17", fullName: "Tạ Quang Bửu", birthYear: 1957, militaryRank: "Thiếu tá", period: "Biên giới phía Bắc", isPartyMember: true, partyBadge: "40 năm", isPolicy: false, phone: "0912111017", hasPaidFund: true, present: true },
-  { id: "M18", fullName: "Võ Văn Kiệt", birthYear: 1964, militaryRank: "Chiến sĩ", period: "Nhiệm vụ Quốc tế", isPartyMember: false, isPolicy: false, phone: "0912111018", hasPaidFund: true, present: true },
-  { id: "M19", fullName: "Hồ Văn Mười", birthYear: 1951, militaryRank: "Trung úy", period: "Kháng chiến chống Mỹ", isPartyMember: true, partyBadge: "50 năm", isPolicy: true, policyType: "Thương binh 3/4", phone: "0912111019", hasPaidFund: true, present: true },
-  { id: "M20", fullName: "Đoàn Văn Vươn", birthYear: 1968, militaryRank: "Thượng sĩ", period: "Cựu quân nhân", isPartyMember: false, isPolicy: false, phone: "0912111020", economicModel: "Trang trại xoài Cát Chu", hasPaidFund: true, present: true },
-  { id: "M21", fullName: "Mai Văn Phúc", birthYear: 1960, militaryRank: "Hạ sĩ", period: "Biên giới phía Bắc", isPartyMember: false, isPolicy: false, phone: "0912111021", hasPaidFund: true, present: true },
-  { id: "M22", fullName: "Lâm Đình Tòng", birthYear: 1955, militaryRank: "Thiếu úy", period: "Kháng chiến chống Mỹ", isPartyMember: true, partyBadge: "40 năm", isPolicy: true, policyType: "Chất độc Da cam", phone: "0912111022", hasPaidFund: true, present: true },
-  { id: "M23", fullName: "Trương Văn Bang", birthYear: 1966, militaryRank: "Trung sĩ", period: "Nhiệm vụ Quốc tế", isPartyMember: false, isPolicy: false, phone: "0912111023", hasPaidFund: true, present: true },
-  { id: "M24", fullName: "Phan Đình Phùng", birthYear: 1958, militaryRank: "Đại úy", period: "Biên giới Tây Nam", isPartyMember: true, partyBadge: "35 năm", isPolicy: false, phone: "0912111024", hasPaidFund: true, present: true },
-  { id: "M25", fullName: "Lê Văn Hưu", birthYear: 1962, militaryRank: "Chiến sĩ", period: "Biên giới phía Bắc", isPartyMember: false, isPolicy: false, phone: "0912111025", hasPaidFund: true, present: true },
-  { id: "M26", fullName: "Nguyễn Tri Phương", birthYear: 1952, militaryRank: "Thiếu tá", period: "Kháng chiến chống Mỹ", isPartyMember: true, partyBadge: "50 năm", isPolicy: true, policyType: "Thương binh 1/4", phone: "0912111026", hasPaidFund: true, present: true },
-  { id: "M27", fullName: "Hoàng Diệu", birthYear: 1969, militaryRank: "Hạ sĩ", period: "Cựu quân nhân", isPartyMember: false, isPolicy: false, phone: "0912111027", hasPaidFund: true, present: true },
-  { id: "M28", fullName: "Bùi Thị Xuân", birthYear: 1963, militaryRank: "Thượng sĩ", period: "Biên giới Tây Nam", isPartyMember: true, partyBadge: "30 năm", isPolicy: false, phone: "0912111028", hasPaidFund: true, present: true },
-  { id: "M29", fullName: "Võ Thị Sáu", birthYear: 1975, militaryRank: "Chiến sĩ", period: "Cựu quân nhân", isPartyMember: false, isPolicy: false, phone: "0912111029", hasPaidFund: true, present: true },
-  { id: "M30", fullName: "Nguyễn Văn Trỗi", birthYear: 1971, militaryRank: "Trung sĩ", period: "Cựu quân nhân", isPartyMember: false, isPolicy: false, phone: "0912111030", hasPaidFund: false, present: false },
-];
+const INITIAL_MEMBERS: MemberItem[] = [];
 
 // Danh sách video YouTube tư liệu & bài giảng
 const VIDEOS = [
@@ -190,7 +159,7 @@ export default function BranchMobilePage() {
   const [isOneTouchMode, setIsOneTouchMode] = useState(false);
 
   // Thu quỹ state
-  const [fundMemberId, setFundMemberId] = useState(INITIAL_MEMBERS[0].id);
+  const [fundMemberId, setFundMemberId] = useState("");
   const [fundAmount, setFundAmount] = useState(50000);
   const [fundPeriod, setFundPeriod] = useState("Tháng 03/2026");
   const [zaloMessage, setZaloMessage] = useState("");
@@ -272,43 +241,45 @@ export default function BranchMobilePage() {
     return stored.filter(
       (m) =>
         m.hamletName === currentHamlet.name &&
-        (m.status === "PENDING_APPROVAL" ||
+        (m.status === "CHO_CHI_HOI_DUYET" ||
+          m.status === "CHO_XA_PHE_DUYET" ||
+          (m.status as any) === "PENDING_APPROVAL" ||
           m.registrationStatus === "PENDING_APPROVAL" ||
           m.registrationStatus === "BRANCH_APPROVED")
     ).length;
   }, [currentHamlet.name, members]);
 
-  // Đồng bộ hóa danh sách hội viên với LocalStorage / MemberStore
+  // Đồng bộ hóa danh sách hội viên: CHỈ HIỂN THỊ HỘI VIÊN CHÍNH THỨC
   const syncMembers = () => {
     const stored = getStoredMembers();
-    const hamletMembers = stored.filter((r) => r.hamletName === currentHamlet.name);
+    const hamletMembers = stored.filter(
+      (r) =>
+        r.hamletName === currentHamlet.name &&
+        (r.status === "CHINH_THUC" || (r.status as any) === "ACTIVE")
+    );
 
-    if (hamletMembers.length > 0) {
-      setMembers(
-        hamletMembers.map((r) => ({
-          id: r.id,
-          fullName: r.fullName,
-          birthYear: r.birthYear,
-          militaryRank: r.militaryRank,
-          period: r.period,
-          isPartyMember: !!r.partyJoinDate,
-          partyBadge: r.partyBadge,
-          isPolicy: r.policyStatus !== "Không",
-          policyType: r.policyStatus !== "Không" ? r.policyStatus : undefined,
-          phone: r.phone,
-          economicModel: r.economicModelName || (r.hasEconomicModel ? `Mô hình: ${r.economicModelType || "Kinh tế"}` : undefined),
-          hasPaidFund: true,
-          present: true,
-          status: r.status,
-          isDeceased: r.isDeceased,
-          isTransferred: r.isTransferred,
-          isExpelled: r.isExpelled,
-          rawRecord: r,
-        }))
-      );
-    } else {
-      setMembers(INITIAL_MEMBERS);
-    }
+    setMembers(
+      hamletMembers.map((r) => ({
+        id: r.id,
+        fullName: r.fullName,
+        birthYear: r.birthYear,
+        militaryRank: r.militaryRank,
+        period: r.period,
+        isPartyMember: !!r.partyJoinDate,
+        partyBadge: r.partyBadge,
+        isPolicy: r.policyStatus !== "Không",
+        policyType: r.policyStatus !== "Không" ? r.policyStatus : undefined,
+        phone: r.phone,
+        economicModel: r.economicModelName || (r.hasEconomicModel ? `Mô hình: ${r.economicModelType || "Kinh tế"}` : undefined),
+        hasPaidFund: true,
+        present: true,
+        status: r.status,
+        isDeceased: r.isDeceased,
+        isTransferred: r.isTransferred,
+        isExpelled: r.isExpelled,
+        rawRecord: r,
+      }))
+    );
   };
 
   // State Quản trị 4 nghiệp vụ Biến động hội viên (Báo tử, Chuyển đi, Xóa tên, Chuyển đến)
@@ -462,6 +433,9 @@ export default function BranchMobilePage() {
       economicRevenue: newMemberForm.economicRevenue.trim(),
       economicLaborCount: newMemberForm.economicLaborCount ? Number(newMemberForm.economicLaborCount) : undefined,
       economicIncome: newMemberForm.economicIncome.trim(),
+      branchApproved: true,
+      branchApprovedBy: currentHamlet.leader,
+      branchNotes: "Chi hội trưởng đã thẩm tra xác minh thực tế tại thôn buôn, đề xuất Thường trực Hội CCB Xã phê duyệt kết nạp.",
       submittedBy: `Chi hội trưởng ${currentHamlet.leader} (${currentHamlet.name})`,
     });
 
@@ -514,13 +488,13 @@ export default function BranchMobilePage() {
     });
 
     alert(
-      `✅ HỒ SƠ ĐÃ ĐƯỢC GỬI LÊN XÃ THÀNH CÔNG!\n` +
+      `✅ HỒ SƠ ĐÃ ĐƯỢC CHUYỂN LÊN THƯỜNG TRỰC XÃ!\n` +
       `------------------------------------------\n` +
-      `👤 Hội viên: ${created.fullName}\n` +
+      `👤 Hội viên đề xuất: ${created.fullName}\n` +
       `🆔 Số CCCD: ${created.cccd}\n` +
       `📍 Đơn vị: Chi hội CCB ${currentHamlet.name}\n` +
-      `⏳ Trạng thái: CHỜ PHÊ DUYỆT (PENDING_APPROVAL)\n\n` +
-      `Hồ sơ đã được lưu trữ và gửi trực tiếp tới Ban Thường trực Hội CCB Xã Ea Súp trên cổng Admin để thẩm định phê duyệt!`
+      `⏳ Trạng thái: CHỜ THƯỜNG TRỰC XÃ PHÊ DUYỆT (CHO_XA_PHE_DUYET)\n\n` +
+      `* Lưu ý: Hội viên chỉ chính thức được ghi tên vào danh sách chi hội khi đã hoàn thành thẩm tra cấp thôn và được Ban Thường trực Hội CCB xã phê duyệt kết nạp.`
     );
   };
 
@@ -1556,12 +1530,17 @@ export default function BranchMobilePage() {
               {/* Badge trạng thái */}
               <div className="p-2.5 rounded-lg border flex items-center justify-between bg-white">
                 <span className="font-bold text-deep-text">Trạng thái phê duyệt:</span>
-                {viewingRecord.status === "PENDING_APPROVAL" ? (
+                {viewingRecord.status === "CHO_CHI_HOI_DUYET" ? (
                   <span className="px-2.5 py-1 bg-amber-100 text-amber-900 border border-amber-400 font-bold text-xs rounded-md flex items-center gap-1">
+                    <span>⏳</span>
+                    <span>Chờ Chi Hội Thẩm Tra</span>
+                  </span>
+                ) : viewingRecord.status === "CHO_XA_PHE_DUYET" ? (
+                  <span className="px-2.5 py-1 bg-blue-100 text-blue-900 border border-blue-400 font-bold text-xs rounded-md flex items-center gap-1">
                     <span>⏳</span>
                     <span>Chờ Thường Trực Xã Phê Duyệt</span>
                   </span>
-                ) : viewingRecord.status === "ACTIVE" ? (
+                ) : viewingRecord.status === "CHINH_THUC" ? (
                   <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold text-xs rounded-md flex items-center gap-1">
                     <span>✅</span>
                     <span>Đã Phê Duyệt Chính Thức</span>

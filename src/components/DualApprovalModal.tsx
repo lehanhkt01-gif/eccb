@@ -64,7 +64,9 @@ export default function DualApprovalModal({
   // Lấy các hồ sơ: PENDING_APPROVAL, BRANCH_APPROVED, ADMIN_APPROVED, REJECTED
   const pendingRecords = members.filter((m) => {
     const isApprovalState =
-      m.status === "PENDING_APPROVAL" ||
+      m.status === "CHO_CHI_HOI_DUYET" ||
+      m.status === "CHO_XA_PHE_DUYET" ||
+      (m.status as any) === "PENDING_APPROVAL" ||
       m.registrationStatus === "PENDING_APPROVAL" ||
       m.registrationStatus === "BRANCH_APPROVED" ||
       m.registrationStatus === "ADMIN_APPROVED";
@@ -217,19 +219,19 @@ export default function DualApprovalModal({
 
                     {/* Badge trạng thái 2 cấp */}
                     <div className="mt-2 flex items-center gap-1">
-                      {regStatus === "PENDING_APPROVAL" && (
+                      {(regStatus === "PENDING_APPROVAL" || m.status === "CHO_CHI_HOI_DUYET") && (
                         <span className="text-[9px] font-black uppercase bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded border border-amber-300">
-                          ⏳ Chờ cấp 1 (Chi hội)
+                          ⏳ Chờ Cấp 1 (Chi hội thẩm tra)
                         </span>
                       )}
-                      {regStatus === "BRANCH_APPROVED" && (
+                      {(regStatus === "BRANCH_APPROVED" || m.status === "CHO_XA_PHE_DUYET") && (
                         <span className="text-[9px] font-black uppercase bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded border border-blue-300">
-                          ✓ Chi hội đã duyệt • Chờ Xã
+                          ✓ Đã qua cấp 1 • Chờ Xã duyệt
                         </span>
                       )}
-                      {regStatus === "ADMIN_APPROVED" && (
-                        <span className="text-[9px] font-black uppercase bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded border border-purple-300">
-                          ✓ Xã đã duyệt • Chờ Chi hội
+                      {(m.status === "CHINH_THUC" || regStatus === "ADMIN_APPROVED") && (
+                        <span className="text-[9px] font-black uppercase bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded border border-emerald-300">
+                          ✓ Đã kết nạp chính thức
                         </span>
                       )}
                     </div>

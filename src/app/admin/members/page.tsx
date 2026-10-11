@@ -25,7 +25,7 @@ import {
 } from "@/lib/memberStore";
 
 export default function AdminMembersPage() {
-  const [activeTab, setActiveTab] = useState<"active" | "pending" | "rejected" | "movements">("active");
+  const [activeTab, setActiveTab] = useState<"active" | "pending_admin" | "pending_branch" | "rejected" | "movements">("active");
   const [members, setMembers] = useState<MemberRecord[]>([]);
   const [movements, setMovements] = useState<MemberMovementRecord[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -66,17 +66,37 @@ export default function AdminMembersPage() {
     setTimeout(() => setToastMessage(null), 5000);
   };
 
-  // Các danh sách phân loại
-  const activeMembers = useMemo(() => members.filter((m) => m.status === "ACTIVE"), [members]);
-  const pendingMembers = useMemo(() => members.filter((m) => m.status === "PENDING_APPROVAL"), [members]);
-  const rejectedMembers = useMemo(() => members.filter((m) => m.status === "REJECTED"), [members]);
+  // Các danh sách phân loại theo quy trình 2 cấp chặt chẽ:
+  // 1. Hội viên chính thức (CHINH_THUC hoặc ACTIVE)
+  const activeMembers = useMemo(
+    () => members.filter((m) => m.status === "CHINH_THUC" || (m.status as any) === "ACTIVE"),
+    [members]
+  );
 
-  // Xử lý phê duyệt chính thức
+  // 2. Cấp 2: Chờ Thường trực Xã phê duyệt (CHO_XA_PHE_DUYET hoặc đã branchApproved)
+  const pendingAdminMembers = useMemo(
+    () => members.filter((m) => m.status === "CHO_XA_PHE_DUYET" || ((m.status as any) === "PENDING_APPROVAL" && m.branchApproved)),
+    [members]
+  );
+
+  // 3. Cấp 1: Chờ Chi hội xác minh (CHO_CHI_HOI_DUYET hoặc chưa branchApproved)
+  const pendingBranchMembers = useMemo(
+    () => members.filter((m) => m.status === "CHO_CHI_HOI_DUYET" || ((m.status as any) === "PENDING_APPROVAL" && !m.branchApproved)),
+    [members]
+  );
+
+  // 4. Hồ sơ bị từ chối
+  const rejectedMembers = useMemo(
+    () => members.filter((m) => m.status === "TU_CHOI" || (m.status as any) === "REJECTED"),
+    [members]
+  );
+
+  // Xử lý Cán bộ xã phê duyệt kết nạp chính thức
   const handleConfirmApprove = () => {
     if (!memberToApprove) return;
     const ok = approveMember(memberToApprove.id);
     if (ok) {
-      showToast(`✅ Đã phê duyệt chính thức đ/c ${memberToApprove.fullName} (${memberToApprove.hamletName}) vào danh sách hội viên xã!`);
+      showToast(`✅ Ban Thường trực Xã đã phê duyệt kết nạp chính thức đ/c ${memberToApprove.fullName} (${memberToApprove.hamletName})!`);
       setMemberToApprove(null);
     }
   };
@@ -95,11 +115,10 @@ export default function AdminMembersPage() {
 
   // Khôi phục xét duyệt lại hồ sơ đã từ chối
   const handleRestorePending = (id: string, fullName: string) => {
-    approveMember(id); // hoặc chuyển lại thành pending
     const currentList = getStoredMembers();
-    const updated = currentList.map((m) => m.id === id ? { ...m, status: "PENDING_APPROVAL" as const, rejectionReason: undefined } : m);
+    const updated = currentList.map((m) => m.id === id ? { ...m, status: "CHO_XA_PHE_DUYET" as const, rejectionReason: undefined } : m);
     setMembers(updated);
-    showToast(`🔄 Đã chuyển hồ sơ đ/c ${fullName} về trạng thái Chờ duyệt!`);
+    showToast(`🔄 Đã chuyển hồ sơ đ/c ${fullName} về trạng thái Chờ Thường trực Xã phê duyệt!`);
   };
 
   // Xử lý lưu chỉnh sửa 35 trường thông tin
@@ -181,9 +200,9 @@ export default function AdminMembersPage() {
     });
   }, [activeMembers, searchQuery, selectedHamlet, selectedPeriod, selectedPolicy, isPartyFilter, isHousingFilter]);
 
-  // Bộ lọc cho hồ sơ chờ duyệt
-  const filteredPendingMembers = useMemo(() => {
-    return pendingMembers.filter((m) => {
+  // Bộ lọc cho hồ sơ chờ Thường trực Xã phê duyệt (Cấp 2)
+  const filteredPendingAdminMembers = useMemo(() => {
+    return pendingAdminMembers.filter((m) => {
       const query = searchQuery.toLowerCase().trim();
       if (!query) return true;
       return (
@@ -193,7 +212,21 @@ export default function AdminMembersPage() {
         m.hamletName.toLowerCase().includes(query)
       );
     });
-  }, [pendingMembers, searchQuery]);
+  }, [pendingAdminMembers, searchQuery]);
+
+  // Bộ lọc cho hồ sơ chờ Chi hội xác minh (Cấp 1)
+  const filteredPendingBranchMembers = useMemo(() => {
+    return pendingBranchMembers.filter((m) => {
+      const query = searchQuery.toLowerCase().trim();
+      if (!query) return true;
+      return (
+        m.fullName.toLowerCase().includes(query) ||
+        m.cccd.includes(query) ||
+        m.phone.includes(query) ||
+        m.hamletName.toLowerCase().includes(query)
+      );
+    });
+  }, [pendingBranchMembers, searchQuery]);
 
   // HÀM XUẤT FILE WORD (.DOCX) PHIẾU THÔNG TIN MẪU 02 CHUẨN NGHỊ ĐỊNH 30/2020/NĐ-CP
   const exportDocx = async (m: MemberRecord) => {
@@ -632,12 +665,12 @@ export default function AdminMembersPage() {
       </div>
 
       {/* ==================================================================== */}
-      {/* THANH 3 TAB CHÍNH: HỘI VIÊN CHÍNH THỨC vs CHỜ DUYỆT vs TỪ CHỐI      */}
+      {/* THANH TAB PHÂN TÁCH QUY TRÌNH 2 CẤP PHÊ DUYỆT CHẶT CHẼ              */}
       {/* ==================================================================== */}
-      <div className="flex border-b-2 border-stone-300 gap-2">
+      <div className="flex border-b-2 border-stone-300 gap-1.5 sm:gap-2 overflow-x-auto pb-0.5">
         <button
           onClick={() => setActiveTab("active")}
-          className={`py-3 px-4 sm:px-6 font-bold text-sm sm:text-base border-b-4 transition flex items-center gap-2 ${
+          className={`py-3 px-3 sm:px-5 font-bold text-xs sm:text-sm border-b-4 transition flex items-center gap-1.5 shrink-0 ${
             activeTab === "active"
               ? "border-moss-green text-moss-green bg-white rounded-t-xl shadow-xs"
               : "border-transparent text-stone-500 hover:text-deep-text"
@@ -651,18 +684,39 @@ export default function AdminMembersPage() {
         </button>
 
         <button
-          onClick={() => setActiveTab("pending")}
-          className={`py-3 px-4 sm:px-6 font-bold text-sm sm:text-base border-b-4 transition flex items-center gap-2 ${
-            activeTab === "pending"
+          onClick={() => setActiveTab("pending_admin")}
+          className={`py-3 px-3 sm:px-5 font-bold text-xs sm:text-sm border-b-4 transition flex items-center gap-1.5 shrink-0 ${
+            activeTab === "pending_admin"
               ? "border-flag-red text-flag-red bg-white rounded-t-xl shadow-xs"
               : "border-transparent text-stone-500 hover:text-deep-text"
           }`}
         >
-          <span>⏳</span>
-          <span>Hồ Sơ Chờ Duyệt</span>
-          {pendingMembers.length > 0 ? (
+          <span>⚖️</span>
+          <span>Chờ Thường Trực Xã Phê Duyệt</span>
+          {pendingAdminMembers.length > 0 ? (
             <span className="px-2 py-0.5 bg-flag-red text-white text-xs rounded-full font-black animate-pulse shadow-xs">
-              {pendingMembers.length}
+              {pendingAdminMembers.length}
+            </span>
+          ) : (
+            <span className="px-2 py-0.5 bg-stone-200 text-stone-600 text-xs rounded-full font-bold">
+              0
+            </span>
+          )}
+        </button>
+
+        <button
+          onClick={() => setActiveTab("pending_branch")}
+          className={`py-3 px-3 sm:px-5 font-bold text-xs sm:text-sm border-b-4 transition flex items-center gap-1.5 shrink-0 ${
+            activeTab === "pending_branch"
+              ? "border-amber-600 text-amber-900 bg-white rounded-t-xl shadow-xs"
+              : "border-transparent text-stone-500 hover:text-deep-text"
+          }`}
+        >
+          <span>⏳</span>
+          <span>Chờ Chi Hội Xác Minh</span>
+          {pendingBranchMembers.length > 0 ? (
+            <span className="px-2 py-0.5 bg-amber-500 text-white text-xs rounded-full font-black shadow-xs">
+              {pendingBranchMembers.length}
             </span>
           ) : (
             <span className="px-2 py-0.5 bg-stone-200 text-stone-600 text-xs rounded-full font-bold">
@@ -673,7 +727,7 @@ export default function AdminMembersPage() {
 
         <button
           onClick={() => setActiveTab("rejected")}
-          className={`py-3 px-4 sm:px-6 font-bold text-sm sm:text-base border-b-4 transition flex items-center gap-2 ${
+          className={`py-3 px-3 sm:px-5 font-bold text-xs sm:text-sm border-b-4 transition flex items-center gap-1.5 shrink-0 ${
             activeTab === "rejected"
               ? "border-stone-600 text-stone-800 bg-white rounded-t-xl shadow-xs"
               : "border-transparent text-stone-500 hover:text-deep-text"
@@ -688,9 +742,9 @@ export default function AdminMembersPage() {
 
         <button
           onClick={() => setActiveTab("movements")}
-          className={`py-3 px-4 sm:px-6 font-bold text-sm sm:text-base border-b-4 transition flex items-center gap-2 ${
+          className={`py-3 px-3 sm:px-5 font-bold text-xs sm:text-sm border-b-4 transition flex items-center gap-1.5 shrink-0 ${
             activeTab === "movements"
-              ? "border-amber-600 text-amber-900 bg-white rounded-t-xl shadow-xs"
+              ? "border-stone-800 text-stone-900 bg-white rounded-t-xl shadow-xs"
               : "border-transparent text-stone-500 hover:text-deep-text"
           }`}
         >
@@ -703,37 +757,187 @@ export default function AdminMembersPage() {
       </div>
 
       {/* ==================================================================== */}
-      {/* TAB 2: HỒ SƠ CHỜ DUYỆT (APPROVAL QUEUE)                              */}
+      {/* TAB 2: CẤP 2 — HỒ SƠ CHỜ THƯỜNG TRỰC XÃ PHÊ DUYỆT (CHỜ XÃ DUYỆT)     */}
       {/* ==================================================================== */}
-      {activeTab === "pending" && (
+      {activeTab === "pending_admin" && (
         <div className="space-y-4 animate-in fade-in duration-200">
-          {/* Banner hướng dẫn nghiệp vụ phê duyệt */}
+          {/* Banner quy trình chuẩn */}
           <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-4 flex items-start gap-3 shadow-xs">
-            <span className="text-2xl mt-0.5">🔔</span>
+            <span className="text-2xl mt-0.5">⚖️</span>
             <div className="space-y-1">
               <h4 className="font-bold text-amber-900 text-sm uppercase">
-                Quy Trình Phê Duyệt Hồ Sơ Hội Viên CCB Xã Ea Súp
+                Quy Trình Phê Duyệt Hồ Sơ Hội Viên CCB Xã Ea Súp (Cấp 2 - Thường Trực Xã)
               </h4>
-              <p className="text-xs text-amber-800 leading-relaxed">
-                Các hồ sơ dưới đây do <strong>Chi hội trưởng 20 thôn buôn</strong> kê khai và gửi lên qua cổng di động PWA. Ban Thường trực Hội CCB xã thẩm định kỹ 35 trường thông tin theo đúng Phiếu Mẫu 02. Khi bấm <strong>[Phê duyệt]</strong>, hồ sơ mới chính thức được kết nạp vào Hội CCB Xã Ea Súp và cộng vào tổng số {activeMembers.length} hội viên chính thức của xã.
+              <p className="text-xs text-amber-900 leading-relaxed font-medium">
+                Hội viên chỉ chính thức được ghi tên vào danh sách chi hội khi đã hoàn thành thẩm tra cấp thôn và được Ban Thường trực Hội CCB xã phê duyệt kết nạp.
               </p>
             </div>
           </div>
 
-          {/* Danh sách hồ sơ chờ duyệt */}
-          {filteredPendingMembers.length === 0 ? (
+          {/* Danh sách hồ sơ chờ Xã duyệt */}
+          {filteredPendingAdminMembers.length === 0 ? (
             <div className="bg-white rounded-xl border-2 border-stone-300 p-12 text-center space-y-2">
               <span className="text-4xl block">🎉</span>
               <h3 className="text-base font-bold text-deep-text">
-                Không có hồ sơ nào đang chờ duyệt!
+                Không có hồ sơ nào đang chờ Thường trực Xã phê duyệt!
               </h3>
               <p className="text-xs text-deep-muted max-w-md mx-auto">
-                Tất cả hồ sơ do các chi hội nộp lên đã được Ban Thường trực thẩm định và xử lý đầy đủ. Khi Chi hội trưởng nộp thêm hội viên mới tại thôn, danh sách sẽ tự động xuất hiện tại đây.
+                Tất cả hồ sơ do các Chi hội trưởng thẩm tra nộp lên đã được Ban Thường trực xem xét và chuẩn y kết nạp đầy đủ.
               </p>
             </div>
           ) : (
             <div className="space-y-3">
-              {filteredPendingMembers.map((m) => (
+              {filteredPendingAdminMembers.map((m) => (
+                <div
+                  key={m.id}
+                  className="bg-white rounded-xl border-2 border-flag-red/60 hover:border-flag-red p-4 shadow-sm transition space-y-3"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2.5 border-b border-stone-200">
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                      <span className="px-2.5 py-1 bg-moss-green text-white font-bold text-xs rounded-md">
+                        {m.hamletName}
+                      </span>
+                      <span className="text-base sm:text-lg font-black text-deep-text">
+                        {m.fullName}
+                      </span>
+                      <span className="text-xs text-deep-muted font-medium">
+                        (Sinh năm: {m.birthYear})
+                      </span>
+                      <span className="px-2 py-0.5 bg-red-100 text-flag-red border border-red-300 text-xs font-bold rounded-md flex items-center gap-1">
+                        <span>⚖️</span>
+                        <span>Đã qua thẩm tra thôn • Chờ Xã phê duyệt kết nạp</span>
+                      </span>
+                    </div>
+
+                    <div className="text-xs text-stone-500 font-medium">
+                      <span>Nộp lúc: </span>
+                      <strong className="text-deep-text">{m.submissionDate || "Mới nộp"}</strong>
+                      {m.branchApprovedBy && (
+                        <span className="block sm:inline sm:ml-1 text-[11px] text-moss-green">
+                          (Đã thẩm tra: {m.branchApprovedBy})
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Grid tóm tắt hồ sơ */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs text-stone-700 bg-stone-50 p-3 rounded-lg border border-stone-200">
+                    <div>
+                      <span className="text-stone-400 block text-[11px]">Số CCCD (12 số):</span>
+                      <strong className="font-mono text-deep-text">{m.cccd}</strong>
+                    </div>
+                    <div>
+                      <span className="text-stone-400 block text-[11px]">Số điện thoại:</span>
+                      <strong className="text-deep-text">{m.phone}</strong>
+                    </div>
+                    <div>
+                      <span className="text-stone-400 block text-[11px]">Thời kỳ quân ngũ:</span>
+                      <strong className="text-moss-green">{m.period}</strong>
+                    </div>
+                    <div>
+                      <span className="text-stone-400 block text-[11px]">Cấp bậc cao nhất:</span>
+                      <strong className="text-deep-text">{m.militaryRank}</strong>
+                    </div>
+
+                    <div>
+                      <span className="text-stone-400 block text-[11px]">Đơn vị khi tại ngũ:</span>
+                      <span className="font-medium">{m.militaryUnit || "—"}</span>
+                    </div>
+                    <div>
+                      <span className="text-stone-400 block text-[11px]">Đảng viên CSVN:</span>
+                      <span className="font-medium text-amber-700">{m.partyJoinDate ? `Có (${m.partyBadge || "ĐV"})` : "Chưa vào Đảng"}</span>
+                    </div>
+                    <div>
+                      <span className="text-stone-400 block text-[11px]">Chính sách người có công:</span>
+                      <span className={`font-bold ${m.policyStatus !== "Không" ? "text-flag-red" : "text-stone-500"}`}>
+                        {m.policyStatus} {m.policyWoundRate && `(${m.policyWoundRate})`}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-stone-400 block text-[11px]">Kinh tế / Đời sống:</span>
+                      <span className="font-medium">
+                        {m.hasEconomicModel ? `🌾 ${m.economicModelName || m.economicModelType}` : (m.isPoorHousehold ? "Hộ nghèo" : "Bình thường")}
+                      </span>
+                    </div>
+                  </div>
+
+                  {m.branchNotes && (
+                    <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-900 flex items-center gap-2">
+                      <span className="font-bold shrink-0">💬 Ý kiến thẩm tra cấp thôn:</span>
+                      <span className="italic">{m.branchNotes}</span>
+                    </div>
+                  )}
+
+                  {/* Nút hành động phê duyệt */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                    <button
+                      onClick={() => setActiveModalMember(m)}
+                      className="px-3 py-1.5 bg-stone-100 hover:bg-stone-200 border border-stone-300 text-deep-text text-xs font-bold rounded-lg transition flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <span>👁️</span>
+                      <span>Xem Toàn Bộ 35 Trường Thông Tin</span>
+                    </button>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          setMemberToReject(m);
+                          setRejectReason("");
+                        }}
+                        className="px-3.5 py-1.5 bg-stone-100 hover:bg-red-50 text-flag-red border border-red-300 font-bold text-xs rounded-lg transition flex items-center gap-1 active:scale-95 cursor-pointer"
+                      >
+                        <span>❌</span>
+                        <span>Từ Chối Hồ Sơ</span>
+                      </button>
+
+                      <button
+                        onClick={() => setMemberToApprove(m)}
+                        className="px-4 py-1.5 bg-moss-green hover:bg-moss-green-light text-white font-bold text-xs rounded-lg shadow-sm border border-bronze-gold transition flex items-center gap-1.5 active:scale-95 cursor-pointer"
+                      >
+                        <span>✅</span>
+                        <span>Phê Duyệt Kết Nạp</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ==================================================================== */}
+      {/* TAB 3: CẤP 1 — HỒ SƠ CHỜ CHI HỘI XÁC MINH                            */}
+      {/* ==================================================================== */}
+      {activeTab === "pending_branch" && (
+        <div className="space-y-4 animate-in fade-in duration-200">
+          {/* Banner hướng dẫn Cấp 1 */}
+          <div className="bg-blue-50 border-2 border-blue-300 rounded-xl p-4 flex items-start gap-3 shadow-xs">
+            <span className="text-2xl mt-0.5">🔍</span>
+            <div className="space-y-1">
+              <h4 className="font-bold text-blue-900 text-sm uppercase">
+                Hồ Sơ Chờ Chi Hội Thôn/Buôn Thẩm Tra Xác Minh (Cấp 1 - Cơ Sở)
+              </h4>
+              <p className="text-xs text-blue-900 leading-relaxed font-medium">
+                Các hồ sơ dưới đây đang chờ Chi hội trưởng tại các thôn buôn thẩm tra thực tế tư cách quân nhân. Sau khi Chi hội trưởng xác nhận đề xuất, hồ sơ sẽ được chuyển lên Ban Thường trực Xã để phê duyệt chính thức.
+              </p>
+            </div>
+          </div>
+
+          {/* Danh sách hồ sơ chờ Chi hội duyệt */}
+          {filteredPendingBranchMembers.length === 0 ? (
+            <div className="bg-white rounded-xl border-2 border-stone-300 p-12 text-center space-y-2">
+              <span className="text-4xl block">✅</span>
+              <h3 className="text-base font-bold text-deep-text">
+                Không có hồ sơ nào đang chờ Chi hội thẩm tra!
+              </h3>
+              <p className="text-xs text-deep-muted max-w-md mx-auto">
+                Hiện tại không có hồ sơ đăng ký mới nào ở cấp thôn buôn đang tồn đọng.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filteredPendingBranchMembers.map((m) => (
                 <div
                   key={m.id}
                   className="bg-white rounded-xl border-2 border-amber-300 hover:border-bronze-gold p-4 shadow-sm transition space-y-3"
@@ -751,7 +955,7 @@ export default function AdminMembersPage() {
                       </span>
                       <span className="px-2 py-0.5 bg-amber-100 text-amber-800 border border-amber-300 text-xs font-bold rounded-md flex items-center gap-1">
                         <span>⏳</span>
-                        <span>Chờ Thường Trực Xã Phê Duyệt</span>
+                        <span>Chờ Chi hội trưởng {m.hamletName} thẩm tra tại cơ sở</span>
                       </span>
                     </div>
 
@@ -807,7 +1011,7 @@ export default function AdminMembersPage() {
                   <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
                     <button
                       onClick={() => setActiveModalMember(m)}
-                      className="px-3 py-1.5 bg-stone-100 hover:bg-stone-200 border border-stone-300 text-deep-text text-xs font-bold rounded-lg transition flex items-center gap-1.5"
+                      className="px-3 py-1.5 bg-stone-100 hover:bg-stone-200 border border-stone-300 text-deep-text text-xs font-bold rounded-lg transition flex items-center gap-1.5 cursor-pointer"
                     >
                       <span>👁️</span>
                       <span>Xem Toàn Bộ 35 Trường Thông Tin</span>
@@ -819,18 +1023,34 @@ export default function AdminMembersPage() {
                           setMemberToReject(m);
                           setRejectReason("");
                         }}
-                        className="px-3.5 py-1.5 bg-stone-100 hover:bg-red-50 text-flag-red border border-red-300 font-bold text-xs rounded-lg transition flex items-center gap-1 active:scale-95"
+                        className="px-3.5 py-1.5 bg-stone-100 hover:bg-red-50 text-flag-red border border-red-300 font-bold text-xs rounded-lg transition flex items-center gap-1 active:scale-95 cursor-pointer"
                       >
                         <span>❌</span>
                         <span>Từ Chối Hồ Sơ</span>
                       </button>
 
                       <button
-                        onClick={() => setMemberToApprove(m)}
-                        className="px-4 py-1.5 bg-moss-green hover:bg-moss-green-light text-white font-bold text-xs rounded-lg shadow-sm border border-bronze-gold transition flex items-center gap-1.5 active:scale-95"
+                        onClick={() => {
+                          // Cán bộ xã hỗ trợ thẩm tra duyệt cấp thôn và chuyển lên cấp Xã duyệt
+                          const notes = prompt(`Nhập ý kiến thẩm tra tư cách quân nhân cho đ/c ${m.fullName}:`, "Đã thẩm tra tư cách quân nhân, đủ điều kiện đề xuất kết nạp.");
+                          if (notes !== null) {
+                            const res = updateStoredMember(m.id, {
+                              branchApproved: true,
+                              branchApprovedAt: new Date().toLocaleDateString("vi-VN"),
+                              branchApprovedBy: "Ban Thường trực Xã (Thẩm tra hỗ trợ)",
+                              branchNotes: notes,
+                              status: "CHO_XA_PHE_DUYET",
+                              registrationStatus: "BRANCH_APPROVED",
+                            });
+                            if (res) {
+                              showToast(`⚡ Đã xác nhận thẩm tra cấp thôn cho đ/c ${m.fullName}. Hồ sơ chuyển sang tab Chờ Xã phê duyệt!`);
+                            }
+                          }
+                        }}
+                        className="px-4 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg shadow-sm border border-amber-300 transition flex items-center gap-1.5 active:scale-95 cursor-pointer"
                       >
-                        <span>✅</span>
-                        <span>Phê Duyệt Hội Viên</span>
+                        <span>⚡</span>
+                        <span>Hỗ Trợ Xác Minh & Chuyển Xã Duyệt</span>
                       </button>
                     </div>
                   </div>
@@ -842,7 +1062,7 @@ export default function AdminMembersPage() {
       )}
 
       {/* ==================================================================== */}
-      {/* TAB 3: HỒ SƠ BỊ TỪ CHỐI (REJECTED QUEUE)                             */}
+      {/* TAB 4: HỒ SƠ BỊ TỪ CHỐI (REJECTED QUEUE)                             */}
       {/* ==================================================================== */}
       {activeTab === "rejected" && (
         <div className="space-y-4 animate-in fade-in duration-200">
@@ -1378,11 +1598,15 @@ export default function AdminMembersPage() {
                   <span className="text-xs font-bold uppercase tracking-wider text-bronze-gold">
                     HỒ SƠ HỘI VIÊN CHUẨN PHIẾU MẪU 02
                   </span>
-                  {activeModalMember.status === "PENDING_APPROVAL" ? (
+                  {activeModalMember.status === "CHO_CHI_HOI_DUYET" ? (
                     <span className="px-2 py-0.5 bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-bold rounded">
-                      ⏳ Chờ duyệt
+                      ⏳ Chờ Chi hội xác minh
                     </span>
-                  ) : activeModalMember.status === "ACTIVE" ? (
+                  ) : activeModalMember.status === "CHO_XA_PHE_DUYET" ? (
+                    <span className="px-2 py-0.5 bg-blue-100 text-blue-900 border border-blue-300 text-[10px] font-bold rounded">
+                      ⏳ Chờ Xã phê duyệt
+                    </span>
+                  ) : activeModalMember.status === "CHINH_THUC" ? (
                     <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px] font-bold rounded">
                       ✅ Chính thức
                     </span>
@@ -1498,14 +1722,16 @@ export default function AdminMembersPage() {
               </button>
 
               <div className="flex items-center gap-2">
-                {activeModalMember.status === "PENDING_APPROVAL" && (
+                {(activeModalMember.status === "CHO_XA_PHE_DUYET" ||
+                  activeModalMember.status === "CHO_CHI_HOI_DUYET" ||
+                  (activeModalMember.status as any) === "PENDING_APPROVAL") && (
                   <button
                     onClick={() => {
                       const mem = activeModalMember;
                       setActiveModalMember(null);
                       setMemberToApprove(mem);
                     }}
-                    className="px-4 py-2 bg-moss-green hover:bg-moss-green-light text-white font-bold rounded-lg text-xs flex items-center gap-1 shadow-sm"
+                    className="px-4 py-2 bg-moss-green hover:bg-moss-green-light text-white font-bold rounded-lg text-xs flex items-center gap-1 shadow-sm cursor-pointer"
                   >
                     <span>✅ Phê Duyệt Hồ Sơ Này</span>
                   </button>

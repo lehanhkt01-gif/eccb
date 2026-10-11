@@ -190,7 +190,7 @@ export async function POST(req: Request) {
         });
       } else {
         return NextResponse.json(
-          { success: false, message: "Mật khẩu không chính xác. Mật khẩu khởi tạo là Số điện thoại của đồng chí." },
+          { success: false, message: "Mật khẩu không chính xác. Vui lòng kiểm tra lại." },
           { status: 401 }
         );
       }
@@ -225,7 +225,7 @@ export async function POST(req: Request) {
         return NextResponse.json(
           {
             success: false,
-            message: `Mật khẩu Chi hội trưởng không chính xác. Mật khẩu khởi tạo là Số điện thoại (${matchedCht.phone}).`,
+            message: "Mật khẩu không chính xác. Vui lòng kiểm tra lại.",
           },
           { status: 401 }
         );
@@ -261,7 +261,7 @@ export async function POST(req: Request) {
         return NextResponse.json(
           {
             success: false,
-            message: "Mật khẩu Hội viên không chính xác. Mật khẩu mặc định là số điện thoại hoặc mã quy định.",
+            message: "Mật khẩu không chính xác. Vui lòng kiểm tra lại.",
           },
           { status: 401 }
         );

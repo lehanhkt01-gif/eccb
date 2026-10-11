@@ -126,7 +126,7 @@ export async function cleanupAndSyncDB() {
         birthDate: birthDateObj,
         hamletId: hamlet.id,
         associationRole: "Chi hội trưởng",
-        status: MemberStatus.ACTIVE,
+        status: MemberStatus.CHINH_THUC,
         registrationStatus: RegistrationStatus.APPROVED,
       },
       create: {
@@ -142,7 +142,7 @@ export async function cleanupAndSyncDB() {
         currentAddress: `${item.hamletName}, Xã Ea Súp, Tỉnh Đắk Lắk`,
         phone: item.phone,
         associationRole: "Chi hội trưởng",
-        status: MemberStatus.ACTIVE,
+        status: MemberStatus.CHINH_THUC,
         registrationStatus: RegistrationStatus.APPROVED,
         isHouseholdHead: true,
       },

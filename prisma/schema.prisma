@@ -62,13 +62,14 @@ enum FundLoanStatus {
   OVERDUE // Quá hạn chưa hoàn trả
 }
 
-/// 4. Trạng thái phê duyệt và sinh hoạt của hội viên
+/// 4. Trạng thái phê duyệt và sinh hoạt của hội viên (Quy trình 2 cấp)
 enum MemberStatus {
-  PENDING_APPROVAL // Chờ Ban Thường trực Hội CCB Xã phê duyệt
-  ACTIVE // Hội viên chính thức sinh hoạt
-  REJECTED // Hồ sơ bị từ chối phê duyệt
-  TRANSFERRED // Chuyển sinh hoạt đi nơi khác
-  DECEASED // Đã từ trần
+  CHO_CHI_HOI_DUYET // Hồ sơ mới nộp hoặc đăng ký online, chờ Chi hội trưởng thôn/buôn thẩm tra
+  CHO_XA_PHE_DUYET  // Chi hội trưởng đã thẩm tra xác nhận đề xuất, chuyển lên Thường trực Hội CCB xã
+  CHINH_THUC        // Cán bộ xã đã phê duyệt kết nạp chính thức
+  TU_CHOI           // Hồ sơ không đủ điều kiện
+  TRANSFERRED       // Chuyển sinh hoạt đi nơi khác
+  DECEASED          // Đã từ trần
 }
 
 /// 5. Phân loại 4 nghiệp vụ biến động hội viên
@@ -210,7 +211,7 @@ model Member {
   period           Period       @default(CUU_QUAN_NHAN) // Thời kỳ quân ngũ tham gia
   isCQN            Boolean      @default(false) // Là Cựu quân nhân (CQN)
   isHouseholdHead  Boolean      @default(false) // Là chủ hộ gia đình
-  status           MemberStatus @default(ACTIVE) // Trạng thái: PENDING_APPROVAL, ACTIVE, REJECTED
+  status           MemberStatus @default(CHO_CHI_HOI_DUYET) // Trạng thái: CHO_CHI_HOI_DUYET, CHO_XA_PHE_DUYET, CHINH_THUC, TU_CHOI
   rejectionReason  String? // Lý do từ chối nếu có
 
   // --- [3] CÔNG TÁC HỘI & XÂY DỰNG ĐẢNG ---

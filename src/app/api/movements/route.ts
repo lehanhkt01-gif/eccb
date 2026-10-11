@@ -107,11 +107,11 @@ export async function POST(request: NextRequest) {
       memberUpdateData.isExpelled = true;
       memberUpdateData.expelledDate = eventDate;
       memberUpdateData.expelledReason = reason || "Quyết định xóa tên của Hội";
-      memberUpdateData.status = MemberStatus.REJECTED;
+      memberUpdateData.status = MemberStatus.TU_CHOI;
     } else if (movementType === "TRANSFER_IN") {
       // 4. Chuyển đến
       memberUpdateData.isTransferred = false;
-      memberUpdateData.status = MemberStatus.ACTIVE;
+      memberUpdateData.status = MemberStatus.CHINH_THUC;
     }
 
     // Thực thi lưu vào PostgreSQL qua Prisma

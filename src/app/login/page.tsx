@@ -21,14 +21,13 @@ export default function LoginPage() {
       const roleParam = params.get("role");
       if (roleParam === "branch") {
         setActiveTab("branch");
-        setUsername("chihoi_thon_01");
       } else if (roleParam === "admin") {
         setActiveTab("admin");
-        setUsername("lehanhkt01@gmail.com");
       } else {
         setActiveTab("member");
-        setUsername("");
       }
+      setUsername("");
+      setPassword("");
     }
   }, []);
 
@@ -36,13 +35,7 @@ export default function LoginPage() {
     setActiveTab(tab);
     setErrorMessage("");
     setPassword("");
-    if (tab === "member") {
-      setUsername("");
-    } else if (tab === "branch") {
-      setUsername("chihoi_thon_01");
-    } else {
-      setUsername("lehanhkt01@gmail.com");
-    }
+    setUsername("");
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -376,7 +369,7 @@ export default function LoginPage() {
                 id="password"
                 name="password"
                 type="password"
-                autoComplete="current-password"
+                autoComplete="off"
                 required
                 placeholder="Nhập mật khẩu an toàn..."
                 value={password}

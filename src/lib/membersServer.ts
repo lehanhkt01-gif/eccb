@@ -22,7 +22,7 @@ export async function getMembers({
   hamletId,
   hamletName,
   search,
-  status = "ACTIVE",
+  status = "CHINH_THUC" as MemberStatus,
 }: MemberFilterParams = {}) {
   try {
     // Xây dựng mảng điều kiện AND bắt buộc

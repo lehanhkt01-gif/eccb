@@ -3,7 +3,11 @@
 // Đồng bộ dữ liệu giữa Mobile Chi Hội (/branch) và Desktop Admin Xã (/admin/members)
 // ==============================================================================
 
-export type ApprovalStatus = "PENDING_APPROVAL" | "ACTIVE" | "REJECTED";
+export type ApprovalStatus =
+  | "CHO_CHI_HOI_DUYET" // Chờ Chi hội trưởng thôn/buôn thẩm tra
+  | "CHO_XA_PHE_DUYET"  // Chi hội trưởng đã thẩm tra xác nhận đề xuất, chuyển lên Thường trực Hội CCB xã
+  | "CHINH_THUC"        // Cán bộ xã đã phê duyệt kết nạp chính thức
+  | "TU_CHOI";          // Hồ sơ bị từ chối
 
 export interface MemberRecord {
   id: string;
@@ -149,132 +153,8 @@ import { EA_SUP_HAMLETS } from "./constants/hamlets";
 export { EA_SUP_HAMLETS };
 export const HAMLET_LIST = EA_SUP_HAMLETS;
 
-// Danh sách ban đầu chứa hồ sơ chính thức và 2 hồ sơ chờ duyệt mẫu
-export const INITIAL_MEMBERS: MemberRecord[] = [
-  // --- Hồ sơ mẫu 1: Chờ duyệt từ Thôn 1 ---
-  {
-    id: "PENDING_001",
-    cccd: "066068001234",
-    cccdIssueDate: "15/04/2022",
-    fullName: "Nguyễn Đình Quảng",
-    birthDate: "12/08/1968",
-    birthYear: 1968,
-    gender: "Nam",
-    phone: "0913456789",
-    hometown: "Huyện Nam Đàn, Tỉnh Nghệ An",
-    ethnicity: "Kinh",
-    religion: "Không",
-    hamletName: "Thôn 1",
-    currentAddress: "Số 45, Thôn 1, Xã Ea Súp, Tỉnh Đắk Lắk",
-    enlistmentDate: "03/1986",
-    militaryUnit: "Sư đoàn 330, Quân khu 9",
-    dischargeDate: "08/1989",
-    militaryRank: "Thượng sĩ",
-    militaryPosition: "Phó Trung đội trưởng",
-    militaryTraining: "Trường Quân chính Quân khu 9",
-    period: "Biên giới Tây Nam",
-    isCQN: false,
-    isHouseholdHead: true,
-    associationJoinDate: "02/10/2026",
-    associationRole: "Hội viên",
-    partyJoinDate: "19/05/1988",
-    partyOfficialDate: "19/05/1989",
-    partyCell: "Chi bộ Thôn 1",
-    partyBadge: "30 năm tuổi Đảng",
-    educationLevel: "12/12",
-    politicalTheory: "Sơ cấp",
-    professionalSkill: "Trung cấp Nông nghiệp",
-    policyStatus: "Thương binh 4/4 (21%)",
-    policyWoundRate: "21%",
-    hasHealthInsurance100: true,
-    healthInsuranceCode: "CB466068001234",
-    livingStandard: "KHONG_NGHEO",
-    isPoorHousehold: false,
-    isNearPoorHousehold: false,
-    hasDilapidatedHouse: false,
-    hasEconomicModel: true,
-    economicModelType: "Trang trại VAC",
-    economicModelName: "Trang trại sầu riêng và mít Thái 3.5ha",
-    economicRevenue: "450.000.000 đ",
-    economicLaborCount: 4,
-    economicIncome: "25.000.000 đ/tháng",
-    awards: "Huân chương Chiến sĩ Vẻ vang, Bằng khen Chủ tịch UBND xã 2024",
-    titles: "Hội viên gương mẫu làm kinh tế giỏi",
-    totalDebt: 0,
-    isDeceased: false,
-    isTransferred: false,
-    status: "PENDING_APPROVAL",
-    registrationStatus: "PENDING_APPROVAL",
-    branchApproved: false,
-    adminApproved: false,
-    submissionDate: "05/10/2026 08:30",
-    submittedBy: "Hội viên đăng ký trực tuyến (Thôn 1)",
-    attachedFiles: [
-      { name: "1. Don_xin_vao_Hoi_CCB_NguyenDinhQuang.pdf", size: 1845000, type: "application/pdf" },
-      { name: "2. Quyet_dinh_xuat_ngu_Su_doan_330.jpg", size: 2420000, type: "image/jpeg" },
-      { name: "3. Ban_chup_CCCD_2_mat_NguyenDinhQuang.jpg", size: 1150000, type: "image/jpeg" },
-      { name: "4. Giay_chung_nhan_thuong_binh_4_4.pdf", size: 1680000, type: "application/pdf" },
-      { name: "5. Chung_nhan_mo_hinh_kinh_te_VAC.jpg", size: 1950000, type: "image/jpeg" },
-    ],
-  },
-  // --- Hồ sơ mẫu 2: Chờ duyệt từ Thôn Thắng Lợi ---
-  {
-    id: "PENDING_002",
-    cccd: "066055009876",
-    fullName: "Lê Bá Tùng",
-    birthDate: "02/04/1955",
-    birthYear: 1955,
-    gender: "Nam",
-    phone: "0918765432",
-    hometown: "Quảng Bình",
-    ethnicity: "Kinh",
-    religion: "Không",
-    hamletName: "Thôn Thắng Lợi",
-    currentAddress: "Đường liên thôn, Thôn Thắng Lợi, Xã Ea Súp, Tỉnh Đắk Lắk",
-    enlistmentDate: "04/1973",
-    militaryUnit: "Trung đoàn 27 Triệu Hải",
-    dischargeDate: "12/1976",
-    militaryRank: "Trung sĩ",
-    militaryPosition: "Tiểu đội trưởng",
-    militaryTraining: "Lớp đào tạo Hạ sĩ quan",
-    period: "Kháng chiến chống Mỹ",
-    isCQN: false,
-    isHouseholdHead: true,
-    associationJoinDate: "06/10/2026",
-    associationRole: "Hội viên",
-    partyJoinDate: "",
-    educationLevel: "9/10",
-    politicalTheory: "Chưa qua",
-    professionalSkill: "Lao động tự do",
-    policyStatus: "Thương binh 4/4",
-    policyWoundRate: "28%",
-    memorialBadgeYear: 2020,
-    hasHealthInsurance100: true,
-    healthInsuranceCode: "CB466055009876",
-    livingStandard: "KHONG_NGHEO",
-    isPoorHousehold: false,
-    isNearPoorHousehold: false,
-    hasDilapidatedHouse: false,
-    hasEconomicModel: false,
-    awards: "Huân chương Chiến sĩ vẻ vang hạng Ba",
-    totalDebt: 30000000,
-    isDeceased: false,
-    isTransferred: false,
-    status: "PENDING_APPROVAL",
-    registrationStatus: "BRANCH_APPROVED",
-    branchApproved: true,
-    branchApprovedAt: "06/10/2026 09:15",
-    branchApprovedBy: "Chi hội trưởng Dương Minh Châu",
-    branchNotes: "Đã thẩm tra tư cách quân nhân trực tiếp tại thôn, gia đình gương mẫu, đủ điều kiện.",
-    adminApproved: false,
-    submissionDate: "07/10/2026 14:15",
-    submittedBy: "Chi hội trưởng Dương Minh Châu (Thôn Thắng Lợi)",
-    attachedFiles: [
-      { name: "Ban_chup_CCCD_LeBaTung.pdf", size: 1800000, type: "application/pdf" },
-      { name: "Giay_chung_nhan_thuong_binh.pdf", size: 2100000, type: "application/pdf" },
-    ],
-  },
-];
+// Danh sách ban đầu (mặc định rỗng, chỉ nạp 20 Chi hội trưởng chuẩn và hồ sơ do người dùng tạo)
+export const INITIAL_MEMBERS: MemberRecord[] = [];
 
 // Danh sách 20 Chi hội trưởng chuẩn xác xã Ea Súp
 export const OFFICIAL_BRANCH_LEADERS: MemberRecord[] = [
@@ -317,7 +197,7 @@ export const OFFICIAL_BRANCH_LEADERS: MemberRecord[] = [
     totalDebt: 30000000,
     isDeceased: false,
     isTransferred: false,
-    status: "ACTIVE",
+    status: "CHINH_THUC",
     approvalDate: "19/05/2010",
   },
   {
@@ -359,7 +239,7 @@ export const OFFICIAL_BRANCH_LEADERS: MemberRecord[] = [
     totalDebt: 0,
     isDeceased: false,
     isTransferred: false,
-    status: "ACTIVE",
+    status: "CHINH_THUC",
     approvalDate: "19/05/1995",
   },
   {
@@ -398,7 +278,7 @@ export const OFFICIAL_BRANCH_LEADERS: MemberRecord[] = [
     totalDebt: 20000000,
     isDeceased: false,
     isTransferred: false,
-    status: "ACTIVE",
+    status: "CHINH_THUC",
     approvalDate: "22/12/2018",
   },
   {
@@ -440,7 +320,7 @@ export const OFFICIAL_BRANCH_LEADERS: MemberRecord[] = [
     totalDebt: 0,
     isDeceased: false,
     isTransferred: false,
-    status: "ACTIVE",
+    status: "CHINH_THUC",
     approvalDate: "19/05/2000",
   },
   {
@@ -482,7 +362,7 @@ export const OFFICIAL_BRANCH_LEADERS: MemberRecord[] = [
     totalDebt: 40000000,
     isDeceased: false,
     isTransferred: false,
-    status: "ACTIVE",
+    status: "CHINH_THUC",
     approvalDate: "22/12/1998",
   },
   {
@@ -524,7 +404,7 @@ export const OFFICIAL_BRANCH_LEADERS: MemberRecord[] = [
     totalDebt: 0,
     isDeceased: false,
     isTransferred: false,
-    status: "ACTIVE",
+    status: "CHINH_THUC",
     approvalDate: "19/05/1996",
   },
   {
@@ -563,7 +443,7 @@ export const OFFICIAL_BRANCH_LEADERS: MemberRecord[] = [
     totalDebt: 25000000,
     isDeceased: false,
     isTransferred: false,
-    status: "ACTIVE",
+    status: "CHINH_THUC",
     approvalDate: "15/08/2008",
   },
   {
@@ -604,7 +484,7 @@ export const OFFICIAL_BRANCH_LEADERS: MemberRecord[] = [
     totalDebt: 0,
     isDeceased: false,
     isTransferred: false,
-    status: "ACTIVE",
+    status: "CHINH_THUC",
     approvalDate: "19/05/1997",
   },
   {
@@ -646,7 +526,7 @@ export const OFFICIAL_BRANCH_LEADERS: MemberRecord[] = [
     totalDebt: 50000000,
     isDeceased: false,
     isTransferred: false,
-    status: "ACTIVE",
+    status: "CHINH_THUC",
     approvalDate: "22/12/2000",
   },
   {
@@ -688,7 +568,7 @@ export const OFFICIAL_BRANCH_LEADERS: MemberRecord[] = [
     totalDebt: 0,
     isDeceased: false,
     isTransferred: false,
-    status: "ACTIVE",
+    status: "CHINH_THUC",
     approvalDate: "15/08/2006",
   },
   {
@@ -730,7 +610,7 @@ export const OFFICIAL_BRANCH_LEADERS: MemberRecord[] = [
     totalDebt: 0,
     isDeceased: false,
     isTransferred: false,
-    status: "ACTIVE",
+    status: "CHINH_THUC",
     approvalDate: "19/05/1999",
   },
   {
@@ -772,7 +652,7 @@ export const OFFICIAL_BRANCH_LEADERS: MemberRecord[] = [
     totalDebt: 30000000,
     isDeceased: false,
     isTransferred: false,
-    status: "ACTIVE",
+    status: "CHINH_THUC",
     approvalDate: "22/12/1997",
   },
   {
@@ -814,7 +694,7 @@ export const OFFICIAL_BRANCH_LEADERS: MemberRecord[] = [
     totalDebt: 0,
     isDeceased: false,
     isTransferred: false,
-    status: "ACTIVE",
+    status: "CHINH_THUC",
     approvalDate: "19/05/1996",
   },
   {
@@ -856,7 +736,7 @@ export const OFFICIAL_BRANCH_LEADERS: MemberRecord[] = [
     totalDebt: 0,
     isDeceased: false,
     isTransferred: false,
-    status: "ACTIVE",
+    status: "CHINH_THUC",
     approvalDate: "19/05/1995",
   },
   {
@@ -898,7 +778,7 @@ export const OFFICIAL_BRANCH_LEADERS: MemberRecord[] = [
     totalDebt: 0,
     isDeceased: false,
     isTransferred: false,
-    status: "ACTIVE",
+    status: "CHINH_THUC",
     approvalDate: "22/12/2001",
   },
   {
@@ -940,7 +820,7 @@ export const OFFICIAL_BRANCH_LEADERS: MemberRecord[] = [
     totalDebt: 35000000,
     isDeceased: false,
     isTransferred: false,
-    status: "ACTIVE",
+    status: "CHINH_THUC",
     approvalDate: "15/08/2015",
   },
   {
@@ -981,7 +861,7 @@ export const OFFICIAL_BRANCH_LEADERS: MemberRecord[] = [
     totalDebt: 0,
     isDeceased: false,
     isTransferred: false,
-    status: "ACTIVE",
+    status: "CHINH_THUC",
     approvalDate: "19/05/2000",
   },
   {
@@ -1023,7 +903,7 @@ export const OFFICIAL_BRANCH_LEADERS: MemberRecord[] = [
     totalDebt: 0,
     isDeceased: false,
     isTransferred: false,
-    status: "ACTIVE",
+    status: "CHINH_THUC",
     approvalDate: "22/12/1997",
   },
   {
@@ -1062,7 +942,7 @@ export const OFFICIAL_BRANCH_LEADERS: MemberRecord[] = [
     totalDebt: 20000000,
     isDeceased: false,
     isTransferred: false,
-    status: "ACTIVE",
+    status: "CHINH_THUC",
     approvalDate: "15/08/2016",
   },
   {
@@ -1104,12 +984,12 @@ export const OFFICIAL_BRANCH_LEADERS: MemberRecord[] = [
     totalDebt: 30000000,
     isDeceased: false,
     isTransferred: false,
-    status: "ACTIVE",
+    status: "CHINH_THUC",
     approvalDate: "22/12/2005",
   },
 ];
 
-const STORAGE_KEY = "eccb_easup_members_v4";
+const STORAGE_KEY = "eccb_easup_members_v5";
 
 export const VALID_20_CHT_CCCD = [
   "0982257421", "034050005833", "0839931193", "0420670022", "025065000445",
@@ -1123,10 +1003,11 @@ export function getStoredMembers(): MemberRecord[] {
     return [...OFFICIAL_BRANCH_LEADERS, ...INITIAL_MEMBERS];
   }
   try {
-    // Dọn dẹp sạch cache phiên bản cũ
+    // Dọn dẹp sạch cache các phiên bản cũ
     localStorage.removeItem("eccb-easup_members_v1");
     localStorage.removeItem("eccb-easup_members_v2");
     localStorage.removeItem("eccb_easup_members_v3");
+    localStorage.removeItem("eccb_easup_members_v4");
 
     const raw = localStorage.getItem(STORAGE_KEY);
     let currentList: MemberRecord[] = [];
@@ -1141,37 +1022,46 @@ export function getStoredMembers(): MemberRecord[] {
       }
     }
 
-    // 1. LOẠI BỎ TOÀN BỘ CHI HỘI TRƯỞNG ẢO VÀ HỘI VIÊN ẢO (NHƯ ĐẶNG HỮU PHÚC)
+    // 1. LOẠI BỎ TOÀN BỘ CHI HỘI TRƯỞNG ẢO VÀ HỘI VIÊN ẢO (NHƯ ĐẶNG HỮU PHÚC, NGUYỄN ĐÌNH QUẢNG, LÊ BÁ TÙNG)
     const validCccdSet = new Set(VALID_20_CHT_CCCD);
     currentList = currentList.filter((m) => {
-      // Xóa bỏ tài khoản ảo Đặng Hữu Phúc
       if (m.fullName === "Đặng Hữu Phúc" || m.cccd === "066067000113") return false;
-      // Nếu là Chi hội trưởng, CCCD bắt buộc phải nằm trong danh sách 20 CCCD chuẩn
+      if (m.id === "PENDING_001" || m.id === "PENDING_002") return false;
+      if (m.fullName === "Nguyễn Đình Quảng" && m.cccd === "066068001234") return false;
+      if (m.fullName === "Lê Bá Tùng" && m.cccd === "066055009876") return false;
       if (m.associationRole === "Chi hội trưởng" && !validCccdSet.has(m.cccd)) {
         return false;
       }
       return true;
     });
 
-    // 2. GÁN CỨNG 20 CHI HỘI TRƯỞNG THỰC TẾ VÀO ĐÚNG THÔN BUÔN CỦA MÌNH (DEDUPLICATE BẰNG MAP)
+    // 2. CHUẨN HÓA TRẠNG THÁI PHÊ DUYỆT 2 CẤP CHO HỘI VIÊN
+    currentList = currentList.map((m) => {
+      let st: ApprovalStatus = "CHINH_THUC";
+      if ((m.status as any) === "ACTIVE" || m.status === "CHINH_THUC") {
+        st = "CHINH_THUC";
+      } else if ((m.status as any) === "REJECTED" || m.status === "TU_CHOI") {
+        st = "TU_CHOI";
+      } else if (m.branchApproved) {
+        st = "CHO_XA_PHE_DUYET";
+      } else {
+        st = "CHO_CHI_HOI_DUYET";
+      }
+      return { ...m, status: st };
+    });
+
+    // 3. GÁN CỨNG 20 CHI HỘI TRƯỞNG THỰC TẾ VÀO ĐÚNG THÔN BUÔN CỦA MÌNH (DEDUPLICATE BẰNG MAP)
     const map = new Map<string, MemberRecord>();
 
-    // Đưa 20 Chi hội trưởng thật vào Map trước tiên theo CCCD
+    // Đưa 20 Chi hội trưởng thật vào Map trước tiên theo CCCD (Đảm bảo luôn chính thức)
     for (const leader of OFFICIAL_BRANCH_LEADERS) {
-      map.set(leader.cccd, { ...leader });
+      map.set(leader.cccd, { ...leader, status: "CHINH_THUC" });
     }
 
-    // Đưa các hội viên khác vào Map (nếu chưa có CCCD đó)
+    // Đưa các hội viên hợp lệ khác vào Map
     for (const m of currentList) {
       if (!map.has(m.cccd)) {
         map.set(m.cccd, m);
-      }
-    }
-
-    // Đưa các hồ sơ chờ duyệt mẫu từ INITIAL_MEMBERS nếu chưa có
-    for (const init of INITIAL_MEMBERS) {
-      if (!map.has(init.cccd)) {
-        map.set(init.cccd, init);
       }
     }
 
@@ -1220,6 +1110,9 @@ export function createPendingMember(member: Partial<MemberRecord>): MemberRecord
   const id = `MEM_${Date.now()}`;
   const now = new Date();
   const dateStr = `${String(now.getDate()).padStart(2, "0")}/${String(now.getMonth() + 1).padStart(2, "0")}/${now.getFullYear()} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+
+  const isBranchCreated = !!member.branchApproved;
+  const initialStatus: ApprovalStatus = isBranchCreated ? "CHO_XA_PHE_DUYET" : "CHO_CHI_HOI_DUYET";
 
   const newRecord: MemberRecord = {
     id,
@@ -1283,35 +1176,40 @@ export function createPendingMember(member: Partial<MemberRecord>): MemberRecord
     isDeceased: false,
     isTransferred: false,
 
-    // Trạng thái phê duyệt song trùng 2 cấp (Dual Approval)
-    status: "PENDING_APPROVAL",
-    registrationStatus: "PENDING_APPROVAL",
-    branchApproved: false,
+    // Quy trình xét duyệt 2 cấp: Bắt đầu từ cấp thôn hoặc trực tuyến, KHÔNG THỂ tạo thẳng CHINH_THUC
+    status: initialStatus,
+    registrationStatus: isBranchCreated ? "BRANCH_APPROVED" : "PENDING_APPROVAL",
+    branchApproved: isBranchCreated,
+    branchApprovedAt: isBranchCreated ? dateStr : undefined,
+    branchApprovedBy: member.branchApprovedBy,
+    branchNotes: member.branchNotes,
     adminApproved: false,
     submissionDate: dateStr,
-    submittedBy: member.submittedBy || `Hội viên đăng ký trực tuyến (${member.hamletName || "Thôn 1"})`,
+    submittedBy: member.submittedBy || `Hồ sơ đăng ký (${member.hamletName || "Thôn 1"})`,
     attachedFiles: member.attachedFiles || [],
   };
 
   const updatedList = [newRecord, ...currentList];
   saveStoredMembers(updatedList);
 
-  // Tự động kích hoạt chuông thông báo cho Chi hội trưởng và Cán bộ xã
+  // Tự động kích hoạt chuông thông báo
   try {
-    createNotification({
-      targetRole: "BRANCH_LEADER",
-      hamletName: newRecord.hamletName,
-      title: `Hồ sơ đăng ký mới: ${newRecord.fullName}`,
-      content: `Đ/c ${newRecord.fullName} (CCCD: ${newRecord.cccd}) vừa gửi hồ sơ đăng ký tại ${newRecord.hamletName}. Đề nghị Chi hội trưởng thẩm tra tư cách quân nhân.`,
-      type: "NEW_REGISTRATION",
-      linkUrl: "/branch",
-    });
+    if (!isBranchCreated) {
+      createNotification({
+        targetRole: "BRANCH_LEADER",
+        hamletName: newRecord.hamletName,
+        title: `Hồ sơ đăng ký mới: ${newRecord.fullName}`,
+        content: `Đ/c ${newRecord.fullName} (CCCD: ${newRecord.cccd}) vừa gửi hồ sơ tại ${newRecord.hamletName}. Đề nghị Chi hội trưởng thẩm tra tư cách quân nhân.`,
+        type: "NEW_REGISTRATION",
+        linkUrl: "/branch",
+      });
+    }
 
     createNotification({
       targetRole: "SUPER_ADMIN",
       hamletName: newRecord.hamletName,
-      title: `Hồ sơ đăng ký mới từ ${newRecord.hamletName}`,
-      content: `Có hồ sơ mới của đ/c ${newRecord.fullName} tại ${newRecord.hamletName} đang chờ quy trình xét duyệt song trùng 2 cấp.`,
+      title: `Hồ sơ mới từ ${newRecord.hamletName}: ${newRecord.fullName}`,
+      content: `Hồ sơ của đ/c ${newRecord.fullName} đang trong quy trình xét duyệt 2 cấp.`,
       type: "NEW_REGISTRATION",
       linkUrl: "/admin/members",
     });
@@ -1323,7 +1221,7 @@ export function createPendingMember(member: Partial<MemberRecord>): MemberRecord
 }
 
 /**
- * CẤP 1: CHI HỘI TRƯỞNG THẨM TRA VÀ PHÊ DUYỆT TƯ CÁCH QUÂN NHÂN
+ * CẤP 1: CHI HỘI TRƯỞNG THẨM TRA VÀ CHUYỂN LÊN THƯỜNG TRỰC XÃ (CHO_XA_PHE_DUYET)
  */
 export function approveMemberBranch(
   id: string,
@@ -1337,16 +1235,14 @@ export function approveMemberBranch(
   let target: MemberRecord | undefined;
   const updatedList = currentList.map((m) => {
     if (m.id === id) {
-      const isBothApproved = !!m.adminApproved;
       target = {
         ...m,
         branchApproved: true,
         branchApprovedAt: dateStr,
         branchApprovedBy: leaderName,
         branchNotes: notes || "Đã thẩm tra tư cách quân nhân tại thôn buôn, đủ tiêu chuẩn kết nạp.",
-        registrationStatus: (isBothApproved ? "APPROVED" : "BRANCH_APPROVED") as RegistrationStatus,
-        status: (isBothApproved ? "ACTIVE" : "PENDING_APPROVAL") as ApprovalStatus,
-        approvalDate: isBothApproved ? dateStr : m.approvalDate,
+        registrationStatus: "BRANCH_APPROVED",
+        status: "CHO_XA_PHE_DUYET", // Chuyển lên Thường trực Xã phê duyệt
       };
       return target;
     }
@@ -1355,7 +1251,6 @@ export function approveMemberBranch(
 
   if (target) {
     saveStoredMembers(updatedList);
-    // Gửi thông báo tới Ban Thường trực Xã
     createNotification({
       targetRole: "SUPER_ADMIN",
       hamletName: target.hamletName,
@@ -1370,7 +1265,7 @@ export function approveMemberBranch(
 }
 
 /**
- * CẤP 2: THƯỜNG TRỰC HỘI CCB XÃ RA QUYẾT ĐỊNH PHÊ DUYỆT KẾT NẠP
+ * CẤP 2: THƯỜNG TRỰC HỘI CCB XÃ RA QUYẾT ĐỊNH PHÊ DUYỆT KẾT NẠP (CHÍNH THỨC)
  */
 export function approveMemberAdmin(
   id: string,
@@ -1384,16 +1279,15 @@ export function approveMemberAdmin(
   let target: MemberRecord | undefined;
   const updatedList = currentList.map((m) => {
     if (m.id === id) {
-      const isBothApproved = !!m.branchApproved;
       target = {
         ...m,
         adminApproved: true,
         adminApprovedAt: dateStr,
         adminApprovedBy: adminName,
         adminNotes: decisionNotes || "Quyết định kết nạp chuẩn y bởi Thường trực Hội CCB Xã Ea Súp.",
-        registrationStatus: (isBothApproved ? "APPROVED" : "ADMIN_APPROVED") as RegistrationStatus,
-        status: (isBothApproved ? "ACTIVE" : "PENDING_APPROVAL") as ApprovalStatus,
-        approvalDate: isBothApproved ? dateStr : m.approvalDate,
+        registrationStatus: "APPROVED",
+        status: "CHINH_THUC", // Chính thức là hội viên CCB
+        approvalDate: dateStr,
       };
       return target;
     }
@@ -1402,13 +1296,12 @@ export function approveMemberAdmin(
 
   if (target) {
     saveStoredMembers(updatedList);
-    // Gửi thông báo tới Chi hội trưởng
     createNotification({
       targetRole: "BRANCH_LEADER",
       hamletName: target.hamletName,
       title: `Thường trực Xã đã phê duyệt kết nạp: ${target.fullName}`,
-      content: `${adminName} đã ký duyệt Quyết định kết nạp cho đ/c ${target.fullName}. ${target.branchApproved ? "Hồ sơ đã hoàn tất 2 cấp, chính thức là hội viên." : "Chờ Chi hội thẩm tra xác nhận."}`,
-      type: target.registrationStatus === "APPROVED" ? "ADMISSION_SUCCESS" : "DUAL_APPROVAL_STEP",
+      content: `${adminName} đã ký duyệt Quyết định kết nạp cho đ/c ${target.fullName}. Hồ sơ chính thức được ghi tên vào danh sách hội viên.`,
+      type: "ADMISSION_SUCCESS",
       linkUrl: `/branch`,
     });
     return { success: true, member: target };
@@ -1417,7 +1310,7 @@ export function approveMemberAdmin(
 }
 
 /**
- * TỪ CHỐI HỒ SƠ ĐĂNG KÝ (CÓ LÝ DO)
+ * TỪ CHỐI HỒ SƠ ĐĂNG KÝ (TU_CHOI)
  */
 export function rejectMemberDual(
   id: string,
@@ -1430,8 +1323,8 @@ export function rejectMemberDual(
     if (m.id === id) {
       target = {
         ...m,
-        status: "REJECTED" as ApprovalStatus,
-        registrationStatus: "REJECTED" as RegistrationStatus,
+        status: "TU_CHOI",
+        registrationStatus: "REJECTED",
         rejectionReason: reason || "Chưa đủ tiêu chuẩn kết nạp theo Điều lệ Hội CCB Việt Nam",
       };
       return target;
@@ -1455,11 +1348,11 @@ export function rejectMemberDual(
 }
 
 export function approveMember(id: string): boolean {
-  return approveMemberBranch(id, "Đã thẩm tra hợp lệ", "Chi hội trưởng CCB").success;
+  return approveMemberAdmin(id, "Quyết định kết nạp chuẩn y bởi Ban Thường trực Hội CCB Xã Ea Súp", "Ban Thường trực Hội CCB Xã").success;
 }
 
 export function rejectMember(id: string, reason: string): boolean {
-  return rejectMemberDual(id, reason, "Chi hội trưởng CCB").success;
+  return rejectMemberDual(id, reason, "Ban Thường trực Hội CCB Xã Ea Súp").success;
 }
 
 const MOVEMENTS_STORAGE_KEY = "eccb-easup_movements_v1";
@@ -1544,13 +1437,13 @@ export function recordLocalMovement(data: {
           isExpelled: true,
           expelledDate: data.eventDate,
           expelledReason: data.reason || "Quyết định xóa tên",
-          status: "REJECTED" as ApprovalStatus,
+          status: "TU_CHOI" as ApprovalStatus,
         };
       } else if (data.type === "TRANSFER_IN") {
         return {
           ...m,
           isTransferred: false,
-          status: "ACTIVE" as ApprovalStatus,
+          status: "CHINH_THUC" as ApprovalStatus,
         };
       }
     }

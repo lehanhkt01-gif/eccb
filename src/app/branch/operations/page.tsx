@@ -373,7 +373,7 @@ export default function BranchOperationsPage() {
           totalDebt: 0,
           isDeceased: false,
           isTransferred: false,
-          status: "ACTIVE",
+          status: "CHINH_THUC",
           approvalDate: new Date().toLocaleDateString("vi-VN"),
         };
         const updated = [newMember, ...currentList];

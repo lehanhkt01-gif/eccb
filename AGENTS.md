@@ -108,6 +108,7 @@ Dự án phục vụ Hội Cựu Chiến Binh xã Ea Súp, mang tính trang tr�
 | **17** | **Sắp xếp Nút Đăng nhập & Dọn dẹp Hội viên Ảo** | Sắp xếp nút Đăng nhập theo thứ tự Hội viên (mặc định) -> Chi hội -> Cán bộ xã (cả Form Login & Dropdown Header); Xóa vĩnh viễn hội viên ảo (Đặng Hữu Phúc), deduplicate chống trùng lặp (Hồ Sỹ Tuấn); Sửa logic bộ lọc thôn buôn AND chặt chẽ; Bổ sung script `prisma/cleanup-and-sync.ts` & API `/api/admin/cleanup-and-sync` | ✅ **Đã hoàn thành** |
 | **18** | **Khóa Chặt CSDL & Chống Mất Dữ Liệu VPS** | Vô hiệu hóa reset CSDL và seed tự động; Thêm Idempotent guard vào `prisma/seed.ts`; Gắn Named Volumes cố định `eccb_postgres_data` và `eccb_uploads_data`; Chuyển 100% lưu trữ bản tin sang PostgreSQL Prisma ORM; Tạo script `deploy.sh` tự động dump backup trước khi update | ✅ **Đã hoàn thành** |
 | **19** | **Dọn Dẹp Chọn Lọc Dữ Liệu Test Ảo** | Tạo `scripts/clean-mock-data.ts` và API `/api/admin/clean-mock-data`; Bảo tồn 100% bản tin Article và 20 Chi hội trưởng thật; Xóa sạch hội viên/User ảo và thông báo test cũ (chuông thông báo sạch) | ✅ **Đã hoàn thành** |
-| **20** | **Triển khai VPS & SSL HTTPS** | Docker compose up trên VPS Maydell, cấu hình Nginx Proxy Manager domain `ccb.easupso.com` | ⏳ *Giai đoạn kế tiếp* |
+| **20** | **Gỡ Gợi Ý Mật Khẩu & Quy Trình Duyệt 2 Cấp** | Gỡ bỏ 100% badge/text mật khẩu mặc định trên Login, Permissions, Modal; Cập nhật Enum MemberStatus (`CHO_CHI_HOI_DUYET`, `CHO_XA_PHE_DUYET`, `CHINH_THUC`, `TU_CHOI`); Phân tách 2 cấp duyệt rõ ràng; Xóa sạch hồ sơ ảo | ✅ **Đã hoàn thành** |
+| **21** | **Triển khai VPS & SSL HTTPS** | Docker compose up trên VPS Maydell, cấu hình Nginx Proxy Manager domain `ccb.easupso.com` | ⏳ *Giai đoạn kế tiếp* |
 
 
