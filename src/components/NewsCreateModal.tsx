@@ -418,7 +418,7 @@ export default function NewsCreateModal({
             title: `Bản tin mới chờ phê duyệt: ${title.trim()}`,
             content: `Đồng chí ${author.trim()} (${currentUser?.hamletName || "Chi hội cơ sở"}) vừa gửi bài viết "${title.trim()}". Đề nghị Cán bộ xã thẩm định và phê duyệt xuất bản.`,
             type: "NEW_ARTICLE_PENDING",
-            linkUrl: "/tin-tuc",
+            linkUrl: "/tin-tuc?tab=pending",
           });
         } else if (isCadre && submitStatus === "APPROVED") {
           // Cán bộ xã phát hành tin tức: Thông báo toàn hệ thống

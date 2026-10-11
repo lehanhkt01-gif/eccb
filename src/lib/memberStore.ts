@@ -2510,7 +2510,7 @@ export function getStoredNotifications(): NotificationRecord[] {
           title: "Bản tin mới chờ duyệt: Sinh hoạt Chi hội Buôn A",
           content: "Đồng chí Y Nô Rcăm (Chi hội trưởng Buôn A) vừa gửi bản tin 'Chi hội CCB Buôn A tổ chức sinh hoạt định kỳ quý IV'. Đề nghị Thường trực Xã thẩm định và phê duyệt.",
           type: "NEW_ARTICLE_PENDING",
-          linkUrl: "/tin-tuc",
+          linkUrl: "/tin-tuc?tab=pending",
           isRead: false,
           createdAt: new Date().toISOString(),
         },

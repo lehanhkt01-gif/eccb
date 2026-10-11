@@ -87,8 +87,12 @@ export default function NotificationBell({
       } else {
         router.push("/admin/members");
       }
+    } else if (notif.type === "NEW_ARTICLE_PENDING") {
+      router.push("/tin-tuc?tab=pending");
     } else if (notif.linkUrl) {
       router.push(notif.linkUrl);
+    } else {
+      router.push("/tin-tuc");
     }
   };
 
