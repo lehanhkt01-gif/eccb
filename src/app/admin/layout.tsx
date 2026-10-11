@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import NotificationBell from "@/components/NotificationBell";
+import { getCurrentUser, AuthUser, AUTH_CHANGE_EVENT } from "@/lib/authSession";
 
 export default function AdminLayout({
   children,
@@ -12,6 +14,27 @@ export default function AdminLayout({
 }) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [currentUser, setCurrentUserState] = useState<AuthUser | null>(() => {
+    return getCurrentUser() || {
+      username: "trunghieuktkt@gmail.com",
+      fullName: "Đặng Trung Hiếu",
+      role: "SUPER_ADMIN",
+    };
+  });
+
+  useEffect(() => {
+    const handleAuth = () => {
+      const u = getCurrentUser();
+      if (u) setCurrentUserState(u);
+    };
+    window.addEventListener(AUTH_CHANGE_EVENT, handleAuth);
+    return () => window.removeEventListener(AUTH_CHANGE_EVENT, handleAuth);
+  }, []);
+
+  const cleanName = (currentUser?.fullName || "Đặng Trung Hiếu")
+    .replace(/^(đ\/c|đồng chí)\s+/i, "")
+    .split(" - ")[0]
+    .trim();
 
   const navItems = [
     {
@@ -98,15 +121,21 @@ export default function AdminLayout({
             </Link>
           </div>
 
-          {/* User Profile Info */}
-          <div className="flex items-center gap-3">
-            <div className="hidden sm:block text-right">
-              <div className="text-xs font-bold text-amber-300">
-                Đ/c Đặng Trung Hiếu
-              </div>
-              <div className="text-[11px] text-emerald-100">
-                Chủ tịch Hội • SuperAdmin
-              </div>
+          {/* User Profile Info & Header Actions */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Chuông Thông Báo Đồng Bộ Cán Bộ Xã */}
+            <NotificationBell currentUser={currentUser} />
+
+            {/* Khung Thông Tin Cán Bộ Chuẩn Hóa: Bỏ Đ/c, badge pill CB bo tròn tinh tế */}
+            <div className="flex items-center gap-1.5 bg-[#1e381d] hover:bg-[#254624] border border-[#B45309] px-2.5 py-1 rounded-md text-xs shadow-xs transition">
+              <span className="text-yellow-300 font-bold text-xs">⭐</span>
+              <span className="font-bold text-yellow-200 truncate max-w-[120px] sm:max-w-[160px]">
+                {cleanName}
+              </span>
+              <span className="bg-[#9E1A1A] border border-amber-400/40 text-[10.5px] font-bold text-amber-200 px-2 py-0.5 rounded-full tracking-normal shrink-0 ml-1 shadow-xs">
+                CB
+              </span>
+              <span className="text-[10px] text-amber-300 ml-0.5">▼</span>
             </div>
 
             <Link
@@ -120,7 +149,7 @@ export default function AdminLayout({
 
             <Link
               href="/login"
-              className="px-3 py-1.5 bg-flag-red hover:bg-flag-red-light text-white text-xs font-bold rounded border border-amber-400/30 shadow-xs transition"
+              className="px-2.5 sm:px-3 py-1.5 bg-flag-red hover:bg-flag-red-light text-white text-xs font-bold rounded border border-amber-400/30 shadow-xs transition"
             >
               Đăng Xuất
             </Link>

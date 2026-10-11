@@ -69,16 +69,15 @@ export default function Header({
     }
   };
 
-  // Format tên cán bộ / hội viên theo tác phong quân đội: "Đ/c Họ và Tên"
+  // Format tên hiển thị sạch không chứa tiền tố: "Họ và Tên"
   const getSalutationName = (user: AuthUser) => {
     let name = user.fullName || user.username;
     // Bỏ hậu tố nếu có dạng "Đặng Trung Hiếu - Chủ tịch Hội CCB Xã"
     if (name.includes(" - ")) {
       name = name.split(" - ")[0].trim();
     }
-    if (!name.toLowerCase().startsWith("đ/c") && !name.toLowerCase().startsWith("đồng chí")) {
-      return `Đ/c ${name}`;
-    }
+    // Xóa bỏ hoàn toàn tiền tố Đ/c hoặc Đồng chí theo quy định hiển thị mới
+    name = name.replace(/^(đ\/c|đồng chí)\s+/i, "").trim();
     return name;
   };
 
@@ -254,16 +253,16 @@ export default function Header({
                     <span className="font-semibold text-yellow-200 truncate max-w-[85px] sm:max-w-[130px]">
                       {getSalutationName(currentUser)}
                     </span>
-                    {/* Badge vai trò viết tắt [CB], [CHT], [HV] chuẩn quân đội */}
-                    <span className="bg-[#9E1A1A] border border-[#B45309]/80 text-[10px] text-white px-1 py-0.2 rounded font-bold tracking-tight shrink-0">
+                    {/* Badge vai trò pill bo tròn tinh tế: CB, CHT, HV (không có ngoặc vuông) */}
+                    <span className="bg-[#9E1A1A] border border-amber-400/40 text-[10.5px] text-amber-200 px-2 py-0.5 rounded-full font-bold tracking-normal shrink-0 ml-1.5 shadow-xs">
                       {currentUser.role === "SUPER_ADMIN"
-                        ? "[CB]"
+                        ? "CB"
                         : currentUser.role === "BRANCH_LEADER"
-                        ? "[CHT]"
-                        : "[HV]"}
+                        ? "CHT"
+                        : "HV"}
                     </span>
-                    <span className={`text-[10px] text-yellow-400 transition-transform duration-200 ${menuOpen ? "rotate-180" : ""}`}>
-                      ▾
+                    <span className={`text-[10px] text-amber-300 transition-transform duration-200 ${menuOpen ? "rotate-180" : ""}`}>
+                      ▼
                     </span>
                   </button>
 

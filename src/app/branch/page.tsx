@@ -610,7 +610,7 @@ export default function BranchMobilePage() {
                 </span>
               </div>
               <h1 className="text-base font-bold leading-tight">
-                Đ/c {currentHamlet.leader}
+                {currentHamlet.leader.replace(/^(đ\/c|đồng chí)\s+/i, "")}
               </h1>
             </div>
           </div>

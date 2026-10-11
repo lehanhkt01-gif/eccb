@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { AuthUser } from "@/lib/authSession";
 import { Article } from "@/lib/newsService";
 import FormattedContent from "@/components/FormattedContent";
+import { createNotification } from "@/lib/memberStore";
 
 interface NewsCreateModalProps {
   isOpen: boolean;
@@ -407,6 +408,31 @@ export default function NewsCreateModal({
             : "Đã phát hành bản tin tuyên truyền thành công!"
           : "✓ Đã gửi bài viết thành công! Đang chờ Ban Thường trực Hội CCB Xã Ea Súp thẩm tra & phê duyệt."
       );
+
+      // Tự động tạo thông báo gửi đến chuông thông báo tương ứng
+      try {
+        if (!isCadre) {
+          // Chi hội trưởng hoặc Hội viên gửi: Gửi thông báo đến Cán bộ xã (SUPER_ADMIN)
+          createNotification({
+            targetRole: "SUPER_ADMIN",
+            title: `Bản tin mới chờ phê duyệt: ${title.trim()}`,
+            content: `Đồng chí ${author.trim()} (${currentUser?.hamletName || "Chi hội cơ sở"}) vừa gửi bài viết "${title.trim()}". Đề nghị Cán bộ xã thẩm định và phê duyệt xuất bản.`,
+            type: "NEW_ARTICLE_PENDING",
+            linkUrl: "/tin-tuc",
+          });
+        } else if (isCadre && submitStatus === "APPROVED") {
+          // Cán bộ xã phát hành tin tức: Thông báo toàn hệ thống
+          createNotification({
+            targetRole: "ALL",
+            title: `Bản tin mới xuất bản: ${title.trim()}`,
+            content: `Thường trực Hội CCB Xã Ea Súp vừa phát hành bản tin mới "${title.trim()}". Kính mời cán bộ, hội viên đón đọc.`,
+            type: "ARTICLE_APPROVED",
+            linkUrl: "/tin-tuc",
+          });
+        }
+      } catch (notifErr) {
+        console.warn("Không thể tạo thông báo chuông:", notifErr);
+      }
 
       setTimeout(() => {
         onSuccess();

@@ -20,6 +20,7 @@ import {
   MemberMovementRecord,
   approveMember,
   rejectMember,
+  updateStoredMember,
   HAMLET_LIST,
 } from "@/lib/memberStore";
 
@@ -35,6 +36,9 @@ export default function AdminMembersPage() {
   const [isHousingFilter, setIsHousingFilter] = useState("all");
 
   const [activeModalMember, setActiveModalMember] = useState<MemberRecord | null>(null);
+  const [editingMember, setEditingMember] = useState<MemberRecord | null>(null);
+  const [editTab, setEditTab] = useState<"personal" | "military" | "party" | "policy">("personal");
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [memberToApprove, setMemberToApprove] = useState<MemberRecord | null>(null);
   const [memberToReject, setMemberToReject] = useState<MemberRecord | null>(null);
   const [rejectReason, setRejectReason] = useState("");
@@ -98,9 +102,30 @@ export default function AdminMembersPage() {
     showToast(`🔄 Đã chuyển hồ sơ đ/c ${fullName} về trạng thái Chờ duyệt!`);
   };
 
+  // Xử lý lưu chỉnh sửa 35 trường thông tin
+  const handleSaveEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingMember) return;
+    setIsSavingEdit(true);
+    try {
+      const res = updateStoredMember(editingMember.id, editingMember);
+      if (res) {
+        showToast(`✅ Đã cập nhật thành công hồ sơ đ/c ${editingMember.fullName}!`);
+        setEditingMember(null);
+      } else {
+        alert("Không tìm thấy hồ sơ để cập nhật.");
+      }
+    } catch (err) {
+      console.error("Lỗi cập nhật hồ sơ:", err);
+      alert("Đã xảy ra lỗi khi lưu hồ sơ.");
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
+
   // Bộ lọc thông minh 35 trường thông tin áp dụng cho danh sách hội viên chính thức
   const filteredActiveMembers = useMemo(() => {
-    return activeMembers.filter((m) => {
+    const list = activeMembers.filter((m) => {
       // Tìm kiếm từ khóa
       const query = searchQuery.toLowerCase().trim();
       if (query) {
@@ -133,6 +158,16 @@ export default function AdminMembersPage() {
       if (isHousingFilter === "model" && !m.hasEconomicModel) return false;
 
       return true;
+    });
+
+    // Ưu tiên Chi hội trưởng đứng đầu danh sách trong từng thôn buôn / toàn xã
+    return [...list].sort((a, b) => {
+      const isLeaderA = a.associationRole === "Chi hội trưởng" ? 1 : 0;
+      const isLeaderB = b.associationRole === "Chi hội trưởng" ? 1 : 0;
+      if (isLeaderA !== isLeaderB) {
+        return isLeaderB - isLeaderA;
+      }
+      return a.fullName.localeCompare(b.fullName, "vi");
     });
   }, [activeMembers, searchQuery, selectedHamlet, selectedPeriod, selectedPolicy, isPartyFilter, isHousingFilter]);
 
@@ -564,7 +599,7 @@ export default function AdminMembersPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-stone-300">
         <div>
           <h2 className="text-xl sm:text-2xl font-bold uppercase tracking-tight text-deep-text">
-            Quản Lý Hồ Sơ Hội Viên CCB — Phiếu Mẫu 02
+            Quản Lý Hồ Sơ Hội Viên CCB
           </h2>
           <p className="text-sm text-deep-muted mt-0.5">
             Cơ sở dữ liệu 35 trường thông tin • Cơ chế xét duyệt hồ sơ chi hội nộp lên • Xuất văn bản Word (.docx) chuẩn Nghị định 30/2020/NĐ-CP
@@ -1087,6 +1122,11 @@ export default function AdminMembersPage() {
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span>{m.fullName}</span>
                           <span className="text-xs text-deep-muted font-normal">({m.birthYear})</span>
+                          {m.associationRole === "Chi hội trưởng" && (
+                            <span className="px-2 py-0.5 bg-[#9E1A1A] text-amber-200 text-[10px] font-bold rounded-full shadow-xs">
+                              Chi hội trưởng
+                            </span>
+                          )}
                           {m.approvalDate && (
                             <span className="px-1.5 py-0.2 bg-emerald-100 text-emerald-800 text-[9px] font-bold rounded">
                               Mới duyệt
@@ -1156,6 +1196,17 @@ export default function AdminMembersPage() {
                             title="Xem toàn bộ 35 trường thông tin"
                           >
                             👁️ Chi tiết
+                          </button>
+                          <button
+                            onClick={() => {
+                              setEditingMember({ ...m });
+                              setEditTab("personal");
+                            }}
+                            className="border border-[#244023] text-[#244023] hover:bg-[#244023] hover:text-white px-2.5 py-1 rounded text-xs font-medium transition flex items-center gap-1 shadow-2xs"
+                            title="Chỉnh sửa 35 trường thông tin hồ sơ"
+                          >
+                            <span>✏️</span>
+                            <span>Sửa</span>
                           </button>
                           <button
                             onClick={() => exportDocx(m)}
@@ -1459,6 +1510,593 @@ export default function AdminMembersPage() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==================================================================== */}
+      {/* MODAL CHỈNH SỬA HỒ SƠ HỘI VIÊN 35 TRƯỜNG THÔNG TIN (DÀNH CHO CÁN BỘ XÃ)*/}
+      {/* ==================================================================== */}
+      {editingMember && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
+          <div className="bg-cream-bg rounded-2xl max-w-3xl w-full max-h-[92vh] flex flex-col border-4 border-moss-green shadow-2xl overflow-hidden">
+            {/* Header Modal */}
+            <div className="bg-moss-green text-white p-4 sm:px-6 flex items-start justify-between shrink-0">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 bg-bronze-gold text-white text-[11px] font-bold rounded">
+                    QUYỀN HẠN CÁN BỘ XÃ
+                  </span>
+                  <span className="text-xs text-amber-200 font-semibold">
+                    Cập nhật 35 trường thông tin
+                  </span>
+                </div>
+                <h3 className="text-lg sm:text-xl font-bold uppercase tracking-tight text-white mt-1">
+                  ✏️ Chỉnh Sửa Hồ Sơ: {editingMember.fullName}
+                </h3>
+                <p className="text-xs text-white/80 font-mono mt-0.5">
+                  CCCD: {editingMember.cccd} • Sinh hoạt tại: {editingMember.hamletName}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingMember(null)}
+                className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 text-white font-bold flex items-center justify-center shrink-0 transition"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Thanh Tab Chuyển 4 Khối Nghiệp Vụ */}
+            <div className="flex border-b border-stone-300 bg-stone-100 shrink-0 overflow-x-auto text-xs font-bold">
+              <button
+                type="button"
+                onClick={() => setEditTab("personal")}
+                className={`py-2.5 px-4 whitespace-nowrap transition border-b-2 flex items-center gap-1.5 ${
+                  editTab === "personal"
+                    ? "border-moss-green text-moss-green bg-white shadow-xs"
+                    : "border-transparent text-stone-600 hover:text-stone-900"
+                }`}
+              >
+                <span>👤</span>
+                <span>1. Cá Nhân & Cư Trú</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditTab("military")}
+                className={`py-2.5 px-4 whitespace-nowrap transition border-b-2 flex items-center gap-1.5 ${
+                  editTab === "military"
+                    ? "border-moss-green text-moss-green bg-white shadow-xs"
+                    : "border-transparent text-stone-600 hover:text-stone-900"
+                }`}
+              >
+                <span>🎖️</span>
+                <span>2. Quá Trình Quân Ngũ</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditTab("party")}
+                className={`py-2.5 px-4 whitespace-nowrap transition border-b-2 flex items-center gap-1.5 ${
+                  editTab === "party"
+                    ? "border-moss-green text-moss-green bg-white shadow-xs"
+                    : "border-transparent text-stone-600 hover:text-stone-900"
+                }`}
+              >
+                <span>🚩</span>
+                <span>3. Hội CCB & Đảng CSVN</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditTab("policy")}
+                className={`py-2.5 px-4 whitespace-nowrap transition border-b-2 flex items-center gap-1.5 ${
+                  editTab === "policy"
+                    ? "border-moss-green text-moss-green bg-white shadow-xs"
+                    : "border-transparent text-stone-600 hover:text-stone-900"
+                }`}
+              >
+                <span>🌾</span>
+                <span>4. Chính Sách & Kinh Tế</span>
+              </button>
+            </div>
+
+            {/* Form Nội Dung 35 Trường */}
+            <form onSubmit={handleSaveEdit} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+              {/* TAB 1: CÁ NHÂN & CƯ TRÚ */}
+              {editTab === "personal" && (
+                <div className="space-y-3 bg-white p-4 rounded-xl border border-stone-200">
+                  <h4 className="font-bold text-moss-green uppercase text-xs border-b pb-1.5 flex items-center gap-1.5">
+                    <span>👤</span>
+                    <span>I. Thông Tin Cá Nhân & Nơi Cư Trú Hiện Nay</span>
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <label className="block text-stone-600 font-semibold mb-1">Họ và tên hội viên: *</label>
+                      <input
+                        type="text"
+                        required
+                        value={editingMember.fullName}
+                        onChange={(e) => setEditingMember({ ...editingMember, fullName: e.target.value })}
+                        className="w-full p-2 bg-stone-50 border border-stone-300 rounded font-bold text-deep-text focus:border-moss-green"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-stone-600 font-semibold mb-1">Số CCCD (12 chữ số): *</label>
+                      <input
+                        type="text"
+                        required
+                        maxLength={12}
+                        value={editingMember.cccd}
+                        onChange={(e) => setEditingMember({ ...editingMember, cccd: e.target.value })}
+                        className="w-full p-2 bg-stone-50 border border-stone-300 rounded font-mono font-bold text-deep-text focus:border-moss-green"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-stone-600 font-semibold mb-1">Ngày cấp CCCD:</label>
+                      <input
+                        type="text"
+                        placeholder="DD/MM/YYYY"
+                        value={editingMember.cccdIssueDate || ""}
+                        onChange={(e) => setEditingMember({ ...editingMember, cccdIssueDate: e.target.value })}
+                        className="w-full p-2 bg-stone-50 border border-stone-300 rounded focus:border-moss-green"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-stone-600 font-semibold mb-1">Số điện thoại liên hệ:</label>
+                      <input
+                        type="tel"
+                        value={editingMember.phone}
+                        onChange={(e) => setEditingMember({ ...editingMember, phone: e.target.value })}
+                        className="w-full p-2 bg-stone-50 border border-stone-300 rounded font-medium focus:border-moss-green"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-stone-600 font-semibold mb-1">Ngày tháng năm sinh:</label>
+                      <input
+                        type="text"
+                        placeholder="DD/MM/YYYY"
+                        value={editingMember.birthDate || ""}
+                        onChange={(e) => setEditingMember({ ...editingMember, birthDate: e.target.value })}
+                        className="w-full p-2 bg-stone-50 border border-stone-300 rounded focus:border-moss-green"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-stone-600 font-semibold mb-1">Năm sinh: *</label>
+                        <input
+                          type="number"
+                          required
+                          value={editingMember.birthYear}
+                          onChange={(e) => setEditingMember({ ...editingMember, birthYear: parseInt(e.target.value) || 1960 })}
+                          className="w-full p-2 bg-stone-50 border border-stone-300 rounded font-bold focus:border-moss-green"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-stone-600 font-semibold mb-1">Giới tính:</label>
+                        <select
+                          value={editingMember.gender}
+                          onChange={(e) => setEditingMember({ ...editingMember, gender: e.target.value })}
+                          className="w-full p-2 bg-stone-50 border border-stone-300 rounded font-medium focus:border-moss-green"
+                        >
+                          <option value="Nam">Nam</option>
+                          <option value="Nữ">Nữ</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-stone-600 font-semibold mb-1">Dân tộc:</label>
+                      <input
+                        type="text"
+                        value={editingMember.ethnicity}
+                        onChange={(e) => setEditingMember({ ...editingMember, ethnicity: e.target.value })}
+                        className="w-full p-2 bg-stone-50 border border-stone-300 rounded focus:border-moss-green"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-stone-600 font-semibold mb-1">Tôn giáo:</label>
+                      <input
+                        type="text"
+                        value={editingMember.religion}
+                        onChange={(e) => setEditingMember({ ...editingMember, religion: e.target.value })}
+                        className="w-full p-2 bg-stone-50 border border-stone-300 rounded focus:border-moss-green"
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="block text-stone-600 font-semibold mb-1">Quê quán (xã/huyện/tỉnh):</label>
+                      <input
+                        type="text"
+                        value={editingMember.hometown}
+                        onChange={(e) => setEditingMember({ ...editingMember, hometown: e.target.value })}
+                        className="w-full p-2 bg-stone-50 border border-stone-300 rounded focus:border-moss-green"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-stone-600 font-semibold mb-1">Chi hội Thôn / Buôn sinh hoạt: *</label>
+                      <select
+                        value={editingMember.hamletName}
+                        onChange={(e) => setEditingMember({ ...editingMember, hamletName: e.target.value })}
+                        className="w-full p-2 bg-stone-50 border border-stone-300 rounded font-bold text-moss-green focus:border-moss-green"
+                      >
+                        {HAMLET_LIST.map((h) => (
+                          <option key={h} value={h}>{h}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-stone-600 font-semibold mb-1">Địa chỉ thường trú hiện nay:</label>
+                      <input
+                        type="text"
+                        value={editingMember.currentAddress}
+                        onChange={(e) => setEditingMember({ ...editingMember, currentAddress: e.target.value })}
+                        className="w-full p-2 bg-stone-50 border border-stone-300 rounded focus:border-moss-green"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 2: QUÁ TRÌNH QUÂN NGŨ */}
+              {editTab === "military" && (
+                <div className="space-y-3 bg-white p-4 rounded-xl border border-stone-200">
+                  <h4 className="font-bold text-moss-green uppercase text-xs border-b pb-1.5 flex items-center gap-1.5">
+                    <span>🎖️</span>
+                    <span>II. Quá Trình Quân Ngũ & Phục Vụ Tổ Quốc</span>
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <label className="block text-stone-600 font-semibold mb-1">Ngày nhập ngũ:</label>
+                      <input
+                        type="text"
+                        placeholder="MM/YYYY hoặc DD/MM/YYYY"
+                        value={editingMember.enlistmentDate || ""}
+                        onChange={(e) => setEditingMember({ ...editingMember, enlistmentDate: e.target.value })}
+                        className="w-full p-2 bg-stone-50 border border-stone-300 rounded focus:border-moss-green"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-stone-600 font-semibold mb-1">Ngày xuất ngũ / phục viên:</label>
+                      <input
+                        type="text"
+                        placeholder="MM/YYYY hoặc DD/MM/YYYY"
+                        value={editingMember.dischargeDate || ""}
+                        onChange={(e) => setEditingMember({ ...editingMember, dischargeDate: e.target.value })}
+                        className="w-full p-2 bg-stone-50 border border-stone-300 rounded focus:border-moss-green"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-stone-600 font-semibold mb-1">Cấp bậc quân hàm cao nhất:</label>
+                      <input
+                        type="text"
+                        value={editingMember.militaryRank}
+                        onChange={(e) => setEditingMember({ ...editingMember, militaryRank: e.target.value })}
+                        placeholder="Thượng sĩ, Trung úy, Thiếu tá..."
+                        className="w-full p-2 bg-stone-50 border border-stone-300 rounded font-bold focus:border-moss-green"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-stone-600 font-semibold mb-1">Chức vụ trong quân đội:</label>
+                      <input
+                        type="text"
+                        value={editingMember.militaryPosition || ""}
+                        onChange={(e) => setEditingMember({ ...editingMember, militaryPosition: e.target.value })}
+                        placeholder="Chiến sĩ, Tiểu đội trưởng, Đại đội trưởng..."
+                        className="w-full p-2 bg-stone-50 border border-stone-300 rounded focus:border-moss-green"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-stone-600 font-semibold mb-1">Đơn vị khi tại ngũ:</label>
+                      <input
+                        type="text"
+                        value={editingMember.militaryUnit || ""}
+                        onChange={(e) => setEditingMember({ ...editingMember, militaryUnit: e.target.value })}
+                        placeholder="Trung đoàn 1, Sư đoàn 330, Quân khu 9..."
+                        className="w-full p-2 bg-stone-50 border border-stone-300 rounded focus:border-moss-green"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-stone-600 font-semibold mb-1">Thời kỳ chiến đấu / phục vụ: *</label>
+                      <select
+                        value={editingMember.period}
+                        onChange={(e) => setEditingMember({ ...editingMember, period: e.target.value })}
+                        className="w-full p-2 bg-stone-50 border border-stone-300 rounded font-semibold focus:border-moss-green"
+                      >
+                        <option value="Kháng chiến chống Mỹ">Kháng chiến chống Mỹ</option>
+                        <option value="Biên giới Tây Nam">Biên giới Tây Nam</option>
+                        <option value="Biên giới phía Bắc">Biên giới phía Bắc</option>
+                        <option value="Nhiệm vụ Quốc tế">Nhiệm vụ Quốc tế (Campuchia, Lào)</option>
+                        <option value="Cựu quân nhân">Cựu quân nhân</option>
+                        <option value="Thời bình">Thời bình</option>
+                      </select>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="block text-stone-600 font-semibold mb-1">Đào tạo trường lớp quân đội:</label>
+                      <input
+                        type="text"
+                        value={editingMember.militaryTraining || ""}
+                        onChange={(e) => setEditingMember({ ...editingMember, militaryTraining: e.target.value })}
+                        placeholder="Trường Sĩ quan Lục quân, Trường Quân chính..."
+                        className="w-full p-2 bg-stone-50 border border-stone-300 rounded focus:border-moss-green"
+                      />
+                    </div>
+                    <div className="flex items-center gap-4 sm:col-span-2 pt-1">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={editingMember.isCQN}
+                          onChange={(e) => setEditingMember({ ...editingMember, isCQN: e.target.checked })}
+                          className="w-4 h-4 text-moss-green rounded"
+                        />
+                        <span className="font-semibold text-stone-700">Là Cựu quân nhân (CQN)</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={editingMember.isHouseholdHead}
+                          onChange={(e) => setEditingMember({ ...editingMember, isHouseholdHead: e.target.checked })}
+                          className="w-4 h-4 text-moss-green rounded"
+                        />
+                        <span className="font-semibold text-stone-700">Là chủ hộ gia đình</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 3: HỘI & ĐẢNG */}
+              {editTab === "party" && (
+                <div className="space-y-3 bg-white p-4 rounded-xl border border-stone-200">
+                  <h4 className="font-bold text-moss-green uppercase text-xs border-b pb-1.5 flex items-center gap-1.5">
+                    <span>🚩</span>
+                    <span>III. Công Tác Hội CCB & Xây Dựng Đảng CSVN</span>
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <label className="block text-stone-600 font-semibold mb-1">Chức vụ trong Hội CCB: *</label>
+                      <select
+                        value={editingMember.associationRole}
+                        onChange={(e) => setEditingMember({ ...editingMember, associationRole: e.target.value })}
+                        className="w-full p-2 bg-stone-50 border border-stone-300 rounded font-bold text-moss-green focus:border-moss-green"
+                      >
+                        <option value="Hội viên">Hội viên</option>
+                        <option value="Chi hội trưởng">Chi hội trưởng</option>
+                        <option value="Chi hội phó">Chi hội phó</option>
+                        <option value="Tổ trưởng">Tổ trưởng</option>
+                        <option value="Ủy viên BCH">Ủy viên BCH</option>
+                        <option value="Thường trực Hội">Thường trực Hội</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-stone-600 font-semibold mb-1">Ngày vào Hội CCB:</label>
+                      <input
+                        type="text"
+                        placeholder="DD/MM/YYYY"
+                        value={editingMember.associationJoinDate || ""}
+                        onChange={(e) => setEditingMember({ ...editingMember, associationJoinDate: e.target.value })}
+                        className="w-full p-2 bg-stone-50 border border-stone-300 rounded focus:border-moss-green"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-stone-600 font-semibold mb-1">Ngày vào Đảng CSVN (dự bị):</label>
+                      <input
+                        type="text"
+                        placeholder="DD/MM/YYYY hoặc để trống nếu chưa vào"
+                        value={editingMember.partyJoinDate || ""}
+                        onChange={(e) => setEditingMember({ ...editingMember, partyJoinDate: e.target.value })}
+                        className="w-full p-2 bg-stone-50 border border-stone-300 rounded focus:border-moss-green"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-stone-600 font-semibold mb-1">Ngày công nhận chính thức:</label>
+                      <input
+                        type="text"
+                        placeholder="DD/MM/YYYY"
+                        value={editingMember.partyOfficialDate || ""}
+                        onChange={(e) => setEditingMember({ ...editingMember, partyOfficialDate: e.target.value })}
+                        className="w-full p-2 bg-stone-50 border border-stone-300 rounded focus:border-moss-green"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-stone-600 font-semibold mb-1">Chi bộ sinh hoạt Đảng:</label>
+                      <input
+                        type="text"
+                        value={editingMember.partyCell || ""}
+                        onChange={(e) => setEditingMember({ ...editingMember, partyCell: e.target.value })}
+                        placeholder="Chi bộ Thôn 1, Chi bộ Buôn A..."
+                        className="w-full p-2 bg-stone-50 border border-stone-300 rounded focus:border-moss-green"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-stone-600 font-semibold mb-1">Huy hiệu Đảng đã nhận:</label>
+                      <input
+                        type="text"
+                        value={editingMember.partyBadge || ""}
+                        onChange={(e) => setEditingMember({ ...editingMember, partyBadge: e.target.value })}
+                        placeholder="30 năm, 40 năm, 45 năm..."
+                        className="w-full p-2 bg-stone-50 border border-stone-300 rounded focus:border-moss-green"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-stone-600 font-semibold mb-1">Trình độ học vấn:</label>
+                      <input
+                        type="text"
+                        value={editingMember.educationLevel || "12/12"}
+                        onChange={(e) => setEditingMember({ ...editingMember, educationLevel: e.target.value })}
+                        className="w-full p-2 bg-stone-50 border border-stone-300 rounded focus:border-moss-green"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-stone-600 font-semibold mb-1">Trình độ lý luận chính trị:</label>
+                      <input
+                        type="text"
+                        value={editingMember.politicalTheory || "Chưa qua"}
+                        onChange={(e) => setEditingMember({ ...editingMember, politicalTheory: e.target.value })}
+                        placeholder="Sơ cấp, Trung cấp, Cao cấp, Cử nhân..."
+                        className="w-full p-2 bg-stone-50 border border-stone-300 rounded focus:border-moss-green"
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="block text-stone-600 font-semibold mb-1">Chuyên môn nghiệp vụ:</label>
+                      <input
+                        type="text"
+                        value={editingMember.professionalSkill || ""}
+                        onChange={(e) => setEditingMember({ ...editingMember, professionalSkill: e.target.value })}
+                        className="w-full p-2 bg-stone-50 border border-stone-300 rounded focus:border-moss-green"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 4: CHÍNH SÁCH & KINH TẾ */}
+              {editTab === "policy" && (
+                <div className="space-y-3 bg-white p-4 rounded-xl border border-stone-200">
+                  <h4 className="font-bold text-moss-green uppercase text-xs border-b pb-1.5 flex items-center gap-1.5">
+                    <span>🌾</span>
+                    <span>IV. Chính Sách Người Có Công & Đời Sống Kinh Tế</span>
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <label className="block text-stone-600 font-semibold mb-1">Diện chính sách người có công:</label>
+                      <select
+                        value={editingMember.policyStatus}
+                        onChange={(e) => setEditingMember({ ...editingMember, policyStatus: e.target.value })}
+                        className="w-full p-2 bg-stone-50 border border-stone-300 rounded font-semibold focus:border-moss-green"
+                      >
+                        <option value="Không">Không thuộc diện chính sách</option>
+                        <option value="Thương binh">Thương binh</option>
+                        <option value="Bệnh binh">Bệnh binh</option>
+                        <option value="Nhiễm Da cam">Nhiễm chất độc da cam / Dioxin</option>
+                        <option value="Thân nhân Liệt sĩ">Thân nhân Liệt sĩ</option>
+                        <option value="Người có công khác">Người có công khác</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-stone-600 font-semibold mb-1">Tỷ lệ thương tật / mất sức:</label>
+                      <input
+                        type="text"
+                        value={editingMember.policyWoundRate || ""}
+                        onChange={(e) => setEditingMember({ ...editingMember, policyWoundRate: e.target.value })}
+                        placeholder="21%, 41%, 61%, 81%..."
+                        className="w-full p-2 bg-stone-50 border border-stone-300 rounded focus:border-moss-green"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-stone-600 font-semibold mb-1">Mức sống hộ gia đình:</label>
+                      <select
+                        value={editingMember.livingStandard}
+                        onChange={(e) => {
+                          const val = e.target.value as "KHONG_NGHEO" | "CAN_NGHEO" | "HO_NGHEO";
+                          setEditingMember({
+                            ...editingMember,
+                            livingStandard: val,
+                            isPoorHousehold: val === "HO_NGHEO",
+                            isNearPoorHousehold: val === "CAN_NGHEO",
+                          });
+                        }}
+                        className="w-full p-2 bg-stone-50 border border-stone-300 rounded font-medium focus:border-moss-green"
+                      >
+                        <option value="KHONG_NGHEO">Bình thường / Khá giả</option>
+                        <option value="CAN_NGHEO">Hộ cận nghèo</option>
+                        <option value="HO_NGHEO">Hộ nghèo</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-stone-600 font-semibold mb-1">Dư nợ vốn vay NHCSXH (VNĐ):</label>
+                      <input
+                        type="number"
+                        step={1000000}
+                        value={editingMember.totalDebt}
+                        onChange={(e) => setEditingMember({ ...editingMember, totalDebt: parseInt(e.target.value) || 0 })}
+                        className="w-full p-2 bg-stone-50 border border-stone-300 rounded font-mono font-bold text-moss-green focus:border-moss-green"
+                      />
+                    </div>
+                    <div className="flex items-center gap-4 sm:col-span-2 pt-1">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={editingMember.hasHealthInsurance100}
+                          onChange={(e) => setEditingMember({ ...editingMember, hasHealthInsurance100: e.target.checked })}
+                          className="w-4 h-4 text-moss-green rounded"
+                        />
+                        <span className="font-semibold text-stone-700">Được cấp thẻ BHYT 100%</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={editingMember.hasDilapidatedHouse}
+                          onChange={(e) => setEditingMember({ ...editingMember, hasDilapidatedHouse: e.target.checked })}
+                          className="w-4 h-4 text-flag-red rounded"
+                        />
+                        <span className="font-bold text-flag-red">🏠 Nhà tạm, dột nát (cần hỗ trợ xóa nhà tạm)</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={editingMember.hasEconomicModel}
+                          onChange={(e) => setEditingMember({ ...editingMember, hasEconomicModel: e.target.checked })}
+                          className="w-4 h-4 text-amber-600 rounded"
+                        />
+                        <span className="font-bold text-bronze-gold">🌾 Có mô hình kinh tế giỏi</span>
+                      </label>
+                    </div>
+
+                    {editingMember.hasEconomicModel && (
+                      <>
+                        <div>
+                          <label className="block text-stone-600 font-semibold mb-1">Tên mô hình kinh tế:</label>
+                          <input
+                            type="text"
+                            value={editingMember.economicModelName || ""}
+                            onChange={(e) => setEditingMember({ ...editingMember, economicModelName: e.target.value })}
+                            placeholder="Trang trại sầu riêng, Nuôi bò vỗ béo..."
+                            className="w-full p-2 bg-stone-50 border border-stone-300 rounded focus:border-moss-green"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-stone-600 font-semibold mb-1">Doanh thu / Lợi nhuận hàng năm:</label>
+                          <input
+                            type="text"
+                            value={editingMember.economicRevenue || ""}
+                            onChange={(e) => setEditingMember({ ...editingMember, economicRevenue: e.target.value })}
+                            placeholder="300 - 500 triệu đồng/năm..."
+                            className="w-full p-2 bg-stone-50 border border-stone-300 rounded focus:border-moss-green"
+                          />
+                        </div>
+                      </>
+                    )}
+
+                    <div className="sm:col-span-2">
+                      <label className="block text-stone-600 font-semibold mb-1">Khen thưởng, kỷ niệm chương:</label>
+                      <input
+                        type="text"
+                        value={editingMember.awards || ""}
+                        onChange={(e) => setEditingMember({ ...editingMember, awards: e.target.value })}
+                        placeholder="Huân chương Chiến sĩ vẻ vang, Kỷ niệm chương CCB..."
+                        className="w-full p-2 bg-stone-50 border border-stone-300 rounded focus:border-moss-green"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Footer Modal Actions */}
+              <div className="pt-3 border-t border-stone-300 flex items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={() => setEditingMember(null)}
+                  className="px-4 py-2.5 bg-stone-200 hover:bg-stone-300 font-bold rounded-xl text-deep-text text-xs transition"
+                >
+                  Hủy Bỏ
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={isSavingEdit}
+                  className="px-6 py-2.5 bg-moss-green hover:bg-moss-green-light text-white font-bold rounded-xl text-xs shadow-md border border-bronze-gold transition flex items-center gap-1.5 active:scale-95"
+                >
+                  <span>{isSavingEdit ? "⏳ Đang Lưu..." : "💾 Lưu Thay Đổi Hồ Sơ"}</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

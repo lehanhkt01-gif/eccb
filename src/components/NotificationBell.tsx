@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import {
   NotificationRecord,
   getStoredNotifications,
@@ -20,6 +21,7 @@ export default function NotificationBell({
   currentHamletName,
   onOpenApproval,
 }: NotificationBellProps) {
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationRecord[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -80,7 +82,13 @@ export default function NotificationBell({
     if (notif.type === "NEW_REGISTRATION" || notif.type === "DUAL_APPROVAL_STEP") {
       if (onOpenApproval) {
         onOpenApproval();
+      } else if (notif.linkUrl) {
+        router.push(notif.linkUrl);
+      } else {
+        router.push("/admin/members");
       }
+    } else if (notif.linkUrl) {
+      router.push(notif.linkUrl);
     }
   };
 
@@ -168,7 +176,11 @@ export default function NotificationBell({
                         ? "⏳"
                         : n.type === "ADMISSION_SUCCESS"
                         ? "🎖️"
-                        : "📢"}
+                        : n.type === "NEW_ARTICLE_PENDING"
+                        ? "📰"
+                        : n.type === "ARTICLE_APPROVED"
+                        ? "📢"
+                        : "🔔"}
                     </span>
 
                     <div className="min-w-0 flex-1">
