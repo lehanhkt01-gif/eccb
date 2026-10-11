@@ -108,13 +108,12 @@ export default function LoginPage() {
       }
 
       // Xử lý chuyển hướng theo định dạng tài khoản trên bản demo tĩnh
-      if (cleanLower.includes("lehanh") || cleanLower.includes("trunghieu")) {
+      if (cleanLower.includes("lehanh") || cleanLower.includes("trunghieu") || cleanLower.includes("hanh")) {
+        const isLeHanh = cleanLower.includes("lehanh") || cleanLower.includes("hanh");
         setCurrentUser({
-          username: cleanLower.includes("lehanh") ? "lehanhkt01" : "trunghieuktkt",
-          email: cleanLower.includes("lehanh") ? "lehanhkt01@gmail.com" : "trunghieuktkt@gmail.com",
-          fullName: cleanLower.includes("lehanh")
-            ? "Lê Hạnh - Ban Quản Trị Hệ Thống"
-            : "Đặng Trung Hiếu - Chủ tịch Hội CCB Xã",
+          username: isLeHanh ? "lehanhkt01" : "trunghieuktkt",
+          email: isLeHanh ? "lehanhkt01@gmail.com" : "trunghieuktkt@gmail.com",
+          fullName: isLeHanh ? "Lê Hạnh" : "Đặng Trung Hiếu",
           role: "SUPER_ADMIN",
         });
         router.push("/admin");

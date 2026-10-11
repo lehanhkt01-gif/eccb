@@ -366,3 +366,6 @@ VALUES
   ('usr-super-admin-01', 'lehanhkt01@gmail.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'Lê Hạnh', 'lehanhkt01@gmail.com', 'SUPER_ADMIN', true, NOW()),
   ('usr-super-admin-02', 'trunghieuktkt@gmail.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'Đặng Trung Hiếu', 'trunghieuktkt@gmail.com', 'SUPER_ADMIN', true, NOW())
 ON CONFLICT ("username") DO NOTHING;
+
+-- 6. XÓA SỐ DƯ NỢ ẢO ĐỂ TRẢ VỀ 0 THEO YÊU CẦU NGHIỆP VỤ
+UPDATE "members" SET "totalDebt" = 0 WHERE "totalDebt" > 0;

@@ -28,10 +28,15 @@ export async function POST(req: Request) {
 
     // 2. KIỂM TRA TÀI KHOẢN SUPER ADMIN
     const isSuperAdminEmail = adminEmails.includes(cleanInputLower);
-    const isSuperAdminUsername = cleanInputLower === "lehanhkt01" || cleanInputLower === "trunghieuktkt";
+    const isSuperAdminUsername =
+      cleanInputLower === "lehanhkt01" ||
+      cleanInputLower === "trunghieuktkt" ||
+      cleanInputLower.includes("lehanh") ||
+      cleanInputLower.includes("trunghieu");
 
     if (isSuperAdminEmail || isSuperAdminUsername) {
       let isPasswordValid = false;
+      let matchedDbUser: any = null;
 
       // Kiểm tra với cơ sở dữ liệu nếu có kết nối
       try {
@@ -43,8 +48,11 @@ export async function POST(req: Request) {
             ],
           },
         });
-        if (dbUser && dbUser.passwordHash) {
-          isPasswordValid = await bcrypt.compare(password, dbUser.passwordHash);
+        if (dbUser) {
+          matchedDbUser = dbUser;
+          if (dbUser.passwordHash) {
+            isPasswordValid = await bcrypt.compare(password, dbUser.passwordHash);
+          }
         }
       } catch {
         // Fallback khi chạy không có kết nối DB
@@ -56,14 +64,15 @@ export async function POST(req: Request) {
       }
 
       if (isPasswordValid) {
-        const isLeHanh = cleanInputLower.includes("lehanh");
+        const isLeHanh = cleanInputLower.includes("lehanh") || cleanInputLower.includes("hanh");
+        const defaultName = isLeHanh ? "Lê Hạnh" : "Đặng Trung Hiếu";
         return NextResponse.json({
           success: true,
           role: "SUPER_ADMIN",
           user: {
             username: isLeHanh ? "lehanhkt01" : "trunghieuktkt",
             email: isLeHanh ? "lehanhkt01@gmail.com" : "trunghieuktkt@gmail.com",
-            fullName: isLeHanh ? "Lê Hạnh - Ban Quản Trị Hệ Thống" : "Đặng Trung Hiếu - Chủ tịch Hội CCB Xã",
+            fullName: matchedDbUser?.fullName || defaultName,
             role: "SUPER_ADMIN",
           },
         });

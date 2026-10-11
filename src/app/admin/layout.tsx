@@ -14,18 +14,25 @@ export default function AdminLayout({
 }) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [currentUser, setCurrentUserState] = useState<AuthUser | null>(() => {
-    return getCurrentUser() || {
-      username: "trunghieuktkt@gmail.com",
-      fullName: "Đặng Trung Hiếu",
-      role: "SUPER_ADMIN",
-    };
-  });
+  const [currentUser, setCurrentUserState] = useState<AuthUser | null>(null);
 
   useEffect(() => {
+    // 1. Luôn đồng bộ tài khoản người dùng thực tế từ phiên đăng nhập ngay khi mount
+    const u = getCurrentUser();
+    if (u) {
+      setCurrentUserState(u);
+    } else {
+      // Mặc định tài khoản Quản trị viên
+      setCurrentUserState({
+        username: "lehanhkt01@gmail.com",
+        fullName: "Lê Hạnh",
+        role: "SUPER_ADMIN",
+      });
+    }
+
     const handleAuth = () => {
-      const u = getCurrentUser();
-      if (u) setCurrentUserState(u);
+      const updatedUser = getCurrentUser();
+      if (updatedUser) setCurrentUserState(updatedUser);
     };
     window.addEventListener(AUTH_CHANGE_EVENT, handleAuth);
     return () => window.removeEventListener(AUTH_CHANGE_EVENT, handleAuth);
@@ -36,7 +43,7 @@ export default function AdminLayout({
     window.location.href = "/";
   };
 
-  const cleanName = (currentUser?.fullName || "Đặng Trung Hiếu")
+  const cleanName = (currentUser?.fullName || "Lê Hạnh")
     .replace(/^(đ\/c|đồng chí)\s+/i, "")
     .split(" - ")[0]
     .trim();
@@ -56,19 +63,16 @@ export default function AdminLayout({
       href: "/admin/funds",
       label: "Quản Lý Quỹ & Vốn Vay",
       icon: "💰",
-      badge: "53,48 Tỷ",
     },
     {
       href: "/admin/permissions",
       label: "Quản Lý Cấp Quyền",
       icon: "🔐",
-      badge: "Phân Quyền",
     },
     {
       href: "/branch",
       label: "Chi Hội Trưởng",
       icon: "📱",
-      badge: "Mobile",
     },
     {
       href: "/",
@@ -204,11 +208,6 @@ export default function AdminLayout({
                         <span className="text-base">{item.icon}</span>
                         <span>{item.label}</span>
                       </div>
-                      {item.badge && (
-                        <span className="text-[10px] bg-amber-400 text-moss-green px-1.5 py-0.2 rounded font-bold">
-                          {item.badge}
-                        </span>
-                      )}
                     </Link>
                   );
                 })}

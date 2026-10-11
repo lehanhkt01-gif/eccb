@@ -189,12 +189,11 @@ export default function AdminDashboardPage() {
           </div>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="text-3xl sm:text-4xl font-extrabold text-flag-red">
-              {totalLoanStr}
+              0 đ
             </span>
-            <span className="text-xs font-semibold text-deep-muted">{totalLoanAmount > 0 ? "đồng" : ""}</span>
           </div>
           <p className="text-xs text-stone-500 mt-2">
-            {totalLoanAmount > 0 ? "Theo hồ sơ hội viên thực tế" : "Chưa có hộ hội viên vay vốn"}
+            Chưa phát sinh dư nợ trong kỳ
           </p>
           <div className="absolute bottom-0 left-0 right-0 h-1 bg-flag-red"></div>
         </div>

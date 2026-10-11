@@ -479,6 +479,7 @@ export default function PermissionsManagementPage() {
           <table className="w-full text-left border-collapse text-xs sm:text-sm">
             <thead>
               <tr className="bg-stone-100 border-b-2 border-stone-300 text-stone-700 font-bold uppercase text-[11px]">
+                <th className="p-3.5 text-center w-14">STT</th>
                 <th className="p-3.5">Họ và Tên</th>
                 <th className="p-3.5">Đơn Vị Trực Thuộc</th>
                 <th className="p-3.5">Tên Đăng Nhập (Email / CCCD)</th>
@@ -490,13 +491,18 @@ export default function PermissionsManagementPage() {
             <tbody className="divide-y divide-stone-200">
               {paginatedList.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="p-8 text-center text-stone-500 italic">
+                  <td colSpan={7} className="p-8 text-center text-stone-500 italic">
                     Không tìm thấy tài khoản phù hợp với từ khóa tìm kiếm.
                   </td>
                 </tr>
               ) : (
-                paginatedList.map((acc) => (
+                paginatedList.map((acc, index) => (
                   <tr key={acc.id} className="hover:bg-stone-50/80 transition">
+                    {/* Số thứ tự */}
+                    <td className="p-3.5 text-center font-bold text-stone-500">
+                      {(currentPage - 1) * pageSize + index + 1}
+                    </td>
+
                     {/* Họ và Tên */}
                     <td className="p-3.5 font-bold text-deep-text">
                       <div className="flex items-center gap-2">
