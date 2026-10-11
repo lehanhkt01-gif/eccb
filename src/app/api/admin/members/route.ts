@@ -410,6 +410,24 @@ export async function PUT(req: NextRequest) {
       });
     }
 
+    // Nếu chức vụ là Chi hội trưởng, tự động cấp quyền User BRANCH_LEADER
+    if (updates.associationRole === "Chi hội trưởng") {
+      try {
+        await prisma.user.updateMany({
+          where: {
+            OR: [
+              { memberId: updated.id },
+              { username: updated.cccd },
+              ...(updated.phone ? [{ username: updated.phone }, { phone: updated.phone }] : []),
+            ],
+          },
+          data: { role: Role.BRANCH_LEADER, isActive: true },
+        });
+      } catch (uErr) {
+        console.warn("Lưu ý cập nhật role:", uErr);
+      }
+    }
+
     return NextResponse.json({
       success: true,
       message: "Đã cập nhật hồ sơ hội viên thành công trong PostgreSQL!",

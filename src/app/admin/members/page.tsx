@@ -240,6 +240,26 @@ export default function AdminMembersPage() {
         } catch (dbErr) {
           console.error("Lỗi đồng bộ hồ sơ vào CSDL PostgreSQL:", dbErr);
         }
+
+        if (editingMember.associationRole === "Chi hội trưởng") {
+          try {
+            await fetch("/api/admin/assign-branch-leader", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                memberId: editingMember.id,
+                cccd: editingMember.cccd,
+                hamletName: editingMember.hamletName,
+                fullName: editingMember.fullName,
+                phone: editingMember.phone,
+              }),
+            });
+            assignBranchLeader(editingMember.id);
+          } catch (e) {
+            console.error("Lỗi đồng bộ CHT:", e);
+          }
+        }
+        window.dispatchEvent(new Event("eccb-members-updated"));
         setEditingMember(null);
       } else {
         alert("Không tìm thấy hồ sơ để cập nhật.");
@@ -1742,7 +1762,7 @@ export default function AdminMembersPage() {
                           {m.hamletName}
                         </td>
 
-                        {/* 6. Thao tác: Chi tiết, Sửa, Word */}
+                        {/* 6. Thao tác: Chi tiết, Sửa, Word, Cấp CHT */}
                         <td className="py-3 px-3 text-center whitespace-nowrap">
                           <div className="flex items-center justify-center gap-1.5">
                             <button
@@ -1765,6 +1785,17 @@ export default function AdminMembersPage() {
                               <span>✏️</span>
                               <span>Sửa</span>
                             </button>
+
+                            {!isCHT && (
+                              <button
+                                onClick={() => handleAssignBranchLeader(m)}
+                                className="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold text-xs rounded border border-amber-300 transition flex items-center gap-1 cursor-pointer shadow-2xs"
+                                title={`Cấp quyền Chi hội trưởng ${m.hamletName} cho đồng chí ${m.fullName}`}
+                              >
+                                <span>⭐</span>
+                                <span className="hidden xl:inline">CHT</span>
+                              </button>
+                            )}
 
                             <button
                               onClick={() => exportDocx(m)}
@@ -2051,6 +2082,24 @@ export default function AdminMembersPage() {
               </button>
 
               <div className="flex items-center gap-2">
+                {activeModalMember.associationRole !== "Chi hội trưởng" ? (
+                  <button
+                    onClick={() => {
+                      const mem = activeModalMember;
+                      setActiveModalMember(null);
+                      handleAssignBranchLeader(mem);
+                    }}
+                    className="px-3.5 py-2 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-sm cursor-pointer"
+                    title={`Cấp quyền Chi hội trưởng cho đ/c ${activeModalMember.fullName}`}
+                  >
+                    <span>⭐ Cấp Quyền CHT</span>
+                  </button>
+                ) : (
+                  <span className="px-3 py-1.5 bg-amber-100 text-amber-900 border border-amber-300 font-bold text-xs rounded-lg flex items-center gap-1">
+                    <span>⭐ Đang là CHT</span>
+                  </span>
+                )}
+
                 {(activeModalMember.status === "CHO_XA_PHE_DUYET" ||
                   activeModalMember.status === "CHO_CHI_HOI_DUYET" ||
                   (activeModalMember.status as any) === "PENDING_APPROVAL") && (

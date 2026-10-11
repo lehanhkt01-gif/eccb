@@ -8,6 +8,7 @@ import { getCurrentUser, logout, AuthUser } from "@/lib/authSession";
 import {
   MemberRecord,
   getStoredMembers,
+  saveStoredMembers,
   createPendingMember,
   MovementType,
   recordLocalMovement,
@@ -366,6 +367,23 @@ export default function BranchMobilePage() {
     window.addEventListener("eccb-members-updated", handleUpdate);
     return () => window.removeEventListener("eccb-members-updated", handleUpdate);
   }, [selectedHamletCode]);
+
+  // Nạp dữ liệu hội viên từ CSDL PostgreSQL máy chủ
+  useEffect(() => {
+    const loadServer = async () => {
+      try {
+        const res = await fetch("/api/admin/members");
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) {
+            saveStoredMembers(data);
+            syncMembers();
+          }
+        }
+      } catch {}
+    };
+    loadServer();
+  }, []);
 
   // Xử lý nộp hồ sơ hội viên mới (Mặc định PENDING_APPROVAL)
   const handleAddMember = (e: React.FormEvent) => {

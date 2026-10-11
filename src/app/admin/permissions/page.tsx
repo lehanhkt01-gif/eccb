@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { getStoredMembers, assignBranchLeader, MemberRecord } from "@/lib/memberStore";
+import { getStoredMembers, saveStoredMembers, assignBranchLeader, MemberRecord } from "@/lib/memberStore";
 import { EA_SUP_HAMLETS } from "@/lib/constants/hamlets";
 
 export type RoleType = "SUPER_ADMIN" | "BRANCH_LEADER" | "MEMBER";
@@ -88,12 +88,18 @@ export default function PermissionsManagementPage() {
   const [newUnit, setNewUnit] = useState("Chi hội Thôn 1");
   const [newUsername, setNewUsername] = useState("");
   const [newPhone, setNewPhone] = useState("");
-  const [newRole, setNewRole] = useState<RoleType>("MEMBER");
+  const [newRole, setNewRole] = useState<RoleType>("BRANCH_LEADER");
   const [createError, setCreateError] = useState("");
 
   // Phân quyền Chi hội trưởng: Chọn Chi hội (Thôn Buôn) & Sổ danh sách hội viên chính thức
   const [selectedBranchHamlet, setSelectedBranchHamlet] = useState("Thôn Đoàn Kết");
   const [selectedMemberIdForLeader, setSelectedMemberIdForLeader] = useState("");
+  const [leaderInputMode, setLeaderInputMode] = useState<"SELECT" | "MANUAL">("SELECT");
+  const [manualFullName, setManualFullName] = useState("");
+  const [manualCccd, setManualCccd] = useState("");
+  const [manualPhone, setManualPhone] = useState("");
+  const [manualBirthYear, setManualBirthYear] = useState("1965");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Thông báo hành động
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -101,7 +107,7 @@ export default function PermissionsManagementPage() {
   // Hiển thị thông báo tự tắt sau 3 giây
   const showToast = (msg: string) => {
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3000);
+    setTimeout(() => setToastMessage(null), 3500);
   };
 
   const FAKE_CCCD_SET = new Set([
@@ -122,7 +128,7 @@ export default function PermissionsManagementPage() {
       const mHamlet = (m.hamletName || "").replace(/^Chi hội\s+/i, "").trim().toLowerCase();
       return mHamlet === cleanHamlet;
     });
-  }, [selectedBranchHamlet, isCreateModalOpen]);
+  }, [selectedBranchHamlet, isCreateModalOpen, memberAccounts]);
 
   // Hội viên đang được chọn làm Chi hội trưởng
   const selectedMemberForLeader = useMemo(() => {
@@ -144,38 +150,32 @@ export default function PermissionsManagementPage() {
   }, [selectedBranchHamlet, newRole, hamletOfficialMembers]);
 
   // Nạp danh sách hội viên chính thức từ memberStore và localStorage
-  const syncPermissionsData = () => {
+  const syncPermissionsData = (customMembers?: MemberRecord[]) => {
     // 1. Lấy danh sách hội viên chính thức (CHỈ HỘI VIÊN CHÍNH THỨC, KHÔNG LẤY HỒ SƠ ẢO)
-    const officialMembers = getStoredMembers().filter(
+    const rawList = customMembers && customMembers.length > 0 ? customMembers : getStoredMembers();
+    const officialMembers = rawList.filter(
       (m) => (m.status === "CHINH_THUC" || (m.status as any) === "ACTIVE") &&
              !FAKE_CCCD_SET.has(m.cccd) &&
              !["Đặng Hữu Phúc", "Nguyễn Đình Quảng", "Nguyễn Văn Hùng", "Lê Bá Tùng", "Đặng Văn Hảo", "Lương Thế Vinh", "Ngô Quang Hưng"].includes(m.fullName)
     );
 
     let loadedAdmins = INITIAL_ADMINS;
-    let loadedBranches = INITIAL_BRANCH_LEADERS;
+    let loadedBranches = [...INITIAL_BRANCH_LEADERS];
 
     try {
-      // Dọn sạch các key cache cũ chứa dữ liệu ảo
-      [
-        "eccb_permissions_state_v1",
-        "eccb_permissions_state_v2",
-        "eccb_permissions_state_v3",
-        "eccb_permissions_state_v4",
-        "eccb_permissions_state_v5"
-      ].forEach((k) => localStorage.removeItem(k));
-
       const stored = localStorage.getItem(STORAGE_KEY_PERMISSIONS);
       if (stored) {
         const parsed = JSON.parse(stored);
         if (parsed.admins && Array.isArray(parsed.admins)) loadedAdmins = parsed.admins;
-        if (parsed.branches && Array.isArray(parsed.branches)) loadedBranches = parsed.branches;
+        if (parsed.branches && Array.isArray(parsed.branches) && parsed.branches.length > 0) {
+          loadedBranches = parsed.branches;
+        }
       }
     } catch {
       // Bỏ qua lỗi parse
     }
 
-    // Luôn đảm bảo số tài khoản hội viên trùng khớp chính xác 1:1 với danh sách hội viên chính thức (Tuyệt đối không có 2 hội viên ảo)
+    // Luôn đảm bảo số tài khoản hội viên trùng khớp chính xác 1:1 với danh sách hội viên chính thức
     const loadedMembers: AccountItem[] = officialMembers.map((m) => ({
       id: `mem_user_${m.id}`,
       fullName: m.fullName,
@@ -191,10 +191,11 @@ export default function PermissionsManagementPage() {
     const leadersInStore = officialMembers.filter((m) => m.associationRole === "Chi hội trưởng");
     for (const leader of leadersInStore) {
       const cleanHamlet = leader.hamletName.replace(/^Chi hội\s+/i, "").trim().toLowerCase();
+      // Tìm xem CHT này đã có tài khoản trong danh sách chưa (so sánh chính xác theo CCCD hoặc SĐT hoặc Họ tên + Thôn)
       const existingIdx = loadedBranches.findIndex(
         (br) =>
-          br.username === leader.cccd ||
-          br.phone === leader.phone ||
+          (leader.cccd && (br.username === leader.cccd || (br as any).cccd === leader.cccd)) ||
+          (leader.phone && (br.phone === leader.phone || br.username === leader.phone)) ||
           (br.fullName.toLowerCase() === leader.fullName.toLowerCase() &&
             br.unit.replace(/^Chi hội\s+/i, "").trim().toLowerCase() === cleanHamlet)
       );
@@ -204,16 +205,16 @@ export default function PermissionsManagementPage() {
         loadedBranches[existingIdx] = {
           ...loadedBranches[existingIdx],
           fullName: leader.fullName,
-          phone: leader.phone,
-          username: leader.phone || leader.cccd,
+          phone: leader.phone || loadedBranches[existingIdx].phone,
+          username: leader.phone || leader.cccd || loadedBranches[existingIdx].username,
           unit: `Chi hội ${leader.hamletName.replace(/^Chi hội\s+/i, "")}`,
           role: "BRANCH_LEADER",
           isActive: true,
         };
       } else {
-        // Bổ sung thêm vào danh sách tài khoản Chi hội trưởng
+        // Bổ sung thêm vào danh sách tài khoản Chi hội trưởng (không ghi đè CHT khác cùng thôn)
         loadedBranches.push({
-          id: `bl_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+          id: `bl_${leader.id || Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
           fullName: leader.fullName,
           unit: `Chi hội ${leader.hamletName.replace(/^Chi hội\s+/i, "")}`,
           username: leader.phone || leader.cccd,
@@ -231,10 +232,32 @@ export default function PermissionsManagementPage() {
     saveState(loadedAdmins, loadedBranches, loadedMembers);
   };
 
+  // Nạp 100% dữ liệu hội viên từ CSDL PostgreSQL của máy chủ để đồng bộ toàn hệ thống
+  const loadServerData = async () => {
+    try {
+      const res = await fetch("/api/admin/members");
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          saveStoredMembers(data);
+          syncPermissionsData(data);
+        }
+      }
+    } catch (err) {
+      console.error("Lỗi fetch /api/admin/members:", err);
+    }
+  };
+
   useEffect(() => {
     syncPermissionsData();
-    window.addEventListener("eccb-members-updated", syncPermissionsData);
-    return () => window.removeEventListener("eccb-members-updated", syncPermissionsData);
+    loadServerData();
+
+    const handleUpdated = () => {
+      syncPermissionsData();
+    };
+
+    window.addEventListener("eccb-members-updated", handleUpdated);
+    return () => window.removeEventListener("eccb-members-updated", handleUpdated);
   }, []);
 
   // Lưu trạng thái vào localStorage khi có thay đổi
@@ -248,6 +271,7 @@ export default function PermissionsManagementPage() {
       // localstorage quota
     }
   };
+
 
   // 1. Chức năng Đặt lại mật khẩu (Reset về 12345678@ từ file .env)
   const handleResetPassword = (account: AccountItem) => {
@@ -308,97 +332,205 @@ export default function PermissionsManagementPage() {
     showToast(`✓ Đã ${account.isActive ? "khóa quyền truy cập" : "mở khóa hoạt động"} cho [${account.fullName}].`);
   };
 
-  // 3. Chức năng Cấp tài khoản mới / Cấp quyền Chi hội trưởng
-  const handleCreateAccount = (e: React.FormEvent) => {
+  // 3. Chức năng Cấp tài khoản mới / Cấp quyền Chi hội trưởng (Đồng bộ trực tiếp PostgreSQL và Toàn hệ thống)
+  const handleCreateAccount = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreateError("");
+    setIsSubmitting(true);
 
-    // TRƯỜNG HỢP 1: CẤP QUYỀN CHI HỘI TRƯỞNG (Chọn từ danh sách hội viên chính thức của chi hội)
-    if (newRole === "BRANCH_LEADER") {
-      if (!selectedMemberForLeader) {
-        setCreateError(`Chi hội [${selectedBranchHamlet}] chưa có hội viên được chọn. Vui lòng chọn 1 hội viên trong danh sách.`);
+    try {
+      // TRƯỜNG HỢP 1: CẤP QUYỀN CHI HỘI TRƯỞNG
+      if (newRole === "BRANCH_LEADER") {
+        const cleanHamlet = selectedBranchHamlet.replace(/^Chi hội\s+/i, "").trim();
+        const unitName = `Chi hội ${cleanHamlet}`;
+
+        // CHẾ ĐỘ 1: CHỌN TỪ DANH SÁCH HỘI VIÊN CHÍNH THỨC CỦA THÔN
+        if (leaderInputMode === "SELECT") {
+          if (!selectedMemberForLeader) {
+            setCreateError(`Chi hội [${selectedBranchHamlet}] chưa có hội viên được chọn. Vui lòng chọn 1 hội viên hoặc chuyển sang chế độ "Nhập trực tiếp".`);
+            setIsSubmitting(false);
+            return;
+          }
+
+          // 1. Gửi request đồng bộ CSDL PostgreSQL máy chủ
+          try {
+            const apiRes = await fetch("/api/admin/assign-branch-leader", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                memberId: selectedMemberForLeader.id,
+                cccd: selectedMemberForLeader.cccd,
+                hamletName: cleanHamlet,
+                fullName: selectedMemberForLeader.fullName,
+                phone: selectedMemberForLeader.phone,
+              }),
+            });
+            const apiData = await apiRes.json();
+            if (!apiData.success) {
+              console.warn("Lưu ý từ server assign-branch-leader:", apiData.error || apiData.message);
+            }
+          } catch (err) {
+            console.error("Lỗi gửi assign-branch-leader lên PostgreSQL:", err);
+          }
+
+          // 2. Cập nhật trong Local Store memberStore
+          assignBranchLeader(selectedMemberForLeader.id);
+
+          // 3. Cập nhật và bổ sung tài khoản vào branchAccounts (không ghi đè CHT khác cùng thôn)
+          let updatedBranches = [...branchAccounts];
+          const existingIdx = updatedBranches.findIndex(
+            (b) =>
+              (selectedMemberForLeader.cccd && (b.username === selectedMemberForLeader.cccd || (b as any).cccd === selectedMemberForLeader.cccd)) ||
+              (selectedMemberForLeader.phone && (b.phone === selectedMemberForLeader.phone || b.username === selectedMemberForLeader.phone)) ||
+              (b.fullName.toLowerCase() === selectedMemberForLeader.fullName.toLowerCase() &&
+                b.unit.replace(/^Chi hội\s+/i, "").trim().toLowerCase() === cleanHamlet.toLowerCase())
+          );
+
+          const leaderAccount: AccountItem = {
+            id: existingIdx !== -1 ? updatedBranches[existingIdx].id : `bl_${selectedMemberForLeader.id || Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+            fullName: selectedMemberForLeader.fullName,
+            unit: unitName,
+            username: selectedMemberForLeader.phone || selectedMemberForLeader.cccd,
+            phone: selectedMemberForLeader.phone,
+            role: "BRANCH_LEADER",
+            isActive: true,
+            passwordStatus: "MẶC_ĐỊNH",
+          };
+
+          if (existingIdx !== -1) {
+            updatedBranches[existingIdx] = leaderAccount;
+          } else {
+            updatedBranches.push(leaderAccount);
+          }
+
+          setBranchAccounts(updatedBranches);
+          saveState(adminAccounts, updatedBranches, memberAccounts);
+
+          // Kích hoạt đồng bộ toàn bộ app
+          window.dispatchEvent(new Event("eccb-members-updated"));
+          syncPermissionsData();
+          loadServerData();
+
+          setIsCreateModalOpen(false);
+          showToast(`✓ Đã cấp quyền Chi hội trưởng [${cleanHamlet}] cho đồng chí [${selectedMemberForLeader.fullName}] thành công!`);
+          return;
+        }
+
+        // CHẾ ĐỘ 2: NHẬP TRỰC TIẾP CHI HỘI TRƯỞNG MỚI (Tự động tạo hồ sơ hội viên & Cấp quyền)
+        if (!manualFullName.trim() || !manualCccd.trim()) {
+          setCreateError("Vui lòng điền đầy đủ Họ tên và Số CCCD 12 số của Chi hội trưởng mới.");
+          setIsSubmitting(false);
+          return;
+        }
+
+        // 1. Tạo hồ sơ hội viên mới và tài khoản trong PostgreSQL
+        try {
+          const createRes = await fetch("/api/admin/members", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              fullName: manualFullName.trim(),
+              cccd: manualCccd.trim(),
+              phone: manualPhone.trim() || undefined,
+              birthYear: parseInt(manualBirthYear) || 1965,
+              hamletName: cleanHamlet,
+              associationRole: "Chi hội trưởng",
+              status: "CHINH_THUC",
+              adminApproved: true,
+              branchApproved: true,
+            }),
+          });
+          const createData = await createRes.json();
+          if (!createData.success) {
+            console.warn("Lưu ý tạo hội viên mới:", createData.error);
+          }
+        } catch (memErr) {
+          console.error("Lỗi tạo hội viên mới:", memErr);
+        }
+
+        // 2. Gán quyền Chi hội trưởng trong CSDL
+        try {
+          await fetch("/api/admin/assign-branch-leader", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              cccd: manualCccd.trim(),
+              hamletName: cleanHamlet,
+              fullName: manualFullName.trim(),
+              phone: manualPhone.trim(),
+            }),
+          });
+        } catch (asErr) {
+          console.error("Lỗi gán CHT:", asErr);
+        }
+
+        // 3. Thêm tài khoản mới vào branchAccounts
+        const newLeaderAcc: AccountItem = {
+          id: `bl_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+          fullName: manualFullName.trim(),
+          unit: unitName,
+          username: manualPhone.trim() || manualCccd.trim(),
+          phone: manualPhone.trim() || undefined,
+          role: "BRANCH_LEADER",
+          isActive: true,
+          passwordStatus: "MẶC_ĐỊNH",
+        };
+
+        const updatedBranches = [...branchAccounts, newLeaderAcc];
+        setBranchAccounts(updatedBranches);
+        saveState(adminAccounts, updatedBranches, memberAccounts);
+
+        // Kích hoạt đồng bộ toàn bộ app
+        window.dispatchEvent(new Event("eccb-members-updated"));
+        syncPermissionsData();
+        loadServerData();
+
+        setIsCreateModalOpen(false);
+        setManualFullName("");
+        setManualCccd("");
+        setManualPhone("");
+        showToast(`✓ Đã thêm và cấp quyền Chi hội trưởng [${cleanHamlet}] cho đ/c [${manualFullName.trim()}] thành công!`);
         return;
       }
 
-      // 1. Chỉ định hội viên làm Chi hội trưởng trong CSDL memberStore
-      const assignRes = assignBranchLeader(selectedMemberForLeader.id);
-      if (!assignRes.success) {
-        setCreateError(assignRes.message);
+      // TRƯỜNG HỢP 2: CÁC VAI TRÒ KHÁC (SUPER_ADMIN HOẶC MEMBER)
+      if (!newFullName.trim() || !newUsername.trim()) {
+        setCreateError("Vui lòng điền đầy đủ Họ tên và Tên đăng nhập / CCCD.");
+        setIsSubmitting(false);
         return;
       }
 
-      // 2. Cập nhật / Bổ sung tài khoản Chi hội trưởng trong danh sách Permissions (Không ghi đè CHT khác)
-      const cleanHamlet = selectedBranchHamlet.replace(/^Chi hội\s+/i, "").trim();
-      const unitName = `Chi hội ${cleanHamlet}`;
-
-      let updatedBranches = [...branchAccounts];
-      const existingIdx = updatedBranches.findIndex(
-        (b) =>
-          b.username === selectedMemberForLeader.cccd ||
-          b.phone === selectedMemberForLeader.phone ||
-          (b.fullName.toLowerCase() === selectedMemberForLeader.fullName.toLowerCase() &&
-            b.unit.replace(/^Chi hội\s+/i, "").trim().toLowerCase() === cleanHamlet.toLowerCase())
-      );
-
-      const leaderAccount: AccountItem = {
-        id: existingIdx !== -1 ? updatedBranches[existingIdx].id : `bl_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-        fullName: selectedMemberForLeader.fullName,
-        unit: unitName,
-        username: selectedMemberForLeader.phone || selectedMemberForLeader.cccd,
-        phone: selectedMemberForLeader.phone,
-        role: "BRANCH_LEADER",
+      const newItem: AccountItem = {
+        id: `acc_${Date.now()}`,
+        fullName: newFullName.trim(),
+        unit: newUnit,
+        username: newUsername.trim(),
+        phone: newPhone.trim(),
+        role: newRole,
         isActive: true,
         passwordStatus: "MẶC_ĐỊNH",
       };
 
-      if (existingIdx !== -1) {
-        updatedBranches[existingIdx] = leaderAccount;
+      if (newRole === "SUPER_ADMIN") {
+        const updated = [newItem, ...adminAccounts];
+        setAdminAccounts(updated);
+        saveState(updated, branchAccounts, memberAccounts);
       } else {
-        // Bổ sung thêm vào danh sách Chi hội trưởng
-        updatedBranches.push(leaderAccount);
+        const updated = [newItem, ...memberAccounts];
+        setMemberAccounts(updated);
+        saveState(adminAccounts, branchAccounts, updated);
       }
 
-      setBranchAccounts(updatedBranches);
-      saveState(adminAccounts, updatedBranches, memberAccounts);
-      syncPermissionsData();
-
       setIsCreateModalOpen(false);
-      showToast(`✓ Đã cấp quyền Chi hội trưởng [${cleanHamlet}] cho đồng chí [${selectedMemberForLeader.fullName}] thành công!`);
-      return;
+      setNewFullName("");
+      setNewUsername("");
+      setNewPhone("");
+      showToast(`✓ Cấp tài khoản mới thành công cho đồng chí [${newItem.fullName}].`);
+    } catch (err: any) {
+      setCreateError(err.message || "Đã xảy ra lỗi khi cấp tài khoản.");
+    } finally {
+      setIsSubmitting(false);
     }
-
-    // TRƯỜNG HỢP 2: CÁC VAI TRÒ KHÁC (SUPER_ADMIN HOẶC MEMBER)
-    if (!newFullName.trim() || !newUsername.trim()) {
-      setCreateError("Vui lòng điền đầy đủ Họ tên và Tên đăng nhập / CCCD.");
-      return;
-    }
-
-    const newItem: AccountItem = {
-      id: `acc_${Date.now()}`,
-      fullName: newFullName.trim(),
-      unit: newUnit,
-      username: newUsername.trim(),
-      phone: newPhone.trim(),
-      role: newRole,
-      isActive: true,
-      passwordStatus: "MẶC_ĐỊNH",
-    };
-
-    if (newRole === "SUPER_ADMIN") {
-      const updated = [newItem, ...adminAccounts];
-      setAdminAccounts(updated);
-      saveState(updated, branchAccounts, memberAccounts);
-    } else {
-      const updated = [newItem, ...memberAccounts];
-      setMemberAccounts(updated);
-      saveState(adminAccounts, branchAccounts, updated);
-    }
-
-    setIsCreateModalOpen(false);
-    setNewFullName("");
-    setNewUsername("");
-    setNewPhone("");
-    showToast(`✓ Cấp tài khoản mới thành công cho đồng chí [${newItem.fullName}].`);
   };
 
   // Danh sách hiện tại theo Tab (Đảm bảo lọc sạch 100% tài khoản ảo)
@@ -783,15 +915,15 @@ export default function PermissionsManagementPage() {
                   onChange={(e) => setNewRole(e.target.value as RoleType)}
                   className="w-full p-2.5 bg-stone-50 border border-stone-300 rounded-lg text-sm text-deep-text focus:border-moss-green focus:bg-white focus:outline-none font-semibold"
                 >
-                  <option value="MEMBER">Hội viên CCB (Đăng nhập CCCD)</option>
                   <option value="BRANCH_LEADER">Chi hội trưởng (20 thôn buôn)</option>
+                  <option value="MEMBER">Hội viên CCB (Đăng nhập CCCD)</option>
                   <option value="SUPER_ADMIN">Cán bộ xã (SuperAdmin)</option>
                 </select>
               </div>
 
               {/* NỘI DUNG FORM THEO VAI TRÒ */}
               {newRole === "BRANCH_LEADER" ? (
-                /* PHÂN HỆ CẤP QUYỀN CHI HỘI TRƯỞNG: SỔ LIST THEO CHI HỘI, CHỈ CHỌN HỘI VIÊN, KHÔNG NHẬP PHỨC TẠP */
+                /* PHÂN HỆ CẤP QUYỀN CHI HỘI TRƯỞNG: HỖ TRỢ 2 CHẾ ĐỘ (CHỌN TỪ THÔN HOẶC NHẬP TRỰC TIẾP) */
                 <div className="space-y-4">
                   {/* 1. Chọn Chi hội (Thôn / Buôn) */}
                   <div>
@@ -810,82 +942,180 @@ export default function PermissionsManagementPage() {
                       ))}
                     </select>
                     <p className="text-[11px] text-stone-500 mt-1">
-                      Chọn chi hội thôn/buôn cần chỉ định hoặc thay thế Chi hội trưởng.
+                      Chi hội thôn/buôn được phân quyền Chi hội trưởng (Một chi hội có thể có nhiều đồng chí Chi hội trưởng).
                     </p>
                   </div>
 
-                  {/* 2. Sổ danh sách hội viên chính thức của chi hội đó */}
-                  <div>
-                    <label className="text-xs font-bold text-stone-700 block mb-1 uppercase flex items-center justify-between">
-                      <span>2. Chọn Hội viên cấp quyền Chi hội trưởng:</span>
-                      <span className="text-[11px] text-moss-green font-semibold">
-                        {hamletOfficialMembers.length} hội viên
-                      </span>
-                    </label>
-
-                    {hamletOfficialMembers.length > 0 ? (
-                      <select
-                        value={selectedMemberIdForLeader}
-                        onChange={(e) => setSelectedMemberIdForLeader(e.target.value)}
-                        className="w-full p-2.5 bg-stone-50 border-2 border-stone-300 focus:border-moss-green rounded-lg text-sm text-deep-text focus:bg-white focus:outline-none font-semibold"
-                      >
-                        <option value="">-- Bấm chọn 1 hội viên trong danh sách --</option>
-                        {hamletOfficialMembers.map((m) => (
-                          <option key={m.id} value={m.id}>
-                            {m.fullName} — Sinh năm {m.birthYear} (CCCD: {m.cccd}) {m.associationRole === "Chi hội trưởng" ? "⭐ [Đang là CHT]" : ""}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <div className="p-3 bg-amber-50 border border-amber-300 rounded-lg text-amber-900 text-xs">
-                        ⚠️ <strong>Chi hội {selectedBranchHamlet}</strong> hiện chưa có danh sách hội viên trong hệ thống.
-                        <p className="mt-1 text-[11px] text-amber-800">
-                          Vui lòng vào mục Quản lý Hội viên để thêm mới hoặc nhập file danh sách trước khi phân quyền.
-                        </p>
-                      </div>
-                    )}
+                  {/* Chuyển đổi phương thức cấp quyền */}
+                  <div className="flex rounded-lg bg-stone-100 p-1 border border-stone-200 text-xs font-bold">
+                    <button
+                      type="button"
+                      onClick={() => setLeaderInputMode("SELECT")}
+                      className={`flex-1 py-1.5 rounded-md transition text-center cursor-pointer ${
+                        leaderInputMode === "SELECT"
+                          ? "bg-white text-moss-green shadow-xs border border-stone-200"
+                          : "text-stone-600 hover:text-stone-900"
+                      }`}
+                    >
+                      📋 Chọn hội viên có sẵn ({hamletOfficialMembers.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLeaderInputMode("MANUAL")}
+                      className={`flex-1 py-1.5 rounded-md transition text-center cursor-pointer ${
+                        leaderInputMode === "MANUAL"
+                          ? "bg-white text-moss-green shadow-xs border border-stone-200"
+                          : "text-stone-600 hover:text-stone-900"
+                      }`}
+                    >
+                      ✏️ Nhập trực tiếp CHT mới
+                    </button>
                   </div>
 
-                  {/* 3. Thẻ tóm tắt thông tin hội viên được chọn (Tự động điền, không cần gõ phím) */}
-                  {selectedMemberForLeader && (
-                    <div className="bg-emerald-50/70 border-2 border-emerald-300 rounded-xl p-3.5 space-y-2 text-xs shadow-2xs">
-                      <div className="flex items-center justify-between pb-1.5 border-b border-emerald-200">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-base">⭐</span>
-                          <span className="font-bold text-moss-green text-sm sm:text-base">
-                            {selectedMemberForLeader.fullName}
-                          </span>
-                        </div>
-                        <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px] border border-emerald-300">
-                          {selectedMemberForLeader.associationRole === "Chi hội trưởng" ? "Đang là CHT" : "Hội viên chính thức"}
+                  {/* PHƯƠNG THỨC 1: CHỌN TỪ DANH SÁCH HỘI VIÊN THÔN */}
+                  {leaderInputMode === "SELECT" ? (
+                    <div>
+                      <label className="text-xs font-bold text-stone-700 block mb-1 uppercase flex items-center justify-between">
+                        <span>2. Chọn Hội viên cấp quyền Chi hội trưởng:</span>
+                        <span className="text-[11px] text-moss-green font-semibold">
+                          {hamletOfficialMembers.length} hội viên
                         </span>
+                      </label>
+
+                      {hamletOfficialMembers.length > 0 ? (
+                        <select
+                          value={selectedMemberIdForLeader}
+                          onChange={(e) => setSelectedMemberIdForLeader(e.target.value)}
+                          className="w-full p-2.5 bg-stone-50 border-2 border-stone-300 focus:border-moss-green rounded-lg text-sm text-deep-text focus:bg-white focus:outline-none font-semibold"
+                        >
+                          <option value="">-- Bấm chọn 1 hội viên trong danh sách --</option>
+                          {hamletOfficialMembers.map((m) => (
+                            <option key={m.id} value={m.id}>
+                              {m.fullName} — Sinh năm {m.birthYear} (CCCD: {m.cccd}) {m.associationRole === "Chi hội trưởng" ? "⭐ [Đang là CHT]" : ""}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <div className="p-3 bg-amber-50 border border-amber-300 rounded-lg text-amber-900 text-xs space-y-2">
+                          <div>
+                            ⚠️ <strong>Chi hội {selectedBranchHamlet}</strong> hiện chưa có danh sách hội viên trong bộ nhớ hiển thị.
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setLeaderInputMode("MANUAL")}
+                            className="px-3 py-1 bg-moss-green text-white rounded font-bold hover:bg-moss-green-dark cursor-pointer text-xs"
+                          >
+                            + Bấm vào đây để nhập thông tin CHT mới trực tiếp
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Thẻ tóm tắt thông tin hội viên được chọn */}
+                      {selectedMemberForLeader && (
+                        <div className="bg-emerald-50/70 border-2 border-emerald-300 rounded-xl p-3.5 space-y-2 text-xs shadow-2xs mt-3">
+                          <div className="flex items-center justify-between pb-1.5 border-b border-emerald-200">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-base">⭐</span>
+                              <span className="font-bold text-moss-green text-sm sm:text-base">
+                                {selectedMemberForLeader.fullName}
+                              </span>
+                            </div>
+                            <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px] border border-emerald-300">
+                              {selectedMemberForLeader.associationRole === "Chi hội trưởng" ? "Đang là CHT" : "Hội viên chính thức"}
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2 text-stone-700">
+                            <div>
+                              <span className="text-stone-500">Năm sinh:</span>{" "}
+                              <strong>{selectedMemberForLeader.birthYear}</strong>
+                            </div>
+                            <div>
+                              <span className="text-stone-500">Số CCCD:</span>{" "}
+                              <strong className="font-mono">{selectedMemberForLeader.cccd}</strong>
+                            </div>
+                            <div>
+                              <span className="text-stone-500">Số điện thoại:</span>{" "}
+                              <strong className="font-mono">{selectedMemberForLeader.phone || "Chưa cập nhật"}</strong>
+                            </div>
+                            <div>
+                              <span className="text-stone-500">Cấp bậc:</span>{" "}
+                              <strong>{selectedMemberForLeader.militaryRank || "Chiến sĩ"}</strong>
+                            </div>
+                          </div>
+
+                          <div className="text-[11px] text-emerald-800 pt-1.5 border-t border-emerald-200 flex items-center gap-1 font-medium">
+                            <span>✓</span>
+                            <span>
+                              Hệ thống tự động cấp quyền Chi hội trưởng và tài khoản đăng nhập (SĐT/CCCD), lưu đồng bộ vào CSDL PostgreSQL.
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    /* PHƯƠNG THỨC 2: NHẬP TRỰC TIẾP THÔNG TIN CHI HỘI TRƯỞNG MỚI */
+                    <div className="space-y-3 bg-stone-50 p-3.5 rounded-xl border border-stone-300">
+                      <div>
+                        <label className="text-xs font-bold text-stone-700 block mb-1 uppercase">
+                          Họ và tên Chi hội trưởng: *
+                        </label>
+                        <input
+                          type="text"
+                          required={leaderInputMode === "MANUAL"}
+                          placeholder="VD: Nguyễn Văn Nam"
+                          value={manualFullName}
+                          onChange={(e) => setManualFullName(e.target.value)}
+                          className="w-full p-2.5 bg-white border border-stone-300 rounded-lg text-sm text-deep-text font-bold focus:border-moss-green focus:outline-none"
+                        />
                       </div>
 
-                      <div className="grid grid-cols-2 gap-2 text-stone-700">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                          <span className="text-stone-500">Năm sinh:</span>{" "}
-                          <strong>{selectedMemberForLeader.birthYear}</strong>
+                          <label className="text-xs font-bold text-stone-700 block mb-1 uppercase">
+                            Số CCCD (12 số): *
+                          </label>
+                          <input
+                            type="text"
+                            required={leaderInputMode === "MANUAL"}
+                            maxLength={12}
+                            placeholder="VD: 066065001234"
+                            value={manualCccd}
+                            onChange={(e) => setManualCccd(e.target.value.replace(/\D/g, ""))}
+                            className="w-full p-2.5 bg-white border border-stone-300 rounded-lg text-sm text-deep-text font-mono font-bold focus:border-moss-green focus:outline-none"
+                          />
                         </div>
+
                         <div>
-                          <span className="text-stone-500">Số CCCD:</span>{" "}
-                          <strong className="font-mono">{selectedMemberForLeader.cccd}</strong>
-                        </div>
-                        <div>
-                          <span className="text-stone-500">Số điện thoại:</span>{" "}
-                          <strong className="font-mono">{selectedMemberForLeader.phone || "Chưa cập nhật"}</strong>
-                        </div>
-                        <div>
-                          <span className="text-stone-500">Cấp bậc:</span>{" "}
-                          <strong>{selectedMemberForLeader.militaryRank || "Chiến sĩ"}</strong>
+                          <label className="text-xs font-bold text-stone-700 block mb-1 uppercase">
+                            Số điện thoại liên hệ:
+                          </label>
+                          <input
+                            type="tel"
+                            placeholder="VD: 0987654321"
+                            value={manualPhone}
+                            onChange={(e) => setManualPhone(e.target.value)}
+                            className="w-full p-2.5 bg-white border border-stone-300 rounded-lg text-sm text-deep-text font-mono focus:border-moss-green focus:outline-none"
+                          />
                         </div>
                       </div>
 
-                      <div className="text-[11px] text-emerald-800 pt-1.5 border-t border-emerald-200 flex items-center gap-1 font-medium">
-                        <span>✓</span>
-                        <span>
-                          Hệ thống tự động cấp quyền Chi hội trưởng và tài khoản đăng nhập (SĐT/CCCD), không cần nhập thông tin thủ công.
-                        </span>
+                      <div>
+                        <label className="text-xs font-bold text-stone-700 block mb-1 uppercase">
+                          Năm sinh:
+                        </label>
+                        <input
+                          type="number"
+                          placeholder="1965"
+                          value={manualBirthYear}
+                          onChange={(e) => setManualBirthYear(e.target.value)}
+                          className="w-full p-2.5 bg-white border border-stone-300 rounded-lg text-sm text-deep-text focus:border-moss-green focus:outline-none"
+                        />
                       </div>
+
+                      <p className="text-[11px] text-moss-green font-medium">
+                        ✓ Khi bấm Lưu, hệ thống sẽ tự động tạo hồ sơ hội viên và cấp quyền Chi hội trưởng cho {selectedBranchHamlet}.
+                      </p>
                     </div>
                   )}
                 </div>
@@ -983,9 +1213,14 @@ export default function PermissionsManagementPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 bg-moss-green hover:bg-moss-green-dark text-white font-bold text-xs uppercase tracking-wider rounded-lg shadow cursor-pointer transition"
+                  disabled={isSubmitting}
+                  className="px-5 py-2.5 bg-moss-green hover:bg-moss-green-dark text-white font-bold text-xs uppercase tracking-wider rounded-lg shadow cursor-pointer transition disabled:opacity-50"
                 >
-                  {newRole === "BRANCH_LEADER" ? "Cấp quyền CHT & Lưu" : "Cấp tài khoản & Lưu"}
+                  {isSubmitting
+                    ? "Đang lưu & đồng bộ..."
+                    : newRole === "BRANCH_LEADER"
+                    ? "Cấp quyền CHT & Lưu"
+                    : "Cấp tài khoản & Lưu"}
                 </button>
               </div>
             </form>

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { PrismaClient, Role } from "@prisma/client";
+import bcrypt from "bcryptjs";
 
 const globalForPrisma = global as unknown as { prisma: PrismaClient };
 const prisma = globalForPrisma.prisma || new PrismaClient();
@@ -8,87 +9,138 @@ if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { cccd, hamletName } = body;
+    const { cccd, memberId, hamletName, fullName, phone } = body;
 
-    if (!cccd || !hamletName) {
+    if (!cccd && !memberId) {
       return NextResponse.json(
-        { success: false, error: "Thiếu CCCD hoặc tên thôn/buôn." },
+        { success: false, error: "Thiếu CCCD hoặc ID hội viên." },
         { status: 400 }
       );
     }
 
-    // 1. Tìm thông tin thôn/buôn
-    const hamlet = await prisma.hamlet.findFirst({
-      where: {
-        name: {
-          contains: hamletName.replace("Chi hội ", "").trim(),
-          mode: "insensitive",
+    // 1. Tìm thông tin thôn/buôn (nếu có cung cấp)
+    let hamlet = null;
+    if (hamletName) {
+      const cleanHamletName = hamletName.replace(/^Chi hội\s+/i, "").trim();
+      hamlet = await prisma.hamlet.findFirst({
+        where: {
+          name: {
+            contains: cleanHamletName,
+            mode: "insensitive",
+          },
         },
-      },
-    });
-
-    if (!hamlet) {
-      return NextResponse.json(
-        { success: false, error: `Không tìm thấy thôn buôn: ${hamletName}` },
-        { status: 404 }
-      );
+      });
     }
 
-    // 2. Tìm hội viên mục tiêu theo CCCD
-    const targetMember = await prisma.member.findUnique({
-      where: { cccd },
-    });
+    // 2. Tìm hội viên mục tiêu theo ID hoặc CCCD
+    let targetMember = null;
+    if (memberId) {
+      targetMember = await prisma.member.findUnique({
+        where: { id: memberId },
+        include: { hamlet: true },
+      });
+    }
+    if (!targetMember && cccd) {
+      targetMember = await prisma.member.findUnique({
+        where: { cccd },
+        include: { hamlet: true },
+      });
+    }
 
     if (!targetMember) {
       return NextResponse.json(
-        { success: false, error: "Không tìm thấy hội viên theo CCCD." },
+        { success: false, error: "Không tìm thấy hồ sơ hội viên trong CSDL PostgreSQL." },
         { status: 404 }
       );
     }
 
+    // Xác định thôn buôn của hội viên
+    const finalHamletId = hamlet?.id || targetMember.hamletId;
+    const finalHamletName = hamlet?.name || targetMember.hamlet?.name || hamletName || "Thôn";
+
     // 3. Cập nhật hội viên mục tiêu thành 'Chi hội trưởng' (Giữ nguyên các Chi hội trưởng khác cùng thôn)
-    await prisma.member.update({
+    const updatedMember = await prisma.member.update({
       where: { id: targetMember.id },
       data: {
         associationRole: "Chi hội trưởng",
-        hamletId: hamlet.id,
+        ...(finalHamletId ? { hamletId: finalHamletId } : {}),
       },
+      include: { hamlet: true },
     });
 
-    // 4. Cập nhật hội viên mục tiêu thành 'Chi hội trưởng'
-    await prisma.member.update({
-      where: { id: targetMember.id },
-      data: {
-        associationRole: "Chi hội trưởng",
-        hamletId: hamlet.id,
-      },
-    });
+    // 4. Cập nhật thông tin đại diện tại bảng Hamlet (nếu có thôn)
+    if (finalHamletId) {
+      try {
+        await prisma.hamlet.update({
+          where: { id: finalHamletId },
+          data: {
+            branchLeaderId: updatedMember.id,
+            branchLeaderName: updatedMember.fullName,
+            branchLeaderPhone: updatedMember.phone,
+          },
+        });
+      } catch (hErr) {
+        console.warn("Lưu ý cập nhật hamlet:", hErr);
+      }
+    }
 
-    // 5. Cập nhật bảng Hamlet
-    await prisma.hamlet.update({
-      where: { id: hamlet.id },
-      data: {
-        branchLeaderId: targetMember.id,
-        branchLeaderName: targetMember.fullName,
-        branchLeaderPhone: targetMember.phone,
-      },
-    });
-
-    // 6. Cập nhật quyền User nếu có tài khoản
+    // 5. Cập nhật hoặc tạo tài khoản User với quyền BRANCH_LEADER
     try {
-      await prisma.user.updateMany({
-        where: { username: targetMember.cccd },
-        data: { role: Role.BRANCH_LEADER },
+      const defaultPassword = process.env.DEFAULT_MEMBER_PASSWORD || "12345678@";
+      const passwordHash = await bcrypt.hash(defaultPassword, 10);
+      const username = updatedMember.phone || updatedMember.cccd;
+
+      // Tìm user hiện có liên kết với member hoặc cccd hoặc phone
+      const existingUser = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { memberId: updatedMember.id },
+            { username: updatedMember.cccd },
+            ...(updatedMember.phone ? [{ username: updatedMember.phone }, { phone: updatedMember.phone }] : []),
+          ],
+        },
       });
-    } catch {}
+
+      if (existingUser) {
+        await prisma.user.update({
+          where: { id: existingUser.id },
+          data: {
+            role: Role.BRANCH_LEADER,
+            memberId: updatedMember.id,
+            ...(finalHamletId ? { hamletId: finalHamletId } : {}),
+            fullName: updatedMember.fullName,
+            phone: updatedMember.phone || existingUser.phone,
+            isActive: true,
+          },
+        });
+      } else {
+        await prisma.user.create({
+          data: {
+            username,
+            passwordHash,
+            fullName: updatedMember.fullName,
+            phone: updatedMember.phone || undefined,
+            role: Role.BRANCH_LEADER,
+            memberId: updatedMember.id,
+            hamletId: finalHamletId,
+            isActive: true,
+          },
+        });
+      }
+    } catch (uErr) {
+      console.warn("Lưu ý cập nhật user role:", uErr);
+    }
 
     return NextResponse.json({
       success: true,
-      message: `Đã chỉ định đồng chí ${targetMember.fullName} làm Chi hội trưởng ${hamlet.name} thành công trong CSDL.`,
+      message: `Đã cấp quyền Chi hội trưởng ${finalHamletName} cho đồng chí ${updatedMember.fullName} thành công trong CSDL PostgreSQL!`,
       data: {
-        hamletName: hamlet.name,
-        leaderName: targetMember.fullName,
-        leaderPhone: targetMember.phone,
+        memberId: updatedMember.id,
+        fullName: updatedMember.fullName,
+        cccd: updatedMember.cccd,
+        phone: updatedMember.phone,
+        hamletName: finalHamletName,
+        associationRole: updatedMember.associationRole,
       },
     });
   } catch (error: any) {
@@ -99,3 +151,4 @@ export async function POST(req: Request) {
     );
   }
 }
+
