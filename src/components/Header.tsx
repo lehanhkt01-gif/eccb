@@ -134,13 +134,13 @@ export default function Header({
           <div className="flex items-center gap-2 min-w-0">
             <Link
               href="/"
-              className="inline-flex items-center gap-1 text-[11px] sm:text-xs text-amber-200 hover:text-white font-medium px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 border border-white/10 transition shrink-0"
+              className="inline-flex items-center gap-1.5 text-xs text-amber-200 hover:text-white font-medium px-2.5 py-1 rounded bg-white/5 hover:bg-white/10 border border-white/10 transition shrink-0"
               title="Về Trang chủ"
             >
               <span>🏠</span>
               <span className="hidden min-[380px]:inline">Trang chủ</span>
             </Link>
-            <div className="text-[10px] text-gray-300 italic truncate hidden sm:block">
+            <div className="text-xs sm:text-sm md:text-[15px] lg:text-base font-serif italic text-amber-100/95 tracking-wide truncate hidden sm:block select-none">
               Trung thành – Đoàn kết – Gương mẫu – Đổi mới
             </div>
           </div>
