@@ -54,152 +54,205 @@ export default function MemberImportModal({ isOpen, onClose, onSuccess }: Member
 
   if (!isOpen) return null;
 
-  // 1. TẢI FILE EXCEL MẪU CHUẨN
+  // 1. TẢI FILE EXCEL MẪU CHUẨN (MẪU 02 - 27 CỘT THỰC TẾ)
   const handleDownloadTemplate = () => {
     try {
-      const templateData = [
-        {
-          "Họ và tên (*)": "Nguyễn Văn An",
-          "Số CCCD (*)": "066060001234",
-          "Năm sinh (*)": 1960,
-          "Ngày sinh": "15/04/1960",
-          "Giới tính": "Nam",
-          "Số điện thoại": "0912345678",
-          "Thôn/Buôn": selectedHamlet !== "AUTO" ? selectedHamlet : "Thôn Đoàn Kết",
-          "Địa chỉ hiện nay": "Thôn Đoàn Kết, Xã Ea Súp, Tỉnh Đắk Lắk",
-          "Quê quán": "Xã Nam Đàn, Huyện Nam Đàn, Nghệ An",
-          "Dân tộc": "Kinh",
-          "Tôn giáo": "Không",
-          "Thời kỳ quân ngũ": "Kháng chiến chống Mỹ",
-          "Cấp bậc": "Trung úy",
-          "Chức vụ quân đội": "Trung đội trưởng",
-          "Ngày nhập ngũ": "02/1978",
-          "Ngày xuất ngũ": "12/1983",
-          "Chức vụ Hội CCB": "Hội viên",
-          "Ngày vào Hội": "19/05/1995",
-          "Đảng viên (Có/Không)": "Có",
-          "Ngày vào Đảng": "03/02/1982",
-          "Chính sách người có công": "Thương binh 4/4",
-          "BHYT 100% (Có/Không)": "Có",
-          "Hộ nghèo (Có/Không)": "Không",
-          "Mô hình kinh tế (Có/Không)": "Có",
-          "Dư nợ NHCSXH (VNĐ)": 50000000,
-        },
-        {
-          "Họ và tên (*)": "Hoàng Văn Bình",
-          "Số CCCD (*)": "066072005678",
-          "Năm sinh (*)": 1972,
-          "Ngày sinh": "20/08/1972",
-          "Giới tính": "Nam",
-          "Số điện thoại": "0987654321",
-          "Thôn/Buôn": selectedHamlet !== "AUTO" ? selectedHamlet : "Thôn 2",
-          "Địa chỉ hiện nay": "Thôn 2, Xã Ea Súp, Tỉnh Đắk Lắk",
-          "Quê quán": "Huyện Cẩm Xuyên, Hà Tĩnh",
-          "Dân tộc": "Kinh",
-          "Tôn giáo": "Không",
-          "Thời kỳ quân ngũ": "Chiến tranh bảo vệ Tổ quốc",
-          "Cấp bậc": "Thượng sĩ",
-          "Chức vụ quân đội": "Tiểu đội trưởng",
-          "Ngày nhập ngũ": "03/1990",
-          "Ngày xuất ngũ": "03/1993",
-          "Chức vụ Hội CCB": "Hội viên",
-          "Ngày vào Hội": "22/12/2000",
-          "Đảng viên (Có/Không)": "Không",
-          "Ngày vào Đảng": "",
-          "Chính sách người có công": "Không",
-          "BHYT 100% (Có/Không)": "Không",
-          "Hộ nghèo (Có/Không)": "Không",
-          "Mô hình kinh tế (Có/Không)": "Không",
-          "Dư nợ NHCSXH (VNĐ)": 0,
-        },
-        {
-          "Họ và tên (*)": "Y Ksor H'Nhi",
-          "Số CCCD (*)": "066085009876",
-          "Năm sinh (*)": 1985,
-          "Ngày sinh": "10/10/1985",
-          "Giới tính": "Nam",
-          "Số điện thoại": "0935123456",
-          "Thôn/Buôn": selectedHamlet !== "AUTO" ? selectedHamlet : "Buôn A",
-          "Địa chỉ hiện nay": "Buôn A, Xã Ea Súp, Tỉnh Đắk Lắk",
-          "Quê quán": "Xã Ea Súp, Tỉnh Đắk Lắk",
-          "Dân tộc": "Ê Đê",
-          "Tôn giáo": "Không",
-          "Thời kỳ quân ngũ": "Cựu quân nhân",
-          "Cấp bậc": "Trung sĩ",
-          "Chức vụ quân đội": "Chiến sĩ",
-          "Ngày nhập ngũ": "02/2004",
-          "Ngày xuất ngũ": "02/2006",
-          "Chức vụ Hội CCB": "Hội viên",
-          "Ngày vào Hội": "15/08/2012",
-          "Đảng viên (Có/Không)": "Có",
-          "Ngày vào Đảng": "19/05/2015",
-          "Chính sách người có công": "Không",
-          "BHYT 100% (Có/Không)": "Có",
-          "Hộ nghèo (Có/Không)": "Không",
-          "Mô hình kinh tế (Có/Không)": "Có",
-          "Dư nợ NHCSXH (VNĐ)": 30000000,
-        },
+      const hamletTitle = selectedHamlet !== "AUTO" ? selectedHamlet : "Thôn Đoàn Kết";
+      const hamletAscii = hamletTitle
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/đ/g, "d")
+        .replace(/Đ/g, "D")
+        .replace(/[^a-zA-Z0-9]/g, "_")
+        .replace(/_+/g, "_");
+
+      const sheetRows: any[][] = [
+        [`HỘI CỰU CHIẾN BINH XÃ EA SÚP - CHI HỘI ${hamletTitle.toUpperCase()}`],
+        ["BẢNG TỔNG HỢP DỮ LIỆU THU THẬP THÔNG TIN HỘI VIÊN CỰU CHIẾN BINH (MẪU 02)"],
+        [`Địa bàn: ${hamletTitle}, xã Ea Súp, tỉnh Đắk Lắk | Hệ thống E-CCB Ea Súp`],
+        [],
+        [
+          "STT",
+          "Họ và tên",
+          "Ngày sinh",
+          "Giới tính",
+          "Số CCCD",
+          "Số điện thoại",
+          "Quê quán (mới)",
+          "Dân tộc",
+          "Tôn giáo",
+          "Ngày vào Đảng",
+          "Nơi ở hiện nay",
+          "Nhập ngũ",
+          "Đơn vị quân đội",
+          "Ngày xuất ngũ / Nghỉ hưu",
+          "Cựu quân nhân (CQN)",
+          "Chức vụ cao nhất QĐ",
+          "Cấp bậc xuất ngũ",
+          "Ngày vào Hội CCB",
+          "Chức vụ Hội đã qua",
+          "Chức vụ Hội hiện tại",
+          "Qua trường đào tạo",
+          "Trình độ văn hóa",
+          "Trình độ LLCT",
+          "Chuyên môn nghiệp vụ",
+          "Người có công / Chính sách",
+          "Danh hiệu / Khen thưởng",
+          "Ngày lập phiếu",
+        ],
+        [
+          1,
+          "Huỳnh Xuân Lê",
+          "14/07/1992",
+          "Nam",
+          "066092000778",
+          "0389120222",
+          "Xã Hoài Nhơn Tây, tỉnh Gia Lai",
+          "Kinh",
+          "Không",
+          "13/06/2019",
+          `05 Trần Phú, ${hamletTitle}, xã Ea Súp, tỉnh Đắk Lắk`,
+          "27/02/2013",
+          "d19, Tiểu đoàn HL BĐBP tỉnh Đắk Lắk",
+          "01/08/2014",
+          "",
+          "BĐ (Thiếu úy)",
+          "Binh nhất",
+          "04/02/2015",
+          "Không",
+          "Hội viên",
+          "SQLQ2 (ĐH Nguyễn Huệ)",
+          "12/12",
+          "Trung cấp",
+          "ĐH ngành QLCS",
+          "Không",
+          "Không",
+          "11/09/2026",
+        ],
+        [
+          2,
+          "Đỗ Thanh Hải",
+          "20/10/1952",
+          "Nam",
+          "034052005398",
+          "0326864882",
+          "Thôn Thượng Trà, xã Diễn Thọ, huyện Diễn Châu, Nghệ An",
+          "Kinh",
+          "Không",
+          "Không",
+          `Số 55 ${hamletTitle}, xã Ea Súp, Đắk Lắk`,
+          "08/1973",
+          "D.668 - E... QK4",
+          "08/1982",
+          "Phục viên",
+          "Trung đội trưởng",
+          "Thiếu úy",
+          "1997",
+          "Chi hội phó",
+          "Hội viên",
+          "Sơ cấp cơ khí",
+          "7/10",
+          "",
+          "",
+          "Thương binh 4/4",
+          "Huân chương Chiến sĩ vẻ vang",
+          "24/08/2026",
+        ],
+        [
+          3,
+          "Nguyễn Đình Chiến",
+          "06/03/1965",
+          "Nam",
+          "042065000508",
+          "0357561647",
+          "Cẩm Xuyên, Hà Tĩnh",
+          "Kinh",
+          "Không",
+          "",
+          `21A ${hamletTitle}, xã Ea Súp`,
+          "02/1986",
+          "Không Quân",
+          "1987",
+          "",
+          "Binh nhất",
+          "Binh nhất",
+          "1996",
+          "Thư ký chi hội",
+          "Thư ký chi hội",
+          "11 tháng HL Không quân",
+          "9/10",
+          "",
+          "Không quân",
+          "Không",
+          "Chiến sĩ thi đua",
+          "26/08/2026",
+        ],
       ];
 
-      const ws = XLSX.utils.json_to_sheet(templateData);
-      // Đặt độ rộng cột cho đẹp mắt
+      const ws = XLSX.utils.aoa_to_sheet(sheetRows);
+      // Đặt độ rộng các cột chuẩn Mẫu 02
       ws["!cols"] = [
+        { wch: 6 },  // STT
         { wch: 22 }, // Họ và tên
-        { wch: 18 }, // CCCD
-        { wch: 12 }, // Năm sinh
         { wch: 14 }, // Ngày sinh
         { wch: 10 }, // Giới tính
+        { wch: 18 }, // Số CCCD
         { wch: 15 }, // SĐT
-        { wch: 18 }, // Thôn buôn
-        { wch: 32 }, // Địa chỉ
-        { wch: 28 }, // Quê quán
+        { wch: 32 }, // Quê quán
         { wch: 12 }, // Dân tộc
         { wch: 12 }, // Tôn giáo
-        { wch: 25 }, // Thời kỳ
-        { wch: 15 }, // Cấp bậc
-        { wch: 20 }, // Chức vụ QĐ
+        { wch: 14 }, // Ngày vào Đảng
+        { wch: 35 }, // Nơi ở hiện nay
         { wch: 14 }, // Nhập ngũ
-        { wch: 14 }, // Xuất ngũ
-        { wch: 16 }, // Chức vụ Hội
-        { wch: 14 }, // Vào Hội
-        { wch: 18 }, // Đảng viên
-        { wch: 14 }, // Vào Đảng
-        { wch: 20 }, // Chính sách
-        { wch: 18 }, // BHYT
-        { wch: 18 }, // Hộ nghèo
-        { wch: 22 }, // Kinh tế
-        { wch: 20 }, // Dư nợ
+        { wch: 25 }, // Đơn vị quân đội
+        { wch: 22 }, // Ngày xuất ngũ
+        { wch: 18 }, // CQN
+        { wch: 20 }, // Chức vụ cao nhất QĐ
+        { wch: 16 }, // Cấp bậc xuất ngũ
+        { wch: 16 }, // Ngày vào Hội CCB
+        { wch: 18 }, // Chức vụ Hội đã qua
+        { wch: 18 }, // Chức vụ Hội hiện tại
+        { wch: 22 }, // Qua trường đào tạo
+        { wch: 16 }, // Trình độ văn hóa
+        { wch: 16 }, // Trình độ LLCT
+        { wch: 20 }, // Chuyên môn nghiệp vụ
+        { wch: 22 }, // Người có công
+        { wch: 22 }, // Khen thưởng
+        { wch: 14 }, // Ngày lập phiếu
       ];
 
       const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "DanhSachHoiVien");
-      const filename =
-        selectedHamlet !== "AUTO"
-          ? `Mau_Danh_Sach_CCB_${selectedHamlet.replace(/\s+/g, "_")}.xlsx`
-          : "Mau_Danh_Sach_Hoi_Vien_CCB_Ea_Sup.xlsx";
+      XLSX.utils.book_append_sheet(wb, ws, "Mau02_HoiVienCCB");
+      const filename = `Mau_02_Danh_Sach_CCB_${hamletAscii}.xlsx`;
 
-      // Xuất chuẩn file nhị phân OpenXML Spreadsheet (.xlsx)
-      const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-      const blob = new Blob([excelBuffer], {
-        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
+      // 1. Dùng XLSX.writeFile chuẩn của SheetJS
+      try {
+        XLSX.writeFile(wb, filename);
+      } catch (writeErr) {
+        // Fallback tạo Blob chuẩn không revoke ngay
+        const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+        const blob = new Blob([excelBuffer], {
+          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+        }, 60000);
+      }
     } catch (err) {
-      console.warn("Client XLSX write warning, chuyển sang tải trực tiếp từ server:", err);
-      // Fallback tải file mẫu chuẩn trực tiếp từ API server
+      console.warn("Client XLSX download warning, tải qua server:", err);
       const hamletParam = encodeURIComponent(selectedHamlet);
       window.location.href = `/api/admin/members/template?hamlet=${hamletParam}`;
     }
   };
 
-  // 2. XỬ LÝ ĐỌC VÀ PARSE FILE EXCEL / CSV
+  // 2. XỬ LÝ ĐỌC VÀ PARSE FILE EXCEL / CSV THÔNG MINH
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
@@ -217,11 +270,34 @@ export default function MemberImportModal({ isOpen, onClose, onSuccess }: Member
       }
 
       const ws = wb.Sheets[firstSheetName];
-      const rawRows = XLSX.utils.sheet_to_json<Record<string, any>>(ws, { defval: "" });
+      // Đọc toàn bộ sheet dạng ma trận 2D
+      const rawMatrix = XLSX.utils.sheet_to_json<any[]>(ws, { header: 1, defval: "" });
 
-      if (rawRows.length === 0) {
+      if (rawMatrix.length === 0) {
         throw new Error("File không chứa dòng dữ liệu nào.");
       }
+
+      // Tự động quét tìm dòng tiêu đề cột (Header row)
+      let headerRowIndex = -1;
+      for (let r = 0; r < Math.min(20, rawMatrix.length); r++) {
+        const row = rawMatrix[r];
+        if (
+          Array.isArray(row) &&
+          row.some((cell) => typeof cell === "string" && (/họ\s*(và)?\s*tên/i.test(cell) || /cccd/i.test(cell)))
+        ) {
+          headerRowIndex = r;
+          break;
+        }
+      }
+
+      // Nếu không tìm thấy, mặc định dòng 0
+      if (headerRowIndex === -1) {
+        headerRowIndex = 0;
+      }
+
+      const headerCells: string[] = (rawMatrix[headerRowIndex] || []).map((c) =>
+        String(c || "").trim()
+      );
 
       // Lấy danh sách CCCD đã có trong hệ thống để phát hiện trùng lặp
       const existingMembers = getStoredMembers();
@@ -229,19 +305,28 @@ export default function MemberImportModal({ isOpen, onClose, onSuccess }: Member
 
       const parsed: ParsedMemberRow[] = [];
 
-      // Helper tìm giá trị theo nhiều biến thể tên cột
-      const findVal = (row: Record<string, any>, keys: string[]) => {
+      // Helper tìm giá trị theo danh sách tên cột
+      const findVal = (rowObj: Record<string, any>, keys: string[]) => {
         for (const k of keys) {
-          if (row[k] !== undefined && row[k] !== "") return String(row[k]).trim();
+          if (rowObj[k] !== undefined && rowObj[k] !== "") return String(rowObj[k]).trim();
         }
-        // Thử tìm case-insensitive
-        const lowerKeys = Object.keys(row).reduce((acc, currentKey) => {
-          acc[currentKey.toLowerCase().replace(/[^a-z0-9]/g, "")] = row[currentKey];
+        // Thử tìm theo dạng chuẩn hóa không dấu và ký tự đặc biệt
+        const lowerKeys = Object.keys(rowObj).reduce((acc, currentKey) => {
+          const clean = currentKey
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-z0-9]/g, "");
+          acc[clean] = rowObj[currentKey];
           return acc;
         }, {} as Record<string, any>);
 
         for (const k of keys) {
-          const cleanK = k.toLowerCase().replace(/[^a-z0-9]/g, "");
+          const cleanK = k
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-z0-9]/g, "");
           if (lowerKeys[cleanK] !== undefined && lowerKeys[cleanK] !== "") {
             return String(lowerKeys[cleanK]).trim();
           }
@@ -249,68 +334,140 @@ export default function MemberImportModal({ isOpen, onClose, onSuccess }: Member
         return "";
       };
 
-      rawRows.forEach((row, index) => {
-        const fullName = findVal(row, ["Họ và tên (*)", "Họ và tên", "Họ tên", "FullName", "Name", "Ho va ten"]);
-        let cccd = findVal(row, ["Số CCCD (*)", "Số CCCD", "CCCD", "CMND", "So CCCD", "Căn cước", "IdCard"]);
+      // Duyệt từng dòng dữ liệu phía sau header
+      for (let r = headerRowIndex + 1; r < rawMatrix.length; r++) {
+        const rowArr = rawMatrix[r];
+        if (!Array.isArray(rowArr) || rowArr.length === 0) continue;
 
-        // Chuẩn hóa CCCD (loại bỏ dấu cách, dấu gạch ngang)
+        // Tạo object { [HeaderName]: Value }
+        const rowObj: Record<string, any> = {};
+        headerCells.forEach((hName, colIdx) => {
+          if (hName) {
+            rowObj[hName] = rowArr[colIdx] !== undefined ? rowArr[colIdx] : "";
+          }
+        });
+
+        const fullName = findVal(rowObj, ["Họ và tên (*)", "Họ và tên", "Họ tên", "FullName", "Name", "Ho va ten"]);
+        let cccd = findVal(rowObj, ["Số CCCD (*)", "Số CCCD", "CCCD", "CMND", "So CCCD", "Căn cước", "IdCard"]);
+
+        // Nếu cả Họ tên và CCCD đều trống thì bỏ qua dòng trống cuối file
+        if (!fullName && !cccd) continue;
+
+        // Chuẩn hóa CCCD (loại bỏ ký tự không phải số)
         cccd = cccd.replace(/[^0-9]/g, "");
         if (cccd.length > 0 && cccd.length < 12) {
-          // Bổ sung số 0 đầu nếu bị format Number của Excel cắt mất
           cccd = cccd.padStart(12, "0");
         }
 
-        const birthYearRaw = findVal(row, ["Năm sinh (*)", "Năm sinh", "Nam sinh", "BirthYear"]);
+        // Ngày sinh / Năm sinh
+        const birthDateRaw = findVal(rowObj, ["Ngày sinh", "Ngay sinh", "BirthDate"]);
+        const birthYearRaw = findVal(rowObj, ["Năm sinh (*)", "Năm sinh", "Nam sinh", "BirthYear"]);
+
         let birthYear = parseInt(birthYearRaw, 10);
+        if (isNaN(birthYear) && birthDateRaw) {
+          const yearMatch = birthDateRaw.match(/\b(19\d{2}|20\d{2})\b/);
+          if (yearMatch) {
+            birthYear = parseInt(yearMatch[1], 10);
+          }
+        }
         if (isNaN(birthYear) || birthYear < 1920 || birthYear > 2010) {
-          birthYear = 1965; // Mặc định nếu không nhận diện được
+          birthYear = 1965; // Mặc định an toàn
         }
 
-        const phone = findVal(row, ["Số điện thoại", "Điện thoại", "SDT", "Phone", "So dien thoai"]);
-        let hamletName = findVal(row, ["Thôn/Buôn", "Thôn", "Buôn", "Địa bàn", "Hamlet", "Don vi"]);
+        const phone = findVal(rowObj, ["Số điện thoại", "Điện thoại", "SDT", "Phone", "So dien thoai"]);
+
+        // Thôn buôn
+        let hamletName = findVal(rowObj, ["Thôn/Buôn", "Thôn", "Buôn", "Địa bàn", "Hamlet"]);
         if (selectedHamlet !== "AUTO") {
           hamletName = selectedHamlet;
         } else if (!hamletName) {
-          hamletName = "Thôn 1";
+          // Trích xuất từ địa chỉ nếu có
+          const addr = findVal(rowObj, ["Nơi ở hiện nay", "Địa chỉ hiện nay", "Địa chỉ", "Dia chi"]);
+          const matchedHamlet = EA_SUP_HAMLETS.find((h) =>
+            addr.toLowerCase().includes(h.toLowerCase())
+          );
+          hamletName = matchedHamlet || "Thôn Đoàn Kết";
         }
 
-        const period = findVal(row, ["Thời kỳ quân ngũ", "Thời kỳ", "Period"]) || "Chiến tranh bảo vệ Tổ quốc";
-        const militaryRank = findVal(row, ["Cấp bậc", "Quân hàm", "MilitaryRank"]) || "Hội viên";
-        const militaryPosition = findVal(row, ["Chức vụ quân đội", "Chức vụ QĐ", "Position"]);
-        const gender = findVal(row, ["Giới tính", "Gender"]) || "Nam";
-        const hometown = findVal(row, ["Quê quán", "Que quan", "Hometown"]);
-        const ethnicity = findVal(row, ["Dân tộc", "Dan toc"]) || "Kinh";
-        const religion = findVal(row, ["Tôn giáo", "Ton giao"]) || "Không";
+        // Ngày nhập ngũ & Ngày xuất ngũ
+        const enlistmentDate = findVal(rowObj, ["Nhập ngũ", "Ngày nhập ngũ", "Ngay nhap ngu"]);
+        const dischargeDate = findVal(rowObj, [
+          "Ngày xuất ngũ / Nghỉ hưu",
+          "Ngày xuất ngũ",
+          "Xuất ngũ",
+          "Nghỉ hưu",
+          "Ngay xuat ngu",
+        ]);
+
+        // Thời kỳ quân ngũ (tự động suy luận nếu trống)
+        let period = findVal(rowObj, ["Thời kỳ quân ngũ", "Thời kỳ", "Period"]);
+        if (!period) {
+          const cqnVal = findVal(rowObj, ["Cựu quân nhân (CQN)", "Cựu quân nhân", "CQN"]);
+          if (cqnVal && cqnVal.toLowerCase() !== "không") {
+            period = "Cựu quân nhân";
+          } else {
+            const enlistMatch = enlistmentDate.match(/\b(19\d{2}|20\d{2})\b/);
+            const enlistYear = enlistMatch ? parseInt(enlistMatch[1], 10) : 0;
+            if (enlistYear > 0 && enlistYear <= 1975) {
+              period = "Kháng chiến chống Mỹ";
+            } else if (enlistYear > 1975 && enlistYear <= 1989) {
+              period = "Chiến tranh bảo vệ Tổ quốc";
+            } else {
+              period = "Chiến tranh bảo vệ Tổ quốc";
+            }
+          }
+        }
+
+        const militaryRank = findVal(rowObj, ["Cấp bậc xuất ngũ", "Cấp bậc", "Quân hàm"]) || "Hội viên";
+        const militaryPosition = findVal(rowObj, ["Chức vụ cao nhất QĐ", "Chức vụ quân đội", "Chức vụ QĐ"]);
+        const gender = findVal(rowObj, ["Giới tính", "Gender"]) || "Nam";
+        const hometown = findVal(rowObj, ["Quê quán (mới)", "Quê quán", "Que quan"]);
+        const ethnicity = findVal(rowObj, ["Dân tộc", "Dan toc"]) || "Kinh";
+        const religion = findVal(rowObj, ["Tôn giáo", "Ton giao"]) || "Không";
         const currentAddress =
-          findVal(row, ["Địa chỉ hiện nay", "Địa chỉ", "Dia chi", "Address"]) ||
+          findVal(rowObj, ["Nơi ở hiện nay", "Địa chỉ hiện nay", "Địa chỉ", "Dia chi"]) ||
           `${hamletName}, Xã Ea Súp, Tỉnh Đắk Lắk`;
 
-        const partyVal = findVal(row, ["Đảng viên (Có/Không)", "Đảng viên", "Dang vien"]).toLowerCase();
-        const isPartyMember = partyVal === "có" || partyVal === "co" || partyVal === "true" || partyVal === "1";
+        const partyDateRaw = findVal(rowObj, ["Ngày vào Đảng", "Vào Đảng"]);
+        const partyVal = findVal(rowObj, ["Đảng viên (Có/Không)", "Đảng viên", "Dang vien"]).toLowerCase();
+        const isPartyMember =
+          (partyDateRaw && partyDateRaw.toLowerCase() !== "không") ||
+          partyVal === "có" ||
+          partyVal === "co" ||
+          partyVal === "true" ||
+          partyVal === "1";
 
-        const policyStatus = findVal(row, ["Chính sách người có công", "Chính sách", "PolicyStatus"]) || "Không";
-        const bhytVal = findVal(row, ["BHYT 100% (Có/Không)", "BHYT 100%", "BHYT"]).toLowerCase();
+        const policyStatus =
+          findVal(rowObj, ["Người có công / Chính sách", "Chính sách người có công", "Chính sách"]) || "Không";
+
+        const bhytVal = findVal(rowObj, ["BHYT 100% (Có/Không)", "BHYT 100%", "BHYT"]).toLowerCase();
         const hasHealthInsurance100 = bhytVal === "có" || bhytVal === "co" || bhytVal === "true";
 
-        const poorVal = findVal(row, ["Hộ nghèo (Có/Không)", "Hộ nghèo", "Ho ngheo"]).toLowerCase();
+        const poorVal = findVal(rowObj, ["Hộ nghèo (Có/Không)", "Hộ nghèo", "Ho ngheo"]).toLowerCase();
         const isPoorHousehold = poorVal === "có" || poorVal === "co" || poorVal === "true";
 
-        const ecoVal = findVal(row, ["Mô hình kinh tế (Có/Không)", "Mô hình kinh tế", "Kinh te"]).toLowerCase();
+        const ecoVal = findVal(rowObj, ["Mô hình kinh tế (Có/Không)", "Mô hình kinh tế", "Kinh te"]).toLowerCase();
         const hasEconomicModel = ecoVal === "có" || ecoVal === "co" || ecoVal === "true";
 
-        const debtRaw = findVal(row, ["Dư nợ NHCSXH (VNĐ)", "Dư nợ", "Vay vốn", "Debt"]);
+        const debtRaw = findVal(rowObj, ["Dư nợ NHCSXH (VNĐ)", "Dư nợ", "Vay vốn", "Debt"]);
         const totalDebt = parseFloat(debtRaw.replace(/[^0-9.]/g, "")) || 0;
 
-        // Kiểm tra hợp lệ
+        // Xử lý CCCD nếu trống
+        if (!cccd) {
+          // Tạo mã định danh tạm thời để không làm mất hồ sơ
+          cccd = `066${String(birthYear).slice(-2)}${String(r).padStart(7, "0")}`;
+        }
+
+        // Kiểm tra tính hợp lệ
         let isValid = true;
         let errorMessage = "";
 
         if (!fullName) {
           isValid = false;
           errorMessage = "Thiếu Họ và tên";
-        } else if (!cccd || cccd.length !== 12) {
+        } else if (cccd.length !== 12) {
           isValid = false;
-          errorMessage = `Số CCCD không đúng 12 số (${cccd || "Trống"})`;
+          errorMessage = `Số CCCD không đúng 12 số (${cccd})`;
         }
 
         const isDuplicate = existingCccdMap.has(cccd);
@@ -319,7 +476,7 @@ export default function MemberImportModal({ isOpen, onClose, onSuccess }: Member
           fullName,
           cccd,
           birthYear,
-          birthDate: findVal(row, ["Ngày sinh", "Ngay sinh"]),
+          birthDate: birthDateRaw,
           gender,
           phone,
           hamletName,
@@ -330,12 +487,13 @@ export default function MemberImportModal({ isOpen, onClose, onSuccess }: Member
           period,
           militaryRank,
           militaryPosition,
-          enlistmentDate: findVal(row, ["Ngày nhập ngũ", "Nhập ngũ"]),
-          dischargeDate: findVal(row, ["Ngày xuất ngũ", "Xuất ngũ"]),
-          associationRole: findVal(row, ["Chức vụ Hội CCB", "Chức vụ Hội"]) || "Hội viên",
-          associationJoinDate: findVal(row, ["Ngày vào Hội", "Vào Hội"]),
+          enlistmentDate,
+          dischargeDate,
+          associationRole:
+            findVal(rowObj, ["Chức vụ Hội hiện tại", "Chức vụ Hội CCB", "Chức vụ Hội"]) || "Hội viên",
+          associationJoinDate: findVal(rowObj, ["Ngày vào Hội CCB", "Ngày vào Hội", "Vào Hội"]),
           isPartyMember,
-          partyJoinDate: findVal(row, ["Ngày vào Đảng", "Vào Đảng"]),
+          partyJoinDate: partyDateRaw && partyDateRaw.toLowerCase() !== "không" ? partyDateRaw : undefined,
           policyStatus,
           hasHealthInsurance100,
           isPoorHousehold,
@@ -345,7 +503,7 @@ export default function MemberImportModal({ isOpen, onClose, onSuccess }: Member
           isValid,
           errorMessage,
         });
-      });
+      }
 
       setParsedRows(parsed);
     } catch (err: any) {
