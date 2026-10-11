@@ -192,7 +192,7 @@ export default function NewsCreateModal({
     });
   };
 
-  // Thao tác thanh công cụ văn bản
+  // Thao tác thanh công cụ văn bản thông minh (Hỗ trợ bôi đen, tự nhận dòng và toggle)
   const handleInsertFormatting = (type: "bold" | "italic" | "newline" | "indent" | "bullet") => {
     // Đảm bảo tab đang ở chế độ Soạn thảo
     setContentMode("edit");
@@ -204,51 +204,114 @@ export default function NewsCreateModal({
     const end = textarea.selectionEnd;
     const selectedText = content.substring(start, end);
     let replacement = "";
-    let selectNewRange = false;
+    let newStart = start;
+    let newEnd = end;
 
-    switch (type) {
-      case "bold":
-        if (selectedText) {
-          replacement = `**${selectedText}**`;
+    if (type === "bold") {
+      if (selectedText) {
+        // Toggle: Nếu đã in đậm thì gỡ bỏ, nếu chưa thì thêm
+        if (selectedText.startsWith("**") && selectedText.endsWith("**") && selectedText.length >= 4) {
+          replacement = selectedText.slice(2, -2);
+          newStart = start;
+          newEnd = start + replacement.length;
+        } else {
+          const match = selectedText.match(/^(\s*)([\s\S]*?)(\s*)$/);
+          const leading = match ? match[1] : "";
+          const core = match ? match[2] : selectedText;
+          const trailing = match ? match[3] : "";
+          replacement = `${leading}**${core}**${trailing}`;
+          newStart = start + leading.length;
+          newEnd = start + replacement.length - trailing.length;
+        }
+      } else {
+        // Nếu không bôi đen: Kiểm tra dòng hiện tại
+        const lastNl = content.lastIndexOf("\n", start - 1);
+        const nextNl = content.indexOf("\n", start);
+        const lineStart = lastNl === -1 ? 0 : lastNl + 1;
+        const lineEnd = nextNl === -1 ? content.length : nextNl;
+        const currentLine = content.substring(lineStart, lineEnd);
+
+        if (currentLine.trim().length > 0) {
+          // Bọc toàn bộ dòng hiện tại
+          if (currentLine.trim().startsWith("**") && currentLine.trim().endsWith("**")) {
+            const unbold = currentLine.trim().slice(2, -2);
+            const newContent = content.substring(0, lineStart) + unbold + content.substring(lineEnd);
+            setContent(newContent);
+            return;
+          } else {
+            const bolded = `**${currentLine.trim()}**`;
+            const newContent = content.substring(0, lineStart) + bolded + content.substring(lineEnd);
+            setContent(newContent);
+            return;
+          }
         } else {
           replacement = `**Nội dung in đậm**`;
-          selectNewRange = true;
+          newStart = start + 2;
+          newEnd = start + 18;
         }
-        break;
-      case "italic":
-        if (selectedText) {
-          replacement = `*${selectedText}*`;
+      }
+    } else if (type === "italic") {
+      if (selectedText) {
+        // Toggle: Nếu đã in nghiêng thì gỡ bỏ
+        if (selectedText.startsWith("*") && selectedText.endsWith("*") && selectedText.length >= 2 && !selectedText.startsWith("**")) {
+          replacement = selectedText.slice(1, -1);
+          newStart = start;
+          newEnd = start + replacement.length;
+        } else {
+          const match = selectedText.match(/^(\s*)([\s\S]*?)(\s*)$/);
+          const leading = match ? match[1] : "";
+          const core = match ? match[2] : selectedText;
+          const trailing = match ? match[3] : "";
+          replacement = `${leading}*${core}*${trailing}`;
+          newStart = start + leading.length;
+          newEnd = start + replacement.length - trailing.length;
+        }
+      } else {
+        const lastNl = content.lastIndexOf("\n", start - 1);
+        const nextNl = content.indexOf("\n", start);
+        const lineStart = lastNl === -1 ? 0 : lastNl + 1;
+        const lineEnd = nextNl === -1 ? content.length : nextNl;
+        const currentLine = content.substring(lineStart, lineEnd);
+
+        if (currentLine.trim().length > 0) {
+          const italicized = `*${currentLine.trim()}*`;
+          const newContent = content.substring(0, lineStart) + italicized + content.substring(lineEnd);
+          setContent(newContent);
+          return;
         } else {
           replacement = `*Nội dung in nghiêng*`;
-          selectNewRange = true;
+          newStart = start + 1;
+          newEnd = start + 21;
         }
-        break;
-      case "newline":
-        replacement = `\n\n`;
-        break;
-      case "indent":
-        if (selectedText.includes("\n")) {
-          replacement = selectedText
-            .split("\n")
-            .map((line) => `    ${line}`)
-            .join("\n");
-        } else {
-          replacement = `    ${selectedText}`;
-        }
-        break;
-      case "bullet":
-        if (selectedText.includes("\n")) {
-          replacement = selectedText
-            .split("\n")
-            .map((line) => (line.trim().startsWith("•") ? line : `• ${line}`))
-            .join("\n");
-        } else if (selectedText) {
-          replacement = `\n• ${selectedText}`;
-        } else {
-          replacement = `\n• Điểm thứ nhất...\n• Điểm thứ hai...`;
-          selectNewRange = true;
-        }
-        break;
+      }
+    } else if (type === "newline") {
+      replacement = `\n\n`;
+      newStart = start + 2;
+      newEnd = start + 2;
+    } else if (type === "indent") {
+      if (selectedText.includes("\n")) {
+        replacement = selectedText
+          .split("\n")
+          .map((line) => `    ${line}`)
+          .join("\n");
+      } else {
+        replacement = `    ${selectedText}`;
+      }
+      newStart = start + replacement.length;
+      newEnd = start + replacement.length;
+    } else if (type === "bullet") {
+      if (selectedText.includes("\n")) {
+        replacement = selectedText
+          .split("\n")
+          .map((line) => (line.trim().startsWith("•") ? line : `• ${line}`))
+          .join("\n");
+      } else if (selectedText) {
+        replacement = `\n• ${selectedText}`;
+      } else {
+        replacement = `\n• Điểm thứ nhất...\n• Điểm thứ hai...`;
+      }
+      newStart = start + replacement.length;
+      newEnd = start + replacement.length;
     }
 
     const newContent = content.substring(0, start) + replacement + content.substring(end);
@@ -256,20 +319,8 @@ export default function NewsCreateModal({
 
     setTimeout(() => {
       textarea.focus();
-      if (selectNewRange && !selectedText) {
-        if (type === "bold") {
-          textarea.setSelectionRange(start + 2, start + replacement.length - 2);
-        } else if (type === "italic") {
-          textarea.setSelectionRange(start + 1, start + replacement.length - 1);
-        } else {
-          const newPos = start + replacement.length;
-          textarea.setSelectionRange(newPos, newPos);
-        }
-      } else {
-        const newPos = start + replacement.length;
-        textarea.setSelectionRange(newPos, newPos);
-      }
-    }, 50);
+      textarea.setSelectionRange(newStart, newEnd);
+    }, 30);
   };
 
   // Xử lý nộp form
@@ -663,6 +714,7 @@ export default function NewsCreateModal({
             <div className="flex items-center gap-1.5 p-1.5 bg-stone-100 border-2 border-stone-300 border-b-0 rounded-t-xl flex-wrap text-xs">
               <button
                 type="button"
+                onMouseDown={(e) => e.preventDefault()}
                 onClick={() => handleInsertFormatting("bold")}
                 className="px-2.5 py-1 bg-white hover:bg-stone-200 border border-stone-300 rounded font-bold text-deep-text transition active:scale-95 cursor-pointer shadow-2xs"
                 title="In đậm chữ: bôi đen đoạn chữ và bấm nút, hoặc bấm để chèn **nội dung in đậm**"
@@ -671,6 +723,7 @@ export default function NewsCreateModal({
               </button>
               <button
                 type="button"
+                onMouseDown={(e) => e.preventDefault()}
                 onClick={() => handleInsertFormatting("italic")}
                 className="px-2.5 py-1 bg-white hover:bg-stone-200 border border-stone-300 rounded italic text-deep-text transition active:scale-95 cursor-pointer shadow-2xs"
                 title="In nghiêng chữ: bôi đen đoạn chữ và bấm nút, hoặc bấm để chèn *nội dung in nghiêng*"
@@ -679,6 +732,7 @@ export default function NewsCreateModal({
               </button>
               <button
                 type="button"
+                onMouseDown={(e) => e.preventDefault()}
                 onClick={() => handleInsertFormatting("bullet")}
                 className="px-2.5 py-1 bg-white hover:bg-stone-200 border border-stone-300 rounded text-deep-text transition active:scale-95 cursor-pointer shadow-2xs"
                 title="Gạch đầu dòng danh sách: chèn dấu ● vào đầu dòng"
@@ -687,6 +741,7 @@ export default function NewsCreateModal({
               </button>
               <button
                 type="button"
+                onMouseDown={(e) => e.preventDefault()}
                 onClick={() => handleInsertFormatting("newline")}
                 className="px-2.5 py-1 bg-white hover:bg-stone-200 border border-stone-300 rounded text-deep-text transition active:scale-95 cursor-pointer shadow-2xs"
                 title="Ngắt sang đoạn văn mới"
@@ -695,6 +750,7 @@ export default function NewsCreateModal({
               </button>
               <button
                 type="button"
+                onMouseDown={(e) => e.preventDefault()}
                 onClick={() => handleInsertFormatting("indent")}
                 className="px-2.5 py-1 bg-white hover:bg-stone-200 border border-stone-300 rounded text-deep-text transition active:scale-95 cursor-pointer shadow-2xs"
                 title="Thụt lề đoạn văn (thêm khoảng trắng đầu dòng)"

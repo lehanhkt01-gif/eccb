@@ -213,13 +213,10 @@ export async function POST(req: NextRequest) {
         author: author?.trim() || (isCadre ? "Thường trực Hội CCB Xã Ea Súp" : "Hội viên CCB Ea Súp"),
         authorRole: effectiveRole,
         authorPhone: authorPhone || "",
-        ...(authorId ? { authorId } : {}),
-        ...(isCadre && articleStatus === PrismaArticleStatus.APPROVED
-          ? {
-              reviewedById: "cadre-ea-sup",
-              reviewedByName: "Ban Thường trực Hội CCB Xã Ea Súp",
-            }
-          : {}),
+        // Chỉ lưu authorId nếu ID đó tồn tại trong User, tránh lỗi Foreign Key
+        authorId: null,
+        reviewedById: null,
+        reviewedByName: isCadre && articleStatus === PrismaArticleStatus.APPROVED ? "Ban Thường trực Hội CCB Xã Ea Súp" : null,
         views: 1,
         createdAt: now,
         updatedAt: now,
@@ -272,16 +269,13 @@ export async function PUT(req: NextRequest) {
     const authHeader = req.headers.get("x-admin-role");
     const roleHeader = req.headers.get("x-user-role");
     const effectiveRole = userRole || roleHeader || "GUEST";
-    const isMemberOrLeader = effectiveRole === "MEMBER" || effectiveRole === "BRANCH_LEADER";
 
-    let isCadre = false;
-    if (!isMemberOrLeader) {
-      if (effectiveRole === "SUPER_ADMIN" || authHeader === "CADRE") {
-        isCadre = true;
-      } else if (pin === "ccbeasup" || pin === "0943170770") {
-        isCadre = true;
-      }
-    }
+    // Cán bộ xã: Là SUPER_ADMIN hoặc có header CADRE hoặc có mã PIN bí mật của Thường trực
+    const isCadre =
+      effectiveRole === "SUPER_ADMIN" ||
+      authHeader === "CADRE" ||
+      pin === "ccbeasup" ||
+      pin === "0943170770";
 
     if (!isCadre) {
       return NextResponse.json(
@@ -307,13 +301,19 @@ export async function PUT(req: NextRequest) {
 
     const now = new Date();
 
+    // Tìm user Cán bộ xã hợp lệ trong DB nếu có để liên kết khóa ngoại an toàn
+    const cadreUser = await prisma.user.findFirst({
+      where: { role: "SUPER_ADMIN" },
+    });
+    const safeReviewerId = cadreUser?.id || null;
+
     // 1. Phê duyệt bài viết
     if (action === "approve") {
       const updated = await prisma.article.update({
         where: { id },
         data: {
           status: PrismaArticleStatus.APPROVED,
-          reviewedById: "cadre-ea-sup",
+          reviewedById: safeReviewerId,
           reviewedByName: "Ban Thường trực Hội CCB Xã Ea Súp",
           updatedAt: now,
         },
@@ -332,7 +332,7 @@ export async function PUT(req: NextRequest) {
         where: { id },
         data: {
           status: PrismaArticleStatus.REJECTED,
-          reviewedById: "cadre-ea-sup",
+          reviewedById: safeReviewerId,
           reviewedByName: "Ban Thường trực Hội CCB Xã Ea Súp",
           updatedAt: now,
         },

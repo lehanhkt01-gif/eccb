@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import Header from "@/components/Header";
 import NewsShareBar from "@/components/NewsShareBar";
 import FormattedContent from "@/components/FormattedContent";
+import SafeImage from "@/components/SafeImage";
 import { getAllNews, getNewsById, Article } from "@/lib/newsService";
 import { getFirstImageUrl, getPreviewDescription } from "@/lib/news-utils";
 
@@ -75,7 +76,7 @@ export default async function NewsDetailPage({ params }: PageProps) {
   const otherArticles = allArticles.filter((item) => item.id !== article.id).slice(0, 3);
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://ccb.easupso.com";
   const currentUrl = `${siteUrl}/tin-tuc/${article.id}`;
-  const imageSrc = article.imageUrl || "/images/tin-01-nha-dong-doi.jpg";
+  const imageSrc = article.imageUrl || "/images/hero-military-bg.webp";
   const previewDesc = getPreviewDescription(article);
 
   return (
@@ -148,7 +149,7 @@ export default async function NewsDetailPage({ params }: PageProps) {
           {/* Ảnh minh họa bài viết */}
           <div className="rounded-xl overflow-hidden border border-stone-200 bg-stone-100 shadow-xs space-y-2">
             <div className="relative w-full aspect-16/9 overflow-hidden">
-              <img
+              <SafeImage
                 src={imageSrc}
                 alt={article.title}
                 className="w-full h-full object-cover"
@@ -183,7 +184,7 @@ export default async function NewsDetailPage({ params }: PageProps) {
                     className="group relative aspect-4/3 rounded-xl overflow-hidden border-2 border-stone-200 bg-stone-100 hover:border-moss-green shadow-xs hover:shadow-md transition duration-200 block"
                     title={`Bấm để xem ảnh phóng to - Ảnh ${idx + 1}`}
                   >
-                    <img
+                    <SafeImage
                       src={imgUrl}
                       alt={`${article.title} - Ảnh ${idx + 1}`}
                       className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
@@ -249,7 +250,7 @@ export default async function NewsDetailPage({ params }: PageProps) {
                   className="bg-white border border-stone-200 hover:border-moss-green rounded-xl overflow-hidden shadow-2xs hover:shadow-md transition duration-200 flex flex-col group"
                 >
                   <div className="h-36 w-full overflow-hidden bg-stone-100 relative">
-                    <img
+                    <SafeImage
                       src={item.imageUrl || "/images/hero-military-bg.webp"}
                       alt={item.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
