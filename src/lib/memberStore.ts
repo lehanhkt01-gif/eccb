@@ -108,6 +108,9 @@ export interface MemberRecord {
     type: string;
     dataUrl?: string;
   }[];
+
+  isUserCreated?: boolean; // Đánh dấu hồ sơ do người dùng / cán bộ xã nhập vào
+  isNewlyApproved?: boolean; // Đánh dấu hồ sơ vừa mới được phê duyệt
 }
 
 export type RegistrationStatus =

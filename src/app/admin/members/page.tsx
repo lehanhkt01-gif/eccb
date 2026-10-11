@@ -24,6 +24,7 @@ import {
   assignBranchLeader,
   HAMLET_LIST,
 } from "@/lib/memberStore";
+import MemberImportModal from "@/components/MemberImportModal";
 
 export default function AdminMembersPage() {
   const [activeTab, setActiveTab] = useState<"active" | "pending_admin" | "pending_branch" | "rejected" | "movements">("active");
@@ -45,6 +46,7 @@ export default function AdminMembersPage() {
   const [rejectReason, setRejectReason] = useState("");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
   const loadData = () => {
     setMembers(getStoredMembers());
@@ -697,14 +699,23 @@ export default function AdminMembersPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => setIsImportModalOpen(true)}
+            className="px-3.5 py-2 bg-amber-700 hover:bg-amber-800 active:scale-95 text-white text-xs sm:text-sm font-bold rounded-lg shadow-sm transition flex items-center gap-1.5 cursor-pointer border border-amber-600"
+            title="Nhập hồ sơ hội viên đồng loạt từ file Excel/CSV theo từng chi hội thôn, buôn"
+          >
+            <span>📥</span>
+            <span>Nhập File Hội Viên</span>
+          </button>
+
           {activeTab === "active" && (
             <button
               onClick={() => {
                 if (filteredActiveMembers.length > 0) exportDocx(filteredActiveMembers[0]);
               }}
               disabled={isExporting}
-              className="px-3.5 py-2 bg-moss-green hover:bg-moss-green-light text-white text-xs sm:text-sm font-bold rounded-lg shadow-sm transition flex items-center gap-1.5"
+              className="px-3.5 py-2 bg-moss-green hover:bg-moss-green-light active:scale-95 text-white text-xs sm:text-sm font-bold rounded-lg shadow-sm transition flex items-center gap-1.5 cursor-pointer"
             >
               <span>📄 Xuất Mẫu 02 Đầu Danh Sách</span>
             </button>
@@ -2405,6 +2416,17 @@ export default function AdminMembersPage() {
           </div>
         </div>
       )}
+
+      {/* MODAL NHẬP HỒ SƠ HỘI VIÊN TỪ EXCEL/CSV */}
+      <MemberImportModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onSuccess={(count, hamletName) => {
+          setMembers(getStoredMembers());
+          setToastMessage(`✓ Đã nhập thành công ${count} hồ sơ hội viên chính thức cho ${hamletName}!`);
+          setTimeout(() => setToastMessage(null), 4000);
+        }}
+      />
     </div>
   );
 }
