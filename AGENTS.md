@@ -106,6 +106,7 @@ Dự án phục vụ Hội Cựu Chiến Binh xã Ea Súp, mang tính trang tr�
 | **14** | **Đồng bộ Header, Chuông Thông Báo & Sửa 35 Trường** | Chuẩn hóa Header (bỏ 'Đ/c', badge pill role CB/CHT/HV), Chuông thông báo đồng bộ Desktop & Mobile bao quát tin bài chờ duyệt, Quản lý hội viên (tiêu đề gọn, nút Sửa 35 trường cho CB, liên kết 20 CHT vào DS hội viên theo thôn) | ✅ **Đã hoàn thành** |
 | **15** | **Đồng bộ 20 Thôn Buôn Toàn Hệ Thống & Dọn CSDL** | Tạo Single Source of Truth `EA_SUP_HAMLETS`, xóa bỏ vòng lặp Thôn 14-17 ảo tại `/admin/permissions`, chuẩn hóa logic lọc chính xác, bổ sung script dọn dẹp bảng Hamlet Prisma (`prisma/cleanup-hamlets.ts` & API `/api/admin/cleanup-hamlets`) | ✅ **Đã hoàn thành** |
 | **17** | **Sắp xếp Nút Đăng nhập & Dọn dẹp Hội viên Ảo** | Sắp xếp nút Đăng nhập theo thứ tự Hội viên (mặc định) -> Chi hội -> Cán bộ xã (cả Form Login & Dropdown Header); Xóa vĩnh viễn hội viên ảo (Đặng Hữu Phúc), deduplicate chống trùng lặp (Hồ Sỹ Tuấn); Sửa logic bộ lọc thôn buôn AND chặt chẽ; Bổ sung script `prisma/cleanup-and-sync.ts` & API `/api/admin/cleanup-and-sync` | ✅ **Đã hoàn thành** |
-| **18** | **Triển khai VPS & SSL HTTPS** | Docker compose up trên VPS Maydell, cấp chứng chỉ SSL Let's Encrypt | ⏳ *Giai đoạn kế tiếp* |
+| **18** | **Khóa Chặt CSDL & Chống Mất Dữ Liệu VPS** | Vô hiệu hóa reset CSDL và seed tự động; Thêm Idempotent guard vào `prisma/seed.ts`; Gắn Named Volumes cố định `eccb_postgres_data` và `eccb_uploads_data`; Chuyển 100% lưu trữ bản tin sang PostgreSQL Prisma ORM; Tạo script `deploy.sh` tự động dump backup trước khi update | ✅ **Đã hoàn thành** |
+| **19** | **Triển khai VPS & SSL HTTPS** | Docker compose up trên VPS Maydell, cấu hình Nginx Proxy Manager domain `ccb.easupso.com` | ⏳ *Giai đoạn kế tiếp* |
 
 

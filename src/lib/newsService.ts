@@ -1,5 +1,8 @@
-import fs from "fs/promises";
-import path from "path";
+import { PrismaClient, ArticleStatus as PrismaArticleStatus } from "@prisma/client";
+
+const globalForPrisma = global as unknown as { prisma: PrismaClient };
+export const prisma = globalForPrisma.prisma || new PrismaClient();
+if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 
 export type ArticleStatus = "DRAFT" | "PENDING_APPROVAL" | "APPROVED" | "REJECTED";
 
@@ -28,11 +31,9 @@ export interface Article {
   updatedAt?: string;
 }
 
-const DATA_FILE_PATH = path.join(process.cwd(), "src", "data", "news.json");
-
 /**
  * Danh sách 04 bản tin tuyên truyền mẫu chuẩn của Hội Cựu Chiến Binh Xã Ea Súp
- * Luôn được bảo tồn và tự động phục hồi nếu hệ thống bị mất dữ liệu
+ * Luôn được nạp vào PostgreSQL nếu CSDL chưa có dữ liệu bản tin
  */
 export const DEFAULT_APPROVED_NEWS: Article[] = [
   {
@@ -113,107 +114,151 @@ export const DEFAULT_APPROVED_NEWS: Article[] = [
   }
 ];
 
+function formatDate(date: Date): string {
+  const d = String(date.getDate()).padStart(2, "0");
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const y = date.getFullYear();
+  return `${d}/${m}/${y}`;
+}
+
+// Map từ Prisma Model sang giao diện Article
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapPrismaArticleToArticle(raw: any): Article {
+  const createdAtDate = new Date(raw.createdAt);
+  const dateStr = formatDate(createdAtDate);
+  const primaryImg = raw.thumbnail || (raw.imageGallery && raw.imageGallery[0]) || "/images/hero-military-bg.webp";
+
+  return {
+    id: raw.id,
+    title: raw.title,
+    slug: raw.slug,
+    category: raw.category,
+    date: dateStr,
+    author: raw.author || "Thường trực Hội CCB Xã Ea Súp",
+    authorId: raw.authorId || undefined,
+    authorRole: raw.authorRole || undefined,
+    authorPhone: raw.authorPhone || undefined,
+    summary: raw.summary || "",
+    content: raw.content || "",
+    imageUrl: primaryImg,
+    thumbnail: primaryImg,
+    imageGallery: raw.imageGallery || [primaryImg],
+    status: raw.status as ArticleStatus,
+    reviewedById: raw.reviewedById || undefined,
+    reviewedByName: raw.reviewedByName || undefined,
+    views: raw.views || 0,
+    createdAt: raw.createdAt.toISOString(),
+    updatedAt: raw.updatedAt.toISOString(),
+  };
+}
+
 /**
- * Đảm bảo file news.json luôn được khởi tạo và lưu trữ an toàn
+ * Tự động đồng bộ 04 bản tin mẫu vào CSDL PostgreSQL nếu bảng Article chưa có dữ liệu
  */
-export async function ensureNewsFileExists(): Promise<void> {
+export async function seedDefaultNewsIfEmpty(): Promise<void> {
   try {
-    const dir = path.dirname(DATA_FILE_PATH);
-    await fs.mkdir(dir, { recursive: true });
-    try {
-      await fs.access(DATA_FILE_PATH);
-    } catch {
-      await fs.writeFile(DATA_FILE_PATH, JSON.stringify(DEFAULT_APPROVED_NEWS, null, 2), "utf-8");
+    const count = await prisma.article.count();
+    if (count === 0) {
+      console.log("Khởi tạo 4 bản tin tuyên truyền mẫu vào CSDL PostgreSQL...");
+      for (const item of DEFAULT_APPROVED_NEWS) {
+        await prisma.article.create({
+          data: {
+            id: item.id,
+            title: item.title,
+            slug: item.slug || item.id,
+            category: item.category,
+            summary: item.summary,
+            content: item.content,
+            thumbnail: item.thumbnail,
+            imageGallery: item.imageGallery || [item.thumbnail || ""],
+            status: PrismaArticleStatus.APPROVED,
+            author: item.author,
+            authorRole: item.authorRole,
+            views: item.views || 100,
+            createdAt: new Date(item.createdAt || Date.now()),
+            updatedAt: new Date(item.updatedAt || Date.now()),
+          },
+        });
+      }
+      console.log("✓ Đã nạp thành công 4 bản tin mẫu vào CSDL PostgreSQL!");
     }
-  } catch (error) {
-    console.error("Lỗi khi khởi tạo thư mục/file tin tức:", error);
+  } catch (err) {
+    console.error("Lỗi khi seed bản tin mặc định vào PostgreSQL:", err);
   }
 }
 
 /**
- * Lấy toàn bộ danh sách bản tin hoạt động & tuyên truyền
- * Tự động phục hồi 04 bản tin tuyên truyền mẫu nếu danh sách bị rỗng hoặc thiếu
+ * Lấy danh sách toàn bộ bản tin đã duyệt từ CSDL PostgreSQL
  */
 export async function getAllNews(): Promise<Article[]> {
   try {
-    let list: Article[] = [];
-    try {
-      const raw = await fs.readFile(DATA_FILE_PATH, "utf-8");
-      list = JSON.parse(raw);
-    } catch {
-      // Nếu file không đọc được, tự động tạo mới từ DEFAULT_APPROVED_NEWS
-      await ensureNewsFileExists();
-      list = [...DEFAULT_APPROVED_NEWS];
+    await seedDefaultNewsIfEmpty();
+
+    const articles = await prisma.article.findMany({
+      where: {
+        status: PrismaArticleStatus.APPROVED,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    if (articles.length === 0) {
+      return DEFAULT_APPROVED_NEWS;
     }
 
-    if (!Array.isArray(list) || list.length === 0) {
-      list = [...DEFAULT_APPROVED_NEWS];
-      try {
-        await fs.writeFile(DATA_FILE_PATH, JSON.stringify(list, null, 2), "utf-8");
-      } catch (e) {
-        console.error("Lỗi khi ghi lại news.json mặc định:", e);
-      }
-    }
-
-    // Đảm bảo 4 bài viết tuyên truyền gốc (tin-01..04) luôn có mặt
-    const existingIds = new Set(list.map((item) => item.id));
-    let hasMissingDefault = false;
-    for (const defItem of DEFAULT_APPROVED_NEWS) {
-      if (!existingIds.has(defItem.id)) {
-        list.push(defItem);
-        hasMissingDefault = true;
-      }
-    }
-
-    if (hasMissingDefault) {
-      try {
-        await fs.writeFile(DATA_FILE_PATH, JSON.stringify(list, null, 2), "utf-8");
-      } catch (e) {
-        console.error("Lỗi khi cập nhật lại 4 bản tin mặc định:", e);
-      }
-    }
-
-    // Chuẩn hóa status mặc định APPROVED nếu chưa có
-    return list.map((item) => ({
-      ...item,
-      status: item.status || "APPROVED",
-      thumbnail: item.thumbnail || item.imageUrl,
-      imageUrl: item.imageUrl || item.thumbnail,
-    }));
+    return articles.map(mapPrismaArticleToArticle);
   } catch (error) {
-    console.error("Lỗi khi đọc file news.json, kích hoạt fallback:", error);
+    console.error("Lỗi khi đọc bản tin từ PostgreSQL, kích hoạt fallback:", error);
     return DEFAULT_APPROVED_NEWS;
   }
 }
 
 /**
- * Lấy chi tiết bản tin theo id hoặc slug
+ * Lấy chi tiết bản tin theo ID hoặc Slug từ PostgreSQL
  */
 export async function getNewsById(idOrSlug: string): Promise<Article | null> {
-  const articles = await getAllNews();
-  const found = articles.find((a) => a.id === idOrSlug || a.slug === idOrSlug);
-  return found || null;
+  try {
+    const found = await prisma.article.findFirst({
+      where: {
+        OR: [
+          { id: idOrSlug },
+          { slug: idOrSlug },
+        ],
+      },
+    });
+
+    if (found) {
+      return mapPrismaArticleToArticle(found);
+    }
+
+    // Fallback trong trường hợp DB chưa kịp nạp
+    const fallback = DEFAULT_APPROVED_NEWS.find((a) => a.id === idOrSlug || a.slug === idOrSlug);
+    return fallback || null;
+  } catch (error) {
+    console.error("Lỗi khi lấy chi tiết bản tin từ PostgreSQL:", error);
+    const fallback = DEFAULT_APPROVED_NEWS.find((a) => a.id === idOrSlug || a.slug === idOrSlug);
+    return fallback || null;
+  }
 }
 
 /**
- * Tăng lượt xem cho bản tin
+ * Tăng lượt xem cho bản tin trong PostgreSQL
  */
 export async function incrementArticleViews(id: string): Promise<number | null> {
   try {
-    const articles = await getAllNews();
-    let updatedViews: number | null = null;
-    const updated = articles.map((a) => {
-      if (a.id === id) {
-        const currentViews = a.views || 100;
-        updatedViews = currentViews + 1;
-        return { ...a, views: updatedViews };
-      }
-      return a;
+    const updated = await prisma.article.update({
+      where: { id },
+      data: {
+        views: {
+          increment: 1,
+        },
+      },
+      select: {
+        views: true,
+      },
     });
-    if (updatedViews !== null) {
-      await fs.writeFile(DATA_FILE_PATH, JSON.stringify(updated, null, 2), "utf-8");
-    }
-    return updatedViews;
+    return updated.views;
   } catch {
     return null;
   }

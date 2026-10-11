@@ -546,22 +546,26 @@ model Notification {
 // ==============================================================================
 
 model Article {
-  id           String        @id @default(cuid())
-  title        String
-  slug         String        @unique
-  summary      String?       @db.Text
-  content      String        @db.Text
-  thumbnail    String?
-  imageGallery String[]      @default([]) // Album tối đa 5 ảnh chi tiết của bài viết
-  category     String        // Nghĩa tình đồng đội, Kinh tế CCB, Hoạt động Hội...
-  status       ArticleStatus @default(PENDING_APPROVAL)
-  authorId     String
-  author       User          @relation("AuthorArticles", fields: [authorId], references: [id], onDelete: Cascade)
-  reviewedById String?       // Cán bộ xã duyệt/sửa
-  reviewedBy   User?         @relation("ReviewerArticles", fields: [reviewedById], references: [id], onDelete: SetNull)
-  views        Int           @default(0)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  id             String        @id @default(cuid())
+  title          String
+  slug           String        @unique
+  summary        String?       @db.Text
+  content        String        @db.Text
+  thumbnail      String?
+  imageGallery   String[]      @default([]) // Album tối đa 5 ảnh chi tiết của bài viết
+  category       String        // Nghĩa tình đồng đội, Kinh tế CCB, Hoạt động Hội...
+  status         ArticleStatus @default(PENDING_APPROVAL)
+  author         String?       // Tên tác giả hiển thị
+  authorRole     String?       // Vai trò người gửi (SUPER_ADMIN, BRANCH_LEADER, MEMBER)
+  authorPhone    String?       // SĐT tác giả
+  authorId       String?       // Khóa ngoại tùy chọn tới User
+  userAuthor     User?         @relation("AuthorArticles", fields: [authorId], references: [id], onDelete: SetNull)
+  reviewedById   String?       // Cán bộ xã duyệt/sửa
+  reviewedByName String?       // Họ tên Cán bộ xã duyệt
+  reviewedBy     User?         @relation("ReviewerArticles", fields: [reviewedById], references: [id], onDelete: SetNull)
+  views          Int           @default(0)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
   @@index([status])
   @@index([authorId])

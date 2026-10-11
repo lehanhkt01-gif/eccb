@@ -233,20 +233,29 @@ const MILITARY_UNITS = [
 const RANKS = ["Chiến sĩ", "Hạ sĩ", "Trung sĩ", "Thượng sĩ", "Thiếu úy", "Trung úy", "Thượng úy", "Đại úy", "Thiếu tá", "Trung tá", "Thượng tá", "Đại tá"];
 
 async function main() {
-  console.log("🚀 Bắt đầu khởi tạo dữ liệu mẫu cho E-CCB Ea Súp (ccb.easupso.com)...");
+  console.log("🚀 Kiểm tra trạng thái CSDL trước khi khởi tạo E-CCB Ea Súp (ccb.easupso.com)...");
 
-  // Dọn dẹp dữ liệu cũ theo đúng thứ tự ràng buộc khóa ngoại
-  await prisma.attendance.deleteMany();
-  await prisma.meeting.deleteMany();
-  await prisma.fundLoan.deleteMany();
-  await prisma.fundContribution.deleteMany();
-  await prisma.internalFund.deleteMany();
-  await prisma.user.deleteMany();
-  await prisma.member.deleteMany();
-  await prisma.loanGroup.deleteMany();
-  await prisma.hamlet.deleteMany();
+  // KHÓA BẢO VỆ CHỐNG MẤT DỮ LIỆU THỰC TẾ (IDEMPOTENT GUARD):
+  // Nếu CSDL đã có dữ liệu hội viên hoặc tài khoản, TUYỆT ĐỐI BỎ QUA seed để bảo toàn dữ liệu!
+  const existingMembersCount = await prisma.member.count();
+  const existingUsersCount = await prisma.user.count();
 
-  console.log("🧹 Đã làm sạch cơ sở dữ liệu cũ.");
+  if (existingMembersCount > 0 || existingUsersCount > 0) {
+    console.log(`🛡️ BẢO TOÀN DỮ LIỆU: CSDL đã có ${existingMembersCount} hội viên và ${existingUsersCount} tài khoản.`);
+    console.log("🛡️ Dừng quá trình seed để bảo toàn 100% dữ liệu thực tế trên hệ thống!");
+    return;
+  }
+
+  // CẤM TUYỆT ĐỐI XÓA DỮ LIỆU HÀNG LOẠT:
+  // await prisma.attendance.deleteMany();
+  // await prisma.meeting.deleteMany();
+  // await prisma.fundLoan.deleteMany();
+  // await prisma.fundContribution.deleteMany();
+  // await prisma.internalFund.deleteMany();
+  // await prisma.user.deleteMany();
+  // await prisma.member.deleteMany();
+  // await prisma.loanGroup.deleteMany();
+  // await prisma.hamlet.deleteMany();
 
   // 1. ĐỌC CẤU HÌNH BẢO MẬT TỪ FILE .ENV (TUYỆT ĐỐI KHÔNG HARDCODE)
   const adminDefaultPassword = process.env.ADMIN_DEFAULT_PASSWORD;

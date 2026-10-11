@@ -17,7 +17,8 @@ services:
     ports:
       - "3011:3000"
     volumes:
-      - ./public:/app/public
+      # Bảo tồn toàn bộ hình ảnh, tài liệu upload độc lập ngoài host
+      - eccb_uploads_data:/app/public/uploads
     expose:
       - "3000"
     env_file:
@@ -100,6 +101,8 @@ services:
 volumes:
   postgres_data:
     name: eccb_postgres_data
+  eccb_uploads_data:
+    name: eccb_uploads_data
 
 networks:
   internal_net:

@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import fs from "fs/promises";
-import path from "path";
-import { Article, ArticleStatus, DEFAULT_APPROVED_NEWS, getAllNews } from "@/lib/newsService";
+import { Article, ArticleStatus, DEFAULT_APPROVED_NEWS, seedDefaultNewsIfEmpty } from "@/lib/newsService";
+import { PrismaClient, ArticleStatus as PrismaArticleStatus } from "@prisma/client";
 
-const DATA_FILE_PATH = path.join(process.cwd(), "src", "data", "news.json");
+const globalForPrisma = global as unknown as { prisma: PrismaClient };
+const prisma = globalForPrisma.prisma || new PrismaClient();
+if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 
 function slugify(text: string): string {
   return text
@@ -17,18 +18,43 @@ function slugify(text: string): string {
     .replace(/-+/g, "-");
 }
 
-async function getArticles(): Promise<Article[]> {
-  return await getAllNews();
+function formatDate(date: Date): string {
+  const d = String(date.getDate()).padStart(2, "0");
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const y = date.getFullYear();
+  return `${d}/${m}/${y}`;
 }
 
-async function saveArticles(articles: Article[]): Promise<void> {
-  const dir = path.dirname(DATA_FILE_PATH);
-  await fs.mkdir(dir, { recursive: true });
-  await fs.writeFile(DATA_FILE_PATH, JSON.stringify(articles, null, 2), "utf-8");
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapPrismaToArticle(raw: any): Article {
+  const primaryImg = raw.thumbnail || (raw.imageGallery && raw.imageGallery[0]) || "/images/hero-military-bg.webp";
+  return {
+    id: raw.id,
+    title: raw.title,
+    slug: raw.slug,
+    category: raw.category,
+    date: formatDate(new Date(raw.createdAt)),
+    author: raw.author || "Thường trực Hội CCB Xã Ea Súp",
+    authorId: raw.authorId || undefined,
+    authorRole: raw.authorRole || undefined,
+    authorPhone: raw.authorPhone || undefined,
+    summary: raw.summary || "",
+    content: raw.content || "",
+    imageUrl: primaryImg,
+    thumbnail: primaryImg,
+    imageGallery: raw.imageGallery || [primaryImg],
+    status: raw.status as ArticleStatus,
+    reviewedById: raw.reviewedById || undefined,
+    reviewedByName: raw.reviewedByName || undefined,
+    views: raw.views || 0,
+    createdAt: raw.createdAt.toISOString(),
+    updatedAt: raw.updatedAt.toISOString(),
+  };
 }
 
 /**
  * GET /api/news
+ * Truy vấn trực tiếp từ PostgreSQL thông qua Prisma Client
  * - Khách/Công chúng: Chỉ lấy bài APPROVED
  * - Cán bộ xã (SUPER_ADMIN): Xem toàn bộ (APPROVED, PENDING_APPROVAL, REJECTED)
  * - Hội viên / Chi hội trưởng: Xem bài APPROVED + bài của chính mình
@@ -40,47 +66,65 @@ export async function GET(req: NextRequest) {
     const authorId = searchParams.get("authorId") || "";
     const filterStatus = searchParams.get("status");
 
-    const articles = await getArticles();
+    // Đảm bảo có 4 bài mặc định nếu CSDL mới tinh
+    await seedDefaultNewsIfEmpty();
 
     const isCadre = role === "SUPER_ADMIN" || req.headers.get("x-admin-role") === "CADRE";
     const mySubmissionsOnly = searchParams.get("mySubmissions") === "true";
 
-    let result = articles;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let whereClause: any = {};
 
     if (isCadre) {
       if (filterStatus && filterStatus !== "ALL") {
-        result = articles.filter((a) => a.status === filterStatus);
+        whereClause.status = filterStatus as PrismaArticleStatus;
       }
     } else if (mySubmissionsOnly && authorId) {
-      // Chỉ lấy riêng danh sách bài viết do tác giả này gửi (bao gồm cả chờ duyệt)
-      result = articles.filter((a) => a.authorId === authorId);
+      whereClause.authorId = authorId;
     } else {
-      // Bản tin xuất bản công khai trên Trang chủ và toàn hệ thống: BẮT BUỘC chỉ hiển thị bài APPROVED
-      result = articles.filter((a) => a.status === "APPROVED");
+      // Công khai: Chỉ lấy bài APPROVED
+      whereClause.status = PrismaArticleStatus.APPROVED;
     }
+
+    const dbArticles = await prisma.article.findMany({
+      where: whereClause,
+      orderBy: { createdAt: "desc" },
+    });
+
+    const result = dbArticles.map(mapPrismaToArticle);
+
+    // Tính toán meta
+    const totalCount = await prisma.article.count();
+    const approvedCount = await prisma.article.count({ where: { status: PrismaArticleStatus.APPROVED } });
+    const pendingCount = await prisma.article.count({ where: { status: PrismaArticleStatus.PENDING_APPROVAL } });
 
     return NextResponse.json({
       success: true,
       data: result,
       meta: {
-        total: articles.length,
-        approved: articles.filter((a) => a.status === "APPROVED").length,
-        pending: articles.filter((a) => a.status === "PENDING_APPROVAL").length,
+        total: totalCount,
+        approved: approvedCount,
+        pending: pendingCount,
       },
     });
   } catch (error) {
-    return NextResponse.json(
-      { success: false, message: "Lỗi tải danh sách bài viết", error: String(error) },
-      { status: 500 }
-    );
+    console.error("Lỗi khi tải danh sách bài viết từ PostgreSQL:", error);
+    // Fallback an toàn để giao diện không bị trắng nếu DB đang kết nối
+    return NextResponse.json({
+      success: true,
+      data: DEFAULT_APPROVED_NEWS,
+      meta: {
+        total: DEFAULT_APPROVED_NEWS.length,
+        approved: DEFAULT_APPROVED_NEWS.length,
+        pending: 0,
+      },
+    });
   }
 }
 
 /**
  * POST /api/news
- * Phân quyền Hybrid RBAC + ABAC:
- * - Cán bộ xã (SUPER_ADMIN): Tạo bài xuất bản ngay (APPROVED)
- * - Hội viên (MEMBER) & Chi hội trưởng (BRANCH_LEADER): Được tạo bài, trạng thái BẮT BUỘC là PENDING_APPROVAL
+ * Lưu bài viết mới trực tiếp 100% vào PostgreSQL (Prisma ORM)
  */
 export async function POST(req: NextRequest) {
   try {
@@ -108,8 +152,6 @@ export async function POST(req: NextRequest) {
     const isMemberOrLeader =
       effectiveRole === "MEMBER" || effectiveRole === "BRANCH_LEADER";
 
-    // Cán bộ xã CHỈ KHI vai trò thực tế là SUPER_ADMIN hoặc có admin header xác thực,
-    // VÀ TUYỆT ĐỐI không phải là tài khoản Chi hội trưởng hoặc Hội viên
     let isCadre = false;
     if (!isMemberOrLeader) {
       if (effectiveRole === "SUPER_ADMIN" || adminRoleHeader === "CADRE") {
@@ -119,7 +161,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Khách vãng lai chưa đăng nhập không được gửi bài
     if (!isCadre && !isMemberOrLeader) {
       return NextResponse.json(
         {
@@ -137,12 +178,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const articles = await getArticles();
-    const now = new Date();
-    const dateStr = `${String(now.getDate()).padStart(2, "0")}/${String(now.getMonth() + 1).padStart(2, "0")}/${now.getFullYear()}`;
-    const generatedSlug = `${slugify(title)}-${Date.now()}`;
-
-    // Xử lý danh sách ảnh (tối đa 5 ảnh)
+    // Xử lý gallery ảnh
     let gallery: string[] = [];
     if (Array.isArray(imageGallery) && imageGallery.length > 0) {
       gallery = imageGallery.slice(0, 5);
@@ -152,57 +188,57 @@ export async function POST(req: NextRequest) {
 
     const primaryImage = gallery[0] || "/images/hero-military-bg.webp";
 
-    // QUY TẮC NGHIỆP VỤ BẢO MẬT BẮT BUỘC THEO ĐIỀU LỆ HỘI CCB:
-    // - Hội viên & Chi hội trưởng: 100% BẮT BUỘC ở trạng thái PENDING_APPROVAL (Chờ Ban Thường trực Xã phê duyệt)
-    // - Chỉ Cán bộ Thường trực Xã mới có thẩm quyền xuất bản trực tiếp (APPROVED) hoặc lưu bản nháp (DRAFT)
-    let articleStatus: ArticleStatus = "PENDING_APPROVAL";
+    // Phân quyền trạng thái:
+    let articleStatus: PrismaArticleStatus = PrismaArticleStatus.PENDING_APPROVAL;
     if (isCadre) {
-      articleStatus = requestedStatus === "DRAFT" ? "DRAFT" : "APPROVED";
+      articleStatus = requestedStatus === "DRAFT" ? PrismaArticleStatus.DRAFT : PrismaArticleStatus.APPROVED;
     } else {
-      articleStatus = "PENDING_APPROVAL";
+      articleStatus = PrismaArticleStatus.PENDING_APPROVAL;
     }
 
-    const newArticle: Article = {
-      id: `tin-${Date.now()}`,
-      slug: generatedSlug,
-      title: title.trim(),
-      category: category?.trim() || "Hoạt động Hội",
-      date: dateStr,
-      author: author?.trim() || (isCadre ? "Thường trực Hội CCB Xã Ea Súp" : "Hội viên CCB Ea Súp"),
-      authorId: authorId || (isCadre ? "cadre-ea-sup" : `user-${Date.now()}`),
-      authorRole: effectiveRole,
-      authorPhone: authorPhone || "",
-      summary: summary.trim(),
-      content: content.trim(),
-      imageUrl: primaryImage,
-      thumbnail: primaryImage,
-      imageGallery: gallery,
-      status: articleStatus,
-      views: 1,
-      createdAt: now.toISOString(),
-      updatedAt: now.toISOString(),
-      ...(isCadre && articleStatus === "APPROVED"
-        ? {
-            reviewedById: "cadre-ea-sup",
-            reviewedByName: "Ban Thường trực Hội CCB Xã Ea Súp",
-            reviewedAt: now.toISOString(),
-          }
-        : {}),
-    };
+    const generatedSlug = `${slugify(title)}-${Date.now()}`;
+    const now = new Date();
 
-    articles.unshift(newArticle);
-    await saveArticles(articles);
+    // Lưu bài viết mới trực tiếp vào PostgreSQL
+    const created = await prisma.article.create({
+      data: {
+        title: title.trim(),
+        slug: generatedSlug,
+        category: category?.trim() || "Hoạt động Hội",
+        summary: summary.trim(),
+        content: content.trim(),
+        thumbnail: primaryImage,
+        imageGallery: gallery,
+        status: articleStatus,
+        author: author?.trim() || (isCadre ? "Thường trực Hội CCB Xã Ea Súp" : "Hội viên CCB Ea Súp"),
+        authorRole: effectiveRole,
+        authorPhone: authorPhone || "",
+        ...(authorId ? { authorId } : {}),
+        ...(isCadre && articleStatus === PrismaArticleStatus.APPROVED
+          ? {
+              reviewedById: "cadre-ea-sup",
+              reviewedByName: "Ban Thường trực Hội CCB Xã Ea Súp",
+            }
+          : {}),
+        views: 1,
+        createdAt: now,
+        updatedAt: now,
+      },
+    });
+
+    const mappedArticle = mapPrismaToArticle(created);
 
     return NextResponse.json({
       success: true,
       message: isCadre
-        ? articleStatus === "DRAFT"
-          ? "Đã lưu bản nháp bài viết thành công!"
-          : "Đã đăng tải và xuất bản bản tin thành công!"
+        ? articleStatus === PrismaArticleStatus.DRAFT
+          ? "Đã lưu bản nháp bài viết thành công vào CSDL!"
+          : "Đã đăng tải và xuất bản bản tin thành công vào CSDL!"
         : "Đã gửi bài viết thành công! Bài viết đang chờ Ban Thường trực Hội CCB Xã Ea Súp phê duyệt.",
-      data: newArticle,
+      data: mappedArticle,
     });
   } catch (error) {
+    console.error("Lỗi khi tạo bài viết trong PostgreSQL:", error);
     return NextResponse.json(
       { success: false, message: "Lỗi hệ thống khi đăng bài viết", error: String(error) },
       { status: 500 }
@@ -212,9 +248,7 @@ export async function POST(req: NextRequest) {
 
 /**
  * PUT /api/news
- * Phân quyền:
- * - CHỈ Cán bộ xã (SUPER_ADMIN) mới có quyền Chỉnh sửa (EDIT) hoặc Phê duyệt / Từ chối (APPROVE / REJECT)
- * - Hội viên và Chi hội trưởng TUYỆT ĐỐI KHÔNG được sửa bài sau khi đã gửi đi!
+ * Cán bộ xã duyệt / từ chối / chỉnh sửa bài viết trong PostgreSQL
  */
 export async function PUT(req: NextRequest) {
   try {
@@ -249,92 +283,93 @@ export async function PUT(req: NextRequest) {
       }
     }
 
-    // Quy tắc: Hội viên & Chi hội trưởng KHÔNG ĐƯỢC PHÉP chỉnh sửa tin bài đã gửi
     if (!isCadre) {
       return NextResponse.json(
         {
           success: false,
           message:
-            "Theo quy định Điều lệ Hội, Hội viên và Chi hội trưởng không có quyền chỉnh sửa bài viết sau khi đã gửi đi. Vui lòng liên hệ Ban Thường trực Hội CCB Xã Ea Súp để điều chỉnh!",
+            "Theo quy định Điều lệ Hội, chỉ Cán bộ Thường trực Hội CCB Xã Ea Súp mới có quyền chỉnh sửa hoặc phê duyệt bài viết!",
         },
         { status: 403 }
       );
     }
 
-    const articles = await getArticles();
-    const idx = articles.findIndex((a) => a.id === id);
+    const existing = await prisma.article.findUnique({
+      where: { id },
+    });
 
-    if (idx === -1) {
+    if (!existing) {
       return NextResponse.json(
-        { success: false, message: "Không tìm thấy bài viết cần xử lý!" },
+        { success: false, message: "Không tìm thấy bài viết cần xử lý trong CSDL!" },
         { status: 404 }
       );
     }
 
     const now = new Date();
-    const current = articles[idx];
 
-    // Xử lý hành động Phê duyệt
+    // 1. Phê duyệt bài viết
     if (action === "approve") {
-      articles[idx] = {
-        ...current,
-        status: "APPROVED",
-        reviewedById: "cadre-ea-sup",
-        reviewedByName: "Ban Thường trực Hội CCB Xã Ea Súp",
-        reviewedAt: now.toISOString(),
-        updatedAt: now.toISOString(),
-      };
-      await saveArticles(articles);
+      const updated = await prisma.article.update({
+        where: { id },
+        data: {
+          status: PrismaArticleStatus.APPROVED,
+          reviewedById: "cadre-ea-sup",
+          reviewedByName: "Ban Thường trực Hội CCB Xã Ea Súp",
+          updatedAt: now,
+        },
+      });
+
       return NextResponse.json({
         success: true,
-        message: `Đã phê duyệt và xuất bản bản tin: "${current.title}"!`,
-        data: articles[idx],
+        message: `Đã phê duyệt và xuất bản bản tin: "${updated.title}"!`,
+        data: mapPrismaToArticle(updated),
       });
     }
 
-    // Xử lý hành động Từ chối
+    // 2. Từ chối bài viết
     if (action === "reject") {
-      articles[idx] = {
-        ...current,
-        status: "REJECTED",
-        rejectionReason: rejectionReason?.trim() || "Nội dung chưa phù hợp tiêu chí tuyên truyền của Hội",
-        reviewedById: "cadre-ea-sup",
-        reviewedByName: "Ban Thường trực Hội CCB Xã Ea Súp",
-        reviewedAt: now.toISOString(),
-        updatedAt: now.toISOString(),
-      };
-      await saveArticles(articles);
+      const updated = await prisma.article.update({
+        where: { id },
+        data: {
+          status: PrismaArticleStatus.REJECTED,
+          reviewedById: "cadre-ea-sup",
+          reviewedByName: "Ban Thường trực Hội CCB Xã Ea Súp",
+          updatedAt: now,
+        },
+      });
+
       return NextResponse.json({
         success: true,
-        message: `Đã từ chối bài viết: "${current.title}"!`,
-        data: articles[idx],
+        message: `Đã từ chối bài viết: "${updated.title}"!`,
+        data: mapPrismaToArticle(updated),
       });
     }
 
-    // Chỉnh sửa nội dung bản tin (Cán bộ xã toàn quyền)
-    const img = imageUrl ? imageUrl.trim() : thumbnail ? thumbnail.trim() : current.imageUrl;
-    const gallery = Array.isArray(imageGallery) ? imageGallery.slice(0, 5) : current.imageGallery || (img ? [img] : []);
-    articles[idx] = {
-      ...current,
-      title: title ? title.trim() : current.title,
-      category: category ? category.trim() : current.category,
-      summary: summary ? summary.trim() : current.summary,
-      content: content ? content.trim() : current.content,
-      author: author ? author.trim() : current.author,
-      imageUrl: img || gallery[0],
-      thumbnail: img || gallery[0],
-      imageGallery: gallery,
-      updatedAt: now.toISOString(),
-    };
+    // 3. Chỉnh sửa nội dung bài viết
+    const img = imageUrl ? imageUrl.trim() : thumbnail ? thumbnail.trim() : existing.thumbnail;
+    const gallery = Array.isArray(imageGallery) ? imageGallery.slice(0, 5) : existing.imageGallery;
 
-    await saveArticles(articles);
+    const updated = await prisma.article.update({
+      where: { id },
+      data: {
+        title: title ? title.trim() : existing.title,
+        category: category ? category.trim() : existing.category,
+        summary: summary ? summary.trim() : existing.summary,
+        content: content ? content.trim() : existing.content,
+        author: author ? author.trim() : existing.author,
+        thumbnail: img || undefined,
+        imageGallery: gallery,
+        updatedAt: now,
+      },
+    });
 
     return NextResponse.json({
       success: true,
-      message: "Cán bộ xã đã cập nhật nội dung bản tin thành công!",
-      data: articles[idx],
+      message: "Cán bộ xã đã cập nhật nội dung bản tin thành công trong CSDL!",
+      data: mapPrismaToArticle(updated),
     });
   } catch (error) {
+    console.error("Lỗi khi cập nhật bài viết trong PostgreSQL:", error);
     return NextResponse.json(
       { success: false, message: "Lỗi hệ thống khi chỉnh sửa bài viết", error: String(error) },
       { status: 500 }
@@ -344,7 +379,7 @@ export async function PUT(req: NextRequest) {
 
 /**
  * DELETE /api/news
- * Chỉ cán bộ xã mới có quyền xóa bài
+ * Xóa vĩnh viễn bài viết khỏi PostgreSQL
  */
 export async function DELETE(req: NextRequest) {
   try {
@@ -367,23 +402,23 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
-    const articles = await getArticles();
-    const filtered = articles.filter((a) => a.id !== id);
-
-    if (filtered.length === articles.length) {
+    if (!id) {
       return NextResponse.json(
-        { success: false, message: "Không tìm thấy bài viết cần xóa!" },
-        { status: 404 }
+        { success: false, message: "Vui lòng cung cấp ID bài viết cần xóa!" },
+        { status: 400 }
       );
     }
 
-    await saveArticles(filtered);
+    await prisma.article.delete({
+      where: { id },
+    });
 
     return NextResponse.json({
       success: true,
-      message: "Đã xóa bản tin tuyên truyền thành công!",
+      message: "Đã xóa bản tin tuyên truyền thành công khỏi CSDL!",
     });
   } catch (error) {
+    console.error("Lỗi khi xóa bài viết trong PostgreSQL:", error);
     return NextResponse.json(
       { success: false, message: "Lỗi hệ thống khi xóa bài viết", error: String(error) },
       { status: 500 }
