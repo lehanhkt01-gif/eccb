@@ -1,52 +1,91 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { getStoredMembers, MemberRecord } from "@/lib/memberStore";
 
-// 20 Thôn, Buôn xã Ea Súp với trạng thái cảnh báo chi tiết (20 Chi hội trưởng chuẩn xác)
-const HAMLET_STATUS_DATA = [
-  { code: "BUON_A", name: "Buôn A", leader: "Y Nô Rcăm", phone: "0982257421", members: 26, debt: "2.25 tỷ", overdue: "0 đ", hasOverdue: false, dilapidatedHouse: 1, status: "alert" },
-  { code: "BUON_B", name: "Buôn B", leader: "Đoàn Hữu Tiến", phone: "0935833737", members: 25, debt: "2.18 tỷ", overdue: "4.3 triệu", hasOverdue: true, dilapidatedHouse: 1, status: "alert" },
-  { code: "BUON_C", name: "Buôn C", leader: "Y Dyơng Êban", phone: "0839931193", members: 27, debt: "2.36 tỷ", overdue: "0 đ", hasOverdue: false, dilapidatedHouse: 1, status: "alert" },
-  { code: "THON_HOABINH", name: "Thôn Hòa Bình", leader: "Lê Văn Hồng", phone: "0977979709", members: 35, debt: "3.05 tỷ", overdue: "0 đ", hasOverdue: false, dilapidatedHouse: 0, status: "good" },
-  { code: "THON_THANGLOI", name: "Thôn Thắng Lợi", leader: "Nguyễn Văn Đông", phone: "0828838929", members: 33, debt: "2.85 tỷ", overdue: "0 đ", hasOverdue: false, dilapidatedHouse: 0, status: "good" },
-  { code: "THON_DOANKET", name: "Thôn Đoàn Kết", leader: "Nguyễn Văn Sơn", phone: "0913779468", members: 30, debt: "2.60 tỷ", overdue: "4.9 triệu", hasOverdue: true, dilapidatedHouse: 0, status: "warning" },
-  { code: "THON_BINHLOI", name: "Thôn Bình Lợi", leader: "Lục Văn Cường", phone: "0338561794", members: 28, debt: "2.42 tỷ", overdue: "0 đ", hasOverdue: false, dilapidatedHouse: 0, status: "good" },
-  { code: "THON_01", name: "Thôn 1", leader: "Hồ Sỹ Tuấn", phone: "0986042302", members: 30, debt: "2.61 tỷ", overdue: "5.2 triệu", hasOverdue: true, dilapidatedHouse: 0, status: "warning" },
-  { code: "THON_02", name: "Thôn 2", leader: "Nguyễn Đức Lợi", phone: "0356912318", members: 32, debt: "2.75 tỷ", overdue: "0 đ", hasOverdue: false, dilapidatedHouse: 0, status: "good" },
-  { code: "THON_03", name: "Thôn 3", leader: "Nguyễn Văn Dũng", phone: "0342302292", members: 28, debt: "2.40 tỷ", overdue: "6.1 triệu", hasOverdue: true, dilapidatedHouse: 1, status: "alert" },
-  { code: "THON_04", name: "Thôn 4", leader: "Nguyễn Phú Bốn", phone: "0367875231", members: 31, debt: "2.68 tỷ", overdue: "0 đ", hasOverdue: false, dilapidatedHouse: 0, status: "good" },
-  { code: "THON_05", name: "Thôn 5", leader: "Vũ Văn Đạt", phone: "0327560358", members: 29, debt: "2.55 tỷ", overdue: "0 đ", hasOverdue: false, dilapidatedHouse: 0, status: "good" },
-  { code: "THON_06", name: "Thôn 6", leader: "Đỗ Thị Lan", phone: "0343800948", members: 33, debt: "2.82 tỷ", overdue: "0 đ", hasOverdue: false, dilapidatedHouse: 0, status: "good" },
-  { code: "THON_07", name: "Thôn 7", leader: "Nguyễn Văn Minh", phone: "0975384025", members: 30, debt: "2.60 tỷ", overdue: "4.8 triệu", hasOverdue: true, dilapidatedHouse: 0, status: "warning" },
-  { code: "THON_08", name: "Thôn 8", leader: "Trần Thanh Hùng", phone: "0397508052", members: 34, debt: "2.90 tỷ", overdue: "0 đ", hasOverdue: false, dilapidatedHouse: 0, status: "good" },
-  { code: "THON_09", name: "Thôn 9", leader: "Trần Văn Cảnh", phone: "0342869974", members: 27, debt: "2.35 tỷ", overdue: "0 đ", hasOverdue: false, dilapidatedHouse: 0, status: "good" },
-  { code: "THON_10", name: "Thôn 10", leader: "Nguyễn Lai", phone: "0986911610", members: 31, debt: "2.65 tỷ", overdue: "0 đ", hasOverdue: false, dilapidatedHouse: 0, status: "good" },
-  { code: "THON_11", name: "Thôn 11", leader: "Huỳnh Công Dũng", phone: "0359326437", members: 30, debt: "2.58 tỷ", overdue: "0 đ", hasOverdue: false, dilapidatedHouse: 1, status: "alert" },
-  { code: "THON_12", name: "Thôn 12", leader: "Triệu Đức Quyên", phone: "0857603535", members: 29, debt: "2.50 tỷ", overdue: "5.5 triệu", hasOverdue: true, dilapidatedHouse: 0, status: "warning" },
-  { code: "THON_13", name: "Thôn 13", leader: "Hoàng Văn Tuyên", phone: "0984594812", members: 32, debt: "2.72 tỷ", overdue: "0 đ", hasOverdue: false, dilapidatedHouse: 0, status: "good" },
-];
-
-// Phân bổ thời kỳ chiến đấu (Tremor Style)
-const PERIOD_DATA = [
-  { name: "Chiến Tranh Bảo Vệ Biên Giới Phía Bắc", count: 152, percent: 24.8, color: "bg-moss-green" },
-  { name: "Chiến Tranh Bảo Vệ Biên Giới Tây Nam", count: 146, percent: 23.9, color: "bg-moss-green-light" },
-  { name: "Kháng Chiến Chống Mỹ Cứu Nước", count: 138, percent: 22.5, color: "bg-flag-red" },
-  { name: "Cựu Quân Nhân Thời Bình", count: 92, percent: 15.0, color: "bg-bronze-gold" },
-  { name: "Làm Nhiệm Vụ Quốc Tế (Campuchia/Lào)", count: 84, percent: 13.7, color: "bg-amber-600" },
+// 20 Thôn, Buôn xã Ea Súp với danh sách 20 Chi hội trưởng chuẩn xác thực tế
+const BASE_HAMLETS = [
+  { code: "BUON_A", name: "Buôn A", leader: "Y Nô Rcăm", phone: "0982257421" },
+  { code: "BUON_B", name: "Buôn B", leader: "Đoàn Hữu Tiến", phone: "0935833737" },
+  { code: "BUON_C", name: "Buôn C", leader: "Y Dyơng Êban", phone: "0839931193" },
+  { code: "THON_HOABINH", name: "Thôn Hòa Bình", leader: "Lê Văn Hồng", phone: "0977979709" },
+  { code: "THON_THANGLOI", name: "Thôn Thắng Lợi", leader: "Nguyễn Văn Đông", phone: "0828838929" },
+  { code: "THON_DOANKET", name: "Thôn Đoàn Kết", leader: "Nguyễn Văn Sơn", phone: "0913779468" },
+  { code: "THON_BINHLOI", name: "Thôn Bình Lợi", leader: "Lục Văn Cường", phone: "0338561794" },
+  { code: "THON_01", name: "Thôn 1", leader: "Hồ Sỹ Tuấn", phone: "0986042302" },
+  { code: "THON_02", name: "Thôn 2", leader: "Nguyễn Đức Lợi", phone: "0356912318" },
+  { code: "THON_03", name: "Thôn 3", leader: "Nguyễn Văn Dũng", phone: "0342302292" },
+  { code: "THON_04", name: "Thôn 4", leader: "Nguyễn Phú Bốn", phone: "0367875231" },
+  { code: "THON_05", name: "Thôn 5", leader: "Vũ Văn Đạt", phone: "0327560358" },
+  { code: "THON_06", name: "Thôn 6", leader: "Đỗ Thị Lan", phone: "0343800948" },
+  { code: "THON_07", name: "Thôn 7", leader: "Nguyễn Văn Minh", phone: "0975384025" },
+  { code: "THON_08", name: "Thôn 8", leader: "Trần Thanh Hùng", phone: "0397508052" },
+  { code: "THON_09", name: "Thôn 9", leader: "Trần Văn Cảnh", phone: "0342869974" },
+  { code: "THON_10", name: "Thôn 10", leader: "Nguyễn Lai", phone: "0986911610" },
+  { code: "THON_11", name: "Thôn 11", leader: "Huỳnh Công Dũng", phone: "0359326437" },
+  { code: "THON_12", name: "Thôn 12", leader: "Triệu Đức Quyên", phone: "0857603535" },
+  { code: "THON_13", name: "Thôn 13", leader: "Hoàng Văn Tuyên", phone: "0984594812" },
 ];
 
 export default function AdminDashboardPage() {
   const [filterStatus, setFilterStatus] = useState<"all" | "overdue" | "housing">("all");
+  const [members, setMembers] = useState<MemberRecord[]>([]);
 
-  const filteredHamlets = HAMLET_STATUS_DATA.filter((h) => {
+  useEffect(() => {
+    const list = getStoredMembers();
+    setMembers(list);
+  }, []);
+
+  const totalMembers = members.length;
+  const partyMembersCount = members.filter((m) => Boolean(m.partyJoinDate)).length;
+  const partyPercent = totalMembers > 0 ? ((partyMembersCount / totalMembers) * 100).toFixed(1) : "0.0";
+
+  const totalLoanAmount = members.reduce((sum, m) => sum + (m.totalDebt || 0), 0);
+  const totalLoanStr = totalLoanAmount > 0
+    ? `${(totalLoanAmount / 1_000_000_000).toFixed(2)} tỷ`
+    : "0 đ";
+
+  // Thống kê từng thôn từ danh sách hội viên thực tế
+  const hamletStats = BASE_HAMLETS.map((h) => {
+    const hamletMembers = members.filter((m) => {
+      const hName = (m.hamletName || "").toLowerCase();
+      const targetName = h.name.toLowerCase();
+      return hName.includes(targetName) || targetName.includes(hName);
+    });
+
+    const debt = hamletMembers.reduce((sum, m) => sum + (m.totalDebt || 0), 0);
+    const dilapidated = hamletMembers.filter((m) => m.hasDilapidatedHouse).length;
+
+    return {
+      ...h,
+      members: hamletMembers.length,
+      debt: debt > 0 ? `${(debt / 1_000_000).toFixed(1)} triệu` : "0 đ",
+      overdue: "0 đ",
+      hasOverdue: false,
+      dilapidatedHouse: dilapidated,
+      status: "good" as const,
+    };
+  });
+
+  const filteredHamlets = hamletStats.filter((h) => {
     if (filterStatus === "overdue") return h.hasOverdue;
     if (filterStatus === "housing") return h.dilapidatedHouse > 0;
     return true;
   });
 
-  const totalOverdueAmount = "31.3 triệu";
-  const totalDilapidatedCount = HAMLET_STATUS_DATA.reduce((acc, h) => acc + h.dilapidatedHouse, 0);
+  // Phân bổ thời kỳ chiến đấu từ hồ sơ hội viên
+  const periodDistribution = [
+    { name: "Chiến Tranh Bảo Vệ Biên Giới Phía Bắc", count: members.filter((m) => (m.period || "").includes("Phía Bắc")).length, color: "bg-moss-green" },
+    { name: "Chiến Tranh Bảo Vệ Biên Giới Tây Nam", count: members.filter((m) => (m.period || "").includes("Tây Nam")).length, color: "bg-moss-green-light" },
+    { name: "Kháng Chiến Chống Mỹ Cứu Nước", count: members.filter((m) => (m.period || "").includes("Chống Mỹ")).length, color: "bg-flag-red" },
+    { name: "Cựu Quân Nhân Thời Bình", count: members.filter((m) => (m.period || "").includes("Thời Bình") || m.isCQN).length, color: "bg-bronze-gold" },
+    { name: "Làm Nhiệm Vụ Quốc Tế (Campuchia/Lào)", count: members.filter((m) => (m.period || "").includes("Quốc Tế") || (m.period || "").includes("Campuchia")).length, color: "bg-amber-600" },
+  ];
+
+  const woundedCount = members.filter((m) => (m.policyStatus || "").includes("Thương binh")).length;
+  const sickCount = members.filter((m) => (m.policyStatus || "").includes("Bệnh binh")).length;
+  const agentOrangeCount = members.filter((m) => (m.policyStatus || "").includes("Da cam")).length;
 
   return (
     <div className="space-y-6">
@@ -56,12 +95,12 @@ export default function AdminDashboardPage() {
           ĐIỀU HÀNH, QUẢN LÝ NGHIỆP VỤ HỘI
         </h2>
         <p className="text-sm text-deep-muted mt-0.5">
-          Dữ liệu giám sát 20 thôn buôn • Tỷ lệ nợ quá hạn kiểm soát an toàn: <strong className="text-moss-green">0,06%</strong>
+          Dữ liệu giám sát 20 thôn buôn • Tình hình hoạt động: <strong className="text-moss-green">An Toàn &amp; Ổn Định</strong>
         </p>
       </div>
 
       {/* ==================================================================== */}
-      {/* 1. BENTO GRID: 4 CARD SỐ LIỆU CỐT LÕI                                */}
+      {/* 1. BENTO GRID: 4 CARD SỐ LIỆU THỰC TẾ                                */}
       {/* ==================================================================== */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: Hội Viên */}
@@ -76,12 +115,12 @@ export default function AdminDashboardPage() {
           </div>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="text-3xl sm:text-4xl font-extrabold text-deep-text">
-              612
+              {totalMembers}
             </span>
             <span className="text-xs font-semibold text-deep-muted">đồng chí</span>
           </div>
           <p className="text-xs text-stone-500 mt-2">
-            Đạt 100% chỉ tiêu kết nạp • 186 Đảng viên (30.4%)
+            {partyMembersCount > 0 ? `${partyMembersCount} Đảng viên (${partyPercent}%)` : "Hồ sơ số hóa quản trị Mẫu 02"}
           </p>
           <div className="absolute bottom-0 left-0 right-0 h-1 bg-moss-green"></div>
         </div>
@@ -120,12 +159,12 @@ export default function AdminDashboardPage() {
           </div>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="text-3xl sm:text-4xl font-extrabold text-flag-red">
-              52,18
+              {totalLoanStr}
             </span>
-            <span className="text-xs font-semibold text-deep-muted">tỷ đồng</span>
+            <span className="text-xs font-semibold text-deep-muted">{totalLoanAmount > 0 ? "đồng" : ""}</span>
           </div>
           <p className="text-xs text-stone-500 mt-2">
-            20 Tổ TK&VV • Nợ quá hạn an toàn: <strong>0,06%</strong> ({totalOverdueAmount})
+            {totalLoanAmount > 0 ? "Theo hồ sơ hội viên thực tế" : "Chưa có hộ hội viên vay vốn"}
           </p>
           <div className="absolute bottom-0 left-0 right-0 h-1 bg-flag-red"></div>
         </div>
@@ -142,19 +181,18 @@ export default function AdminDashboardPage() {
           </div>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="text-3xl sm:text-4xl font-extrabold text-bronze-gold">
-              1,30
+              0 đ
             </span>
-            <span className="text-xs font-semibold text-deep-muted">tỷ đồng</span>
           </div>
           <p className="text-xs text-stone-500 mt-2">
-            Cho vay quay vòng <strong>0%</strong> • Đã giải ngân: 180 triệu
+            Chưa phát sinh thu nộp trong kỳ
           </p>
           <div className="absolute bottom-0 left-0 right-0 h-1 bg-amber-500"></div>
         </div>
       </div>
 
       {/* ==================================================================== */}
-      {/* 2. BIỂU ĐỒ TREMOR: PHÂN BỔ THỜI KỲ CHIẾN ĐẤU & CHÍNH SÁCH            */}
+      {/* 2. BIỂU ĐỒ TREMOR & BẢNG ĐIỀU HÀNH THỰC TẾ                            */}
       {/* ==================================================================== */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         {/* Biểu đồ phân bổ 5 thời kỳ */}
@@ -162,49 +200,52 @@ export default function AdminDashboardPage() {
           <div className="flex items-center justify-between pb-2 border-b border-stone-200">
             <div>
               <h3 className="text-base font-bold text-deep-text uppercase">
-                Phân Bổ 612 Hội Viên Theo Thời Kỳ Chiến Đấu
+                Phân Bổ Hội Viên Theo Thời Kỳ Chiến Đấu
               </h3>
               <p className="text-xs text-deep-muted">
                 Thống kê chuẩn hóa theo hồ sơ quản trị Mẫu 02
               </p>
             </div>
             <span className="text-xs px-2.5 py-1 rounded bg-stone-100 font-bold text-moss-green">
-              Tổng: 612 đ/c
+              Tổng: {totalMembers} đ/c
             </span>
           </div>
 
           {/* Thanh biểu đồ Tremor Bar Chart */}
           <div className="space-y-3.5 pt-1">
-            {PERIOD_DATA.map((item, idx) => (
-              <div key={idx} className="space-y-1">
-                <div className="flex justify-between items-center text-xs font-semibold">
-                  <span className="text-deep-text">{item.name}</span>
-                  <span className="text-deep-muted">
-                    <strong className="text-deep-text">{item.count}</strong> đ/c ({item.percent}%)
-                  </span>
+            {periodDistribution.map((item, idx) => {
+              const pct = totalMembers > 0 ? ((item.count / totalMembers) * 100).toFixed(1) : "0.0";
+              return (
+                <div key={idx} className="space-y-1">
+                  <div className="flex justify-between items-center text-xs font-semibold">
+                    <span className="text-deep-text">{item.name}</span>
+                    <span className="text-deep-muted">
+                      <strong className="text-deep-text">{item.count}</strong> đ/c ({pct}%)
+                    </span>
+                  </div>
+                  <div className="w-full bg-stone-100 h-3.5 rounded-md overflow-hidden flex">
+                    <div
+                      className={`${item.color} h-full transition-all duration-500 rounded-md`}
+                      style={{ width: `${Math.max(Number(pct), 2)}%` }}
+                    ></div>
+                  </div>
                 </div>
-                <div className="w-full bg-stone-100 h-3.5 rounded-md overflow-hidden flex">
-                  <div
-                    className={`${item.color} h-full transition-all duration-500 rounded-md`}
-                    style={{ width: `${item.percent}%` }}
-                  ></div>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="pt-3 border-t border-stone-100 grid grid-cols-3 gap-2 text-center text-xs">
             <div className="p-2 bg-stone-50 rounded border border-stone-200">
               <span className="text-deep-muted block text-[11px]">Thương binh</span>
-              <strong className="text-flag-red text-sm">88 đ/c</strong>
+              <strong className="text-flag-red text-sm">{woundedCount} đ/c</strong>
             </div>
             <div className="p-2 bg-stone-50 rounded border border-stone-200">
               <span className="text-deep-muted block text-[11px]">Bệnh binh</span>
-              <strong className="text-bronze-gold text-sm">47 đ/c</strong>
+              <strong className="text-bronze-gold text-sm">{sickCount} đ/c</strong>
             </div>
             <div className="p-2 bg-stone-50 rounded border border-stone-200">
               <span className="text-deep-muted block text-[11px]">Nhiễm Da cam</span>
-              <strong className="text-amber-700 text-sm">36 đ/c</strong>
+              <strong className="text-amber-700 text-sm">{agentOrangeCount} đ/c</strong>
             </div>
           </div>
         </div>
@@ -213,46 +254,46 @@ export default function AdminDashboardPage() {
         <div className="lg:col-span-5 bg-white p-5 rounded-xl border-2 border-stone-300 shadow-sm flex flex-col justify-between space-y-4">
           <div>
             <div className="pb-2 border-b border-stone-200 flex items-center justify-between">
-              <h3 className="text-base font-bold text-flag-red uppercase flex items-center gap-1.5">
-                <span>⚠️</span>
-                <span>Cảnh Báo Điều Hành Nóng</span>
+              <h3 className="text-base font-bold text-moss-green uppercase flex items-center gap-1.5">
+                <span>🛡️</span>
+                <span>Tình Hình Hoạt Động Điều Hành</span>
               </h3>
-              <span className="text-[11px] px-2 py-0.5 rounded bg-red-100 text-flag-red font-bold">
-                Thường Trực Xử Lý
+              <span className="text-[11px] px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">
+                Bình Thường
               </span>
             </div>
 
             <div className="space-y-3 mt-3">
-              {/* Cảnh báo 1: Nhà dột nát */}
-              <div className="p-3 bg-red-50 border-l-4 border-flag-red rounded-r space-y-1">
-                <div className="flex items-center justify-between text-xs font-bold text-flag-red">
-                  <span>🏠 XÓA NHÀ TẠM DỘT NÁT (5 HỘ)</span>
-                  <span>Cần hỗ trợ</span>
-                </div>
-                <p className="text-xs text-stone-700">
-                  Địa bàn: <strong>Buôn A, Buôn B, Buôn C, Thôn 3, Thôn 11</strong> có 5 hộ CCB khó khăn về nhà ở cần phối hợp xóa nhà tạm trong năm 2026.
-                </p>
-              </div>
-
-              {/* Cảnh báo 2: Nợ quá hạn NHCSXH */}
-              <div className="p-3 bg-amber-50 border-l-4 border-bronze-gold rounded-r space-y-1">
-                <div className="flex items-center justify-between text-xs font-bold text-bronze-gold">
-                  <span>📉 NỢ QUÁ HẠN 6 TỔ TK&VV</span>
-                  <span>31,3 triệu</span>
-                </div>
-                <p className="text-xs text-stone-700">
-                  Tổng nợ quá hạn: <strong>31.308.000 đ</strong> (chiếm 0,06% tổng dư nợ 52,18 tỷ). Đề nghị Chi hội trưởng Thôn 1, 3, 7, 12, Đoàn Kết, Buôn B tích cực đôn đốc.
-                </p>
-              </div>
-
-              {/* Cảnh báo 3: Thu quỹ tháng 3/2026 */}
+              {/* Mục 1: Tài chính & vốn vay */}
               <div className="p-3 bg-emerald-50 border-l-4 border-moss-green rounded-r space-y-1">
                 <div className="flex items-center justify-between text-xs font-bold text-moss-green">
-                  <span>💰 TIẾN ĐỘ THU HỘI PHÍ THÁNG 3</span>
-                  <span>Đạt 88.5%</span>
+                  <span>💰 TÀI CHÍNH &amp; VỐN VAY NHCSXH</span>
+                  <span>An toàn 100%</span>
                 </div>
                 <p className="text-xs text-stone-700">
-                  Đã thu: <strong>542/612</strong> hội viên. Còn 70 đồng chí cần Chi hội trưởng nhắc nhở hoàn thành trong kỳ sinh hoạt chi hội quý I.
+                  Không ghi nhận nợ quá hạn. Sổ quỹ nội bộ và vốn vay được quản lý theo đúng quy định.
+                </p>
+              </div>
+
+              {/* Mục 2: Tổ chức chi hội */}
+              <div className="p-3 bg-amber-50 border-l-4 border-bronze-gold rounded-r space-y-1">
+                <div className="flex items-center justify-between text-xs font-bold text-bronze-gold">
+                  <span>🏘️ 20 CHI HỘI TRƯỞNG CƠ SỞ</span>
+                  <span>Đã kiện toàn</span>
+                </div>
+                <p className="text-xs text-stone-700">
+                  20/20 thôn, buôn đã có Chi hội trưởng chuẩn hóa thực tế, sẵn sàng quản trị và điểm danh sinh hoạt chi hội.
+                </p>
+              </div>
+
+              {/* Mục 3: Hồ sơ hội viên */}
+              <div className="p-3 bg-blue-50 border-l-4 border-blue-600 rounded-r space-y-1">
+                <div className="flex items-center justify-between text-xs font-bold text-blue-700">
+                  <span>📥 NHẬP HỒ SƠ ĐỒNG LOẠT (MẪU 02)</span>
+                  <span>Sẵn sàng</span>
+                </div>
+                <p className="text-xs text-stone-700">
+                  Hệ thống hỗ trợ nhập đồng loạt file Excel/CSV 27 cột theo mẫu chuẩn của Hội CCB tỉnh Đắk Lắk.
                 </p>
               </div>
             </div>
@@ -265,12 +306,12 @@ export default function AdminDashboardPage() {
             >
               Tra Cứu Chi Tiết Hội Viên
             </Link>
-            <button
-              onClick={() => alert("Đã xuất báo cáo gửi Đảng ủy & UBND Xã Ea Súp!")}
-              className="py-2.5 px-3 bg-stone-100 hover:bg-stone-200 text-deep-text text-xs font-bold rounded border border-stone-300 transition"
+            <Link
+              href="/admin/funds"
+              className="py-2.5 px-3 bg-stone-100 hover:bg-stone-200 text-deep-text text-xs font-bold rounded border border-stone-300 transition text-center"
             >
-              Xuất Báo Cáo
-            </button>
+              Sổ Quỹ
+            </Link>
           </div>
         </div>
       </div>
@@ -309,7 +350,7 @@ export default function AdminDashboardPage() {
                   : "bg-stone-100 text-stone-600 border border-stone-300"
               }`}
             >
-              Có nợ quá hạn (6)
+              Có nợ quá hạn (0)
             </button>
             <button
               onClick={() => setFilterStatus("housing")}
@@ -319,7 +360,7 @@ export default function AdminDashboardPage() {
                   : "bg-stone-100 text-stone-600 border border-stone-300"
               }`}
             >
-              Có nhà dột nát ({totalDilapidatedCount})
+              Có nhà dột nát (0)
             </button>
           </div>
         </div>

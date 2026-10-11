@@ -91,12 +91,7 @@ export async function GET(req: NextRequest) {
       orderBy: { createdAt: "desc" },
     });
 
-    let result = dbArticles.map(mapPrismaToArticle);
-
-    // BẢO VỆ CHỐNG MẤT BẢN TIN: Nếu danh sách rỗng khi khách/hội viên xem bài đã duyệt, tự động dùng 4 bài mẫu mặc định
-    if (result.length === 0 && (!isCadre || !filterStatus || filterStatus === "APPROVED" || filterStatus === "ALL")) {
-      result = DEFAULT_APPROVED_NEWS;
-    }
+    const result = dbArticles.map(mapPrismaToArticle);
 
     // Tính toán meta
     const totalCount = await prisma.article.count();
@@ -114,13 +109,13 @@ export async function GET(req: NextRequest) {
     });
   } catch (error) {
     console.error("Lỗi khi tải danh sách bài viết từ PostgreSQL:", error);
-    // Fallback an toàn để giao diện không bị trắng nếu DB đang kết nối
+    // Trả về rỗng an toàn nếu DB đang khởi động
     return NextResponse.json({
       success: true,
-      data: DEFAULT_APPROVED_NEWS,
+      data: [],
       meta: {
-        total: DEFAULT_APPROVED_NEWS.length,
-        approved: DEFAULT_APPROVED_NEWS.length,
+        total: 0,
+        approved: 0,
         pending: 0,
       },
     });
