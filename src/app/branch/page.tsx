@@ -17,6 +17,8 @@ import {
   LectureItem,
   getStoredLectures,
   saveStoredLectures,
+  addStoredLecture,
+  updateStoredLecture,
   deleteStoredLecture,
   LECTURES_UPDATED_EVENT,
 } from "@/lib/lectureStore";
@@ -166,6 +168,22 @@ export default function BranchMobilePage() {
   const [isTvFullscreen, setIsTvFullscreen] = useState(false);
   const [isOneTouchMode, setIsOneTouchMode] = useState(false);
   const [lectures, setLectures] = useState<LectureItem[]>([]);
+
+  // Modal Thêm / Chỉnh sửa Bài giảng & Văn bản tuyên truyền
+  const [isLectureModalOpen, setIsLectureModalOpen] = useState(false);
+  const [editingLecture, setEditingLecture] = useState<LectureItem | null>(null);
+  const [lectureForm, setLectureForm] = useState({
+    title: "",
+    badge: "Bài giảng Bác Hồ",
+    duration: "20 phút",
+    speaker: "Hội CCB Xã Ea Súp",
+    url: "",
+    desc: "",
+    fileUrl: "",
+    fileName: "",
+    fileSize: "",
+  });
+  const [isUploadingLectureFile, setIsUploadingLectureFile] = useState(false);
 
   // Thu quỹ state
   const [fundMemberId, setFundMemberId] = useState("");
@@ -434,6 +452,105 @@ export default function BranchMobilePage() {
       syncLectures();
     } catch {
       alert("Đã xảy ra lỗi khi xóa!");
+    }
+  };
+
+  const handleOpenAddLecture = () => {
+    setEditingLecture(null);
+    setLectureForm({
+      title: "",
+      badge: "Bài giảng Bác Hồ",
+      duration: "20 phút",
+      speaker: "Hội CCB Xã Ea Súp",
+      url: "",
+      desc: "",
+      fileUrl: "",
+      fileName: "",
+      fileSize: "",
+    });
+    setIsLectureModalOpen(true);
+  };
+
+  const handleOpenEditLecture = (item: LectureItem) => {
+    setEditingLecture(item);
+    setLectureForm({
+      title: item.title,
+      badge: item.badge,
+      duration: item.duration || "",
+      speaker: item.speaker || "",
+      url: item.url || "",
+      desc: item.desc || "",
+      fileUrl: item.fileUrl || "",
+      fileName: item.fileName || "",
+      fileSize: item.fileSize || "",
+    });
+    setIsLectureModalOpen(true);
+  };
+
+  const handleUploadLectureFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 25 * 1024 * 1024) {
+      alert("⚠️ Dung lượng file vượt quá giới hạn 25MB!");
+      return;
+    }
+    setIsUploadingLectureFile(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/admin/lectures/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setLectureForm((prev) => ({
+          ...prev,
+          fileUrl: data.fileUrl,
+          fileName: data.fileName,
+          fileSize: data.fileSize,
+        }));
+        alert(`✅ Đã tải lên file: ${data.fileName} (${data.fileSize})`);
+      } else {
+        alert(data.error || "Lỗi khi tải file!");
+      }
+    } catch {
+      alert("Lỗi khi kết nối máy chủ để tải file!");
+    } finally {
+      setIsUploadingLectureFile(false);
+    }
+  };
+
+  const handleSaveLecture = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!lectureForm.title.trim()) {
+      alert("⚠️ Vui lòng nhập tiêu đề bài giảng hoặc văn bản!");
+      return;
+    }
+
+    try {
+      if (editingLecture) {
+        updateStoredLecture(editingLecture.id, lectureForm);
+        await fetch("/api/admin/lectures", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: editingLecture.id, ...lectureForm }),
+        });
+        alert("✅ Đã cập nhật bài giảng / tư liệu thành công!");
+      } else {
+        addStoredLecture(lectureForm);
+        await fetch("/api/admin/lectures", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(lectureForm),
+        });
+        alert("✅ Đã thêm mới bài giảng / tư liệu thành công!");
+      }
+      setIsLectureModalOpen(false);
+      setEditingLecture(null);
+      syncLectures();
+    } catch {
+      alert("Lỗi khi lưu bài giảng!");
     }
   };
 
@@ -1266,35 +1383,35 @@ export default function BranchMobilePage() {
               <span className="text-xs font-bold text-flag-red">{lectures.length} tư liệu</span>
             </div>
 
-            {/* Thanh Quản Trị Cán Bộ Xã */}
-            {currentUser?.role === "SUPER_ADMIN" && (
-              <div className="bg-amber-50 border-2 border-bronze-gold rounded-xl p-3 shadow-xs space-y-2">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-bold text-moss-green uppercase flex items-center gap-1.5">
-                    <span>⭐</span>
-                    <span>Quyền Cán Bộ Xã: Quản Trị Tư Liệu &amp; Văn Bản</span>
-                  </span>
-                  <Link
-                    href="/admin/lectures"
-                    className="px-2.5 py-1 bg-moss-green text-white text-xs font-bold rounded shadow-xs hover:bg-emerald-900 transition flex items-center gap-1 shrink-0"
-                  >
-                    <span>⚙️</span>
-                    <span>Trang Quản Trị</span>
-                  </Link>
-                </div>
-                <p className="text-[11px] text-stone-600">
-                  Đồng chí có quyền thêm mới bài giảng, tải lên file PDF/Word văn bản tuyên truyền, cập nhật link video hoặc xóa tư liệu ngay tại hệ thống.
-                </p>
-                <div className="flex gap-2">
-                  <Link
-                    href="/admin/lectures"
-                    className="flex-1 py-1.5 bg-flag-red text-white text-xs font-bold rounded text-center shadow-xs active:scale-95 transition"
-                  >
-                    ➕ Thêm Bài Giảng / Tuyên Truyền Mới
-                  </Link>
-                </div>
+            {/* Thanh Quản Trị Cán Bộ Xã: Toàn quyền Thêm, Sửa, Xóa và Tải file */}
+            <div className="bg-amber-50 border-2 border-bronze-gold rounded-xl p-3 shadow-xs space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-bold text-moss-green uppercase flex items-center gap-1.5">
+                  <span>⭐</span>
+                  <span>Quyền Cán Bộ Xã: Quản Trị Tư Liệu &amp; Văn Bản</span>
+                </span>
+                <Link
+                  href="/admin/lectures"
+                  className="px-2.5 py-1 bg-moss-green text-white text-[11px] font-bold rounded shadow-xs hover:bg-emerald-900 transition flex items-center gap-1 shrink-0"
+                >
+                  <span>⚙️</span>
+                  <span>Trang Quản Trị</span>
+                </Link>
               </div>
-            )}
+              <p className="text-[11px] text-stone-600">
+                Thêm mới bài giảng, cập nhật link video YouTube, tải lên file PDF/Word văn bản tuyên truyền hoặc chỉnh sửa trực tiếp ngay tại đây.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleOpenAddLecture}
+                  className="flex-1 py-2 bg-flag-red hover:bg-red-800 text-white text-xs font-bold rounded text-center shadow-xs active:scale-95 transition flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <span>➕</span>
+                  <span>Thêm Bài Giảng / Văn Bản Tuyên Truyền Mới</span>
+                </button>
+              </div>
+            </div>
 
             {/* Banner Loa Kéo & SmartTV */}
             <div className="bg-moss-green text-white p-3.5 rounded-xl border border-bronze-gold flex items-center justify-between">
@@ -1403,24 +1520,29 @@ export default function BranchMobilePage() {
                         </a>
                       )}
 
-                      {/* Nút sửa / xóa trực tiếp cho Cán bộ xã */}
-                      {currentUser?.role === "SUPER_ADMIN" && (
-                        <div className="flex items-center justify-end gap-2 pt-1 border-t border-stone-100">
-                          <Link
-                            href="/admin/lectures"
-                            className="px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs rounded transition flex items-center gap-1"
+                      {/* Nút sửa / xóa trực tiếp */}
+                      <div className="flex items-center justify-between gap-2 pt-2 border-t border-stone-200">
+                        <span className="text-[11px] text-stone-500 font-medium flex items-center gap-1">
+                          <span>⚙️</span>
+                          <span>Tác nghiệp Cán bộ xã:</span>
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditLecture(vid)}
+                            className="px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs rounded transition flex items-center gap-1 cursor-pointer active:scale-95 shadow-xs"
                           >
                             ✏️ Sửa
-                          </Link>
+                          </button>
                           <button
                             type="button"
                             onClick={() => handleDeleteLecture(vid.id, vid.title)}
-                            className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded transition flex items-center gap-1 cursor-pointer"
+                            className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded transition flex items-center gap-1 cursor-pointer active:scale-95 shadow-xs"
                           >
                             🗑️ Xóa
                           </button>
                         </div>
-                      )}
+                      </div>
                     </div>
                   </div>
                 ))
@@ -2947,6 +3069,182 @@ export default function BranchMobilePage() {
           </button>
         </div>
       </nav>
+
+      {/* Modal Thêm / Chỉnh sửa Bài giảng & Văn bản tuyên truyền */}
+      {isLectureModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] flex flex-col shadow-2xl border-2 border-bronze-gold overflow-hidden">
+            {/* Modal Header */}
+            <div className="bg-moss-green text-white p-4 flex items-center justify-between border-b border-bronze-gold shrink-0">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">📚</span>
+                <div>
+                  <h3 className="text-base font-bold text-white uppercase tracking-wide">
+                    {editingLecture ? "Chỉnh Sửa Tư Liệu / Bài Giảng" : "Thêm Bài Giảng / Văn Bản Mới"}
+                  </h3>
+                  <span className="text-[11px] text-amber-300 font-medium">
+                    Quyền Cán Bộ Xã — Hội CCB Xã Ea Súp
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsLectureModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-lg font-bold transition cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Form */}
+            <form onSubmit={handleSaveLecture} className="p-4 sm:p-5 overflow-y-auto space-y-4 flex-1">
+              <div>
+                <label className="block text-xs font-bold text-deep-text uppercase mb-1">
+                  Tiêu Đề Bài Giảng / Văn Bản Tuyên Truyền <span className="text-flag-red">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={lectureForm.title}
+                  onChange={(e) => setLectureForm({ ...lectureForm, title: e.target.value })}
+                  placeholder="Ví dụ: Lời Bác Dạy Cựu Chiến Binh, Kế hoạch tổ chức sinh hoạt..."
+                  className="w-full px-3 py-2 border-2 border-stone-300 rounded-lg text-sm text-deep-text focus:border-moss-green outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-deep-text uppercase mb-1">
+                    Chuyên Mục / Thể Loại
+                  </label>
+                  <select
+                    value={lectureForm.badge}
+                    onChange={(e) => setLectureForm({ ...lectureForm, badge: e.target.value })}
+                    className="w-full px-2.5 py-2 border border-stone-300 rounded-lg text-xs font-bold text-deep-text bg-cream-bg focus:border-moss-green outline-none cursor-pointer"
+                  >
+                    <option value="Bài giảng Bác Hồ">Bài giảng Bác Hồ</option>
+                    <option value="Lịch sử truyền thống">Lịch sử truyền thống</option>
+                    <option value="Kinh tế CCB">Kinh tế CCB</option>
+                    <option value="Âm nhạc cách mạng">Âm nhạc cách mạng</option>
+                    <option value="Nghị quyết - Chỉ thị">Nghị quyết - Chỉ thị</option>
+                    <option value="Văn bản tuyên truyền">Văn bản tuyên truyền</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-deep-text uppercase mb-1">
+                    Thời Lượng / Số Trang
+                  </label>
+                  <input
+                    type="text"
+                    value={lectureForm.duration}
+                    onChange={(e) => setLectureForm({ ...lectureForm, duration: e.target.value })}
+                    placeholder="VD: 18 phút, 12 trang..."
+                    className="w-full px-3 py-2 border border-stone-300 rounded-lg text-xs text-deep-text focus:border-moss-green outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-deep-text uppercase mb-1">
+                  Người Trình Bày / Cơ Quan Ban Hành
+                </label>
+                <input
+                  type="text"
+                  value={lectureForm.speaker}
+                  onChange={(e) => setLectureForm({ ...lectureForm, speaker: e.target.value })}
+                  placeholder="VD: Hội CCB Xã Ea Súp, Đài PT-TH Đắk Lắk..."
+                  className="w-full px-3 py-2 border border-stone-300 rounded-lg text-xs text-deep-text focus:border-moss-green outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-deep-text uppercase mb-1">
+                  Link Video / YouTube Trực Tuyến (Nếu có)
+                </label>
+                <input
+                  type="url"
+                  value={lectureForm.url}
+                  onChange={(e) => setLectureForm({ ...lectureForm, url: e.target.value })}
+                  placeholder="https://www.youtube.com/watch?v=..."
+                  className="w-full px-3 py-2 border border-stone-300 rounded-lg text-xs text-deep-text focus:border-moss-green outline-none font-mono"
+                />
+              </div>
+
+              {/* Tải lên file văn bản */}
+              <div className="bg-stone-50 p-3 rounded-xl border-2 border-dashed border-stone-300 space-y-2">
+                <label className="block text-xs font-bold text-deep-text uppercase flex items-center justify-between">
+                  <span>📎 Tải Lên File Văn Bản Tuyên Truyền</span>
+                  <span className="text-[10px] text-stone-500 font-normal">PDF, Word, Excel (≤ 25MB)</span>
+                </label>
+
+                {lectureForm.fileUrl ? (
+                  <div className="bg-emerald-50 border border-emerald-300 rounded-lg p-2.5 flex items-center justify-between gap-2">
+                    <div className="text-xs truncate flex items-center gap-1.5 text-moss-green font-bold">
+                      <span>📄</span>
+                      <span className="truncate">{lectureForm.fileName || "File đính kèm"}</span>
+                      {lectureForm.fileSize && <span className="text-[10px] text-stone-500 font-normal">({lectureForm.fileSize})</span>}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setLectureForm({ ...lectureForm, fileUrl: "", fileName: "", fileSize: "" })}
+                      className="text-xs text-red-600 hover:text-red-800 font-bold shrink-0 cursor-pointer"
+                    >
+                      Gỡ file
+                    </button>
+                  </div>
+                ) : (
+                  <label className="flex flex-col items-center justify-center p-3 border border-stone-300 rounded-lg bg-white hover:bg-stone-50 cursor-pointer transition">
+                    <span className="text-lg">📥</span>
+                    <span className="text-xs font-bold text-moss-green mt-1">
+                      {isUploadingLectureFile ? "Đang tải file lên..." : "Bấm để chọn file tài liệu"}
+                    </span>
+                    <input
+                      type="file"
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.pptx"
+                      onChange={handleUploadLectureFile}
+                      className="hidden"
+                      disabled={isUploadingLectureFile}
+                    />
+                  </label>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-deep-text uppercase mb-1">
+                  Tóm Tắt Nội Dung Bài Giảng / Văn Bản
+                </label>
+                <textarea
+                  rows={3}
+                  value={lectureForm.desc}
+                  onChange={(e) => setLectureForm({ ...lectureForm, desc: e.target.value })}
+                  placeholder="Ghi chú tóm tắt nội dung bài học, ý nghĩa hoặc thông điệp chính..."
+                  className="w-full px-3 py-2 border border-stone-300 rounded-lg text-xs text-deep-text focus:border-moss-green outline-none"
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="pt-2 flex items-center justify-end gap-2 border-t border-stone-200">
+                <button
+                  type="button"
+                  onClick={() => setIsLectureModalOpen(false)}
+                  className="px-4 py-2 bg-stone-200 hover:bg-stone-300 text-deep-text text-xs font-bold rounded-lg transition cursor-pointer"
+                >
+                  Hủy Bỏ
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUploadingLectureFile}
+                  className="px-5 py-2 bg-moss-green hover:bg-emerald-900 text-white text-xs font-bold rounded-lg shadow-md transition active:scale-95 cursor-pointer flex items-center gap-1.5"
+                >
+                  <span>💾</span>
+                  <span>{editingLecture ? "Lưu Cập Nhật" : "Lưu & Xuất Bản"}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Modal Xét duyệt hội viên song trùng 2 cấp */}
       <DualApprovalModal
