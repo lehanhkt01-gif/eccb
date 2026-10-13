@@ -50,8 +50,8 @@ async function main() {
     where: {
       cccd: { notIn: WHITELIST_CCCD },
       OR: [
-        { fullName: { in: ["Đặng Hữu Phúc", "Nguyễn Đình Quảng", "Nguyễn Văn Hùng", "Lê Bá Tùng"] } },
-        { cccd: { in: ["066067000113", "066068001234", "066058000102", "066055009876"] } },
+        { fullName: { in: ["Đặng Hữu Phúc", "Nguyễn Đình Quảng", "Nguyễn Văn Hùng", "Lê Bá Tùng", "Đặng Văn Hảo", "Lương Thế Vinh", "Ngô Quang Hưng"] } },
+        { cccd: { in: ["066067000113", "066068001234", "066058000102", "066055009876", "066052000101", "066060000111", "066072000109"] } },
       ],
     },
   });
@@ -59,6 +59,21 @@ async function main() {
   const mockMemberIds = mockMembers.map((m) => m.id);
   console.log(`🔍 Phát hiện ${mockMemberIds.length} hồ sơ hội viên ảo cần dọn dẹp:`);
   mockMembers.forEach((m) => console.log(`   - ${m.fullName} (CCCD: ${m.cccd})`));
+
+  // Xóa tất cả các bản ghi biến động ảo (mock movements)
+  try {
+    const deletedMovs = await prisma.memberMovement.deleteMany({
+      where: {
+        OR: [
+          { id: { startsWith: "mov_init_" } },
+          { memberId: { in: mockMemberIds } },
+          { member: { fullName: { in: ["Đặng Văn Hảo", "Nguyễn Văn Hùng", "Lương Thế Vinh", "Ngô Quang Hưng"] } } },
+          { member: { cccd: { in: ["066052000101", "066058000102", "066060000111", "066072000109"] } } },
+        ],
+      },
+    });
+    console.log(`✓ Đã dọn dẹp ${deletedMovs.count} bản ghi biến động ảo (MemberMovement).`);
+  } catch (_) {}
 
   if (mockMemberIds.length > 0) {
     // 2.1 Hủy liên kết Chi hội trưởng nếu có trỏ tới member ảo
@@ -69,12 +84,9 @@ async function main() {
       });
     } catch (_) {}
 
-    // 2.2 Xóa các bản ghi liên kết phụ thuộc (Attendance, MemberMovement, FundContribution, FundLoan)
+    // 2.2 Xóa các bản ghi liên kết phụ thuộc (Attendance, FundContribution, FundLoan)
     try {
       await prisma.attendance.deleteMany({ where: { memberId: { in: mockMemberIds } } });
-    } catch (_) {}
-    try {
-      await prisma.memberMovement.deleteMany({ where: { memberId: { in: mockMemberIds } } });
     } catch (_) {}
     try {
       await prisma.fundContribution.deleteMany({ where: { memberId: { in: mockMemberIds } } });

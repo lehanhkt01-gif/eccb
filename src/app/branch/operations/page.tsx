@@ -11,6 +11,7 @@ import {
   getStoredMembers,
   saveStoredMembers,
   getStoredMovements,
+  deleteStoredMovement,
   recordLocalMovement,
 } from "@/lib/memberStore";
 import NotificationBell from "@/components/NotificationBell";
@@ -68,64 +69,8 @@ const HAMLETS = [
   { code: "THON_13", name: "Thôn 13", leader: "Hoàng Văn Tuyên" },
 ];
 
-// Dữ liệu nghiệp vụ mẫu sinh động ban đầu nếu localStorage chưa có
-const INITIAL_OPERATIONS_DATA: MemberMovementRecord[] = [
-  {
-    id: "mov_init_1",
-    memberId: "M001",
-    memberName: "Đặng Văn Hảo",
-    memberCccd: "066052000101",
-    hamletName: "Thôn 1",
-    type: "DECEASED",
-    eventDate: "2026-03-15",
-    reason: "Tuổi cao sức yếu (hưởng thọ 74 tuổi)",
-    decisionNumber: "12/TLKT-UBND",
-    burialPlace: "Nghĩa trang nhân dân xã Ea Súp",
-    documentPdfUrl: "/uploads/documents/doc_trich_luc_khai_tu_m01.pdf",
-    createdAt: "2026-03-15T08:30:00.000Z",
-  },
-  {
-    id: "mov_init_2",
-    memberId: "M002",
-    memberName: "Nguyễn Văn Hùng",
-    memberCccd: "066058000102",
-    hamletName: "Thôn 1",
-    type: "TRANSFER_OUT",
-    eventDate: "2026-03-20",
-    reason: "Chuyển sinh sống cùng con tại thị xã Buôn Hồ",
-    destination: "Hội CCB Phường An Lạc, Thị xã Buôn Hồ, Đắk Lắk",
-    decisionNumber: "08/GGT-CCB",
-    documentPdfUrl: "/uploads/documents/doc_giay_gioi_thieu_chuyen_di.pdf",
-    createdAt: "2026-03-20T10:00:00.000Z",
-  },
-  {
-    id: "mov_init_3",
-    memberId: "M_NEW_01",
-    memberName: "Lương Thế Vinh",
-    memberCccd: "066060000111",
-    hamletName: "Thôn 1",
-    type: "TRANSFER_IN",
-    eventDate: "2026-02-18",
-    reason: "Khai hoang phát triển kinh tế, chuyển sinh hoạt về Ea Súp",
-    destination: "Hội CCB Xã Cư Êbur, TP. Buôn Ma Thuột",
-    decisionNumber: "22/GGT-CCB",
-    documentPdfUrl: "/uploads/documents/doc_tiep_nhan_chuyen_den.pdf",
-    createdAt: "2026-02-18T14:15:00.000Z",
-  },
-  {
-    id: "mov_init_4",
-    memberId: "M004",
-    memberName: "Ngô Quang Hưng",
-    memberCccd: "066072000109",
-    hamletName: "Thôn 1",
-    type: "EXPELLED",
-    eventDate: "2026-01-10",
-    reason: "Không tham gia sinh hoạt liên tục trên 12 tháng không có lý do",
-    decisionNumber: "03/QĐ-CCB",
-    documentPdfUrl: "/uploads/documents/doc_quyet_dinh_xoa_ten.pdf",
-    createdAt: "2026-01-10T09:00:00.000Z",
-  },
-];
+// Danh sách biến động rỗng mặc định, tuyệt đối không tự sinh dữ liệu test ảo
+const INITIAL_OPERATIONS_DATA: MemberMovementRecord[] = [];
 
 export default function BranchOperationsPage() {
   const router = useRouter();
@@ -188,15 +133,42 @@ export default function BranchOperationsPage() {
     setMembers(mems);
 
     const storedMovs = getStoredMovements();
-    if (storedMovs.length === 0) {
-      // Nạp dữ liệu mẫu ban đầu để giao diện sống động
-      setMovements(INITIAL_OPERATIONS_DATA);
-    } else {
-      setMovements(storedMovs);
-    }
+    setMovements(storedMovs);
+  };
+
+  // Xóa hồ sơ biến động
+  const handleDeleteMovement = (id: string, name?: string) => {
+    const confirmDelete = window.confirm(
+      `Đồng chí có chắc chắn muốn XÓA hồ sơ biến động của "${name || "hội viên này"}" khỏi hệ thống?`
+    );
+    if (!confirmDelete) return;
+
+    deleteStoredMovement(id);
+    const updated = getStoredMovements();
+    setMovements(updated);
+    showToast("✓ Đã xóa hồ sơ biến động thành công.");
   };
 
   useEffect(() => {
+    // Tự động dọn dẹp các hồ sơ biến động test ảo nếu còn sót lại trong localStorage
+    try {
+      const raw = localStorage.getItem("eccb-easup_movements_v1");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          const cleaned = parsed.filter(
+            (m: any) =>
+              !m.id?.startsWith("mov_init_") &&
+              !["Đặng Văn Hảo", "Nguyễn Văn Hùng", "Lương Thế Vinh", "Ngô Quang Hưng"].includes(m.memberName || "") &&
+              !["066052000101", "066058000102", "066060000111", "066072000109"].includes(m.memberCccd || "")
+          );
+          if (cleaned.length !== parsed.length) {
+            localStorage.setItem("eccb-easup_movements_v1", JSON.stringify(cleaned));
+          }
+        }
+      }
+    } catch {}
+
     loadData();
     const handleUpdate = () => loadData();
     window.addEventListener("eccb-members-updated", handleUpdate);
@@ -605,22 +577,32 @@ export default function BranchOperationsPage() {
                       </div>
                     </div>
 
-                    {/* Nút Xem file PDF / Ảnh văn bản */}
-                    {mov.documentPdfUrl ? (
-                      <a
-                        href={mov.documentPdfUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-3 py-1.5 bg-moss-green hover:bg-moss-green-light text-white font-bold text-xs rounded-lg shadow-xs flex items-center gap-1.5 shrink-0 active:scale-95 transition"
+                    {/* Nút Xem file PDF / Ảnh văn bản & Nút Xóa */}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {mov.documentPdfUrl ? (
+                        <a
+                          href={mov.documentPdfUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-3 py-1.5 bg-moss-green hover:bg-moss-green-light text-white font-bold text-xs rounded-lg shadow-xs flex items-center gap-1.5 shrink-0 active:scale-95 transition"
+                        >
+                          <span>📄</span>
+                          <span>Xem PDF</span>
+                        </a>
+                      ) : (
+                        <span className="text-[11px] text-stone-400 italic px-2 py-1 bg-stone-100 rounded-md">
+                          Chưa có file
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteMovement(mov.id, mov.memberName)}
+                        className="p-1.5 text-stone-400 hover:text-flag-red hover:bg-red-50 rounded-lg transition border border-transparent hover:border-red-200 cursor-pointer"
+                        title="Xóa hồ sơ biến động này"
                       >
-                        <span>📄</span>
-                        <span>Xem PDF</span>
-                      </a>
-                    ) : (
-                      <span className="text-[11px] text-stone-400 italic px-2 py-1 bg-stone-100 rounded-md">
-                        Chưa có file
-                      </span>
-                    )}
+                        🗑️
+                      </button>
+                    </div>
                   </div>
 
                   {/* Dòng 3: Chi tiết nội dung nghiệp vụ */}

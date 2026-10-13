@@ -1638,6 +1638,9 @@ export function demoteBranchLeader(identifier: string): boolean {
 
 const MOVEMENTS_STORAGE_KEY = "eccb-easup_movements_v1";
 
+const MOCK_MOVEMENT_NAMES = new Set(["Đặng Văn Hảo", "Nguyễn Văn Hùng", "Lương Thế Vinh", "Ngô Quang Hưng"]);
+const MOCK_MOVEMENT_CCCDS = new Set(["066052000101", "066058000102", "066060000111", "066072000109"]);
+
 export function getStoredMovements(): MemberMovementRecord[] {
   if (typeof window === "undefined") {
     return [];
@@ -1645,7 +1648,21 @@ export function getStoredMovements(): MemberMovementRecord[] {
   try {
     const raw = localStorage.getItem(MOVEMENTS_STORAGE_KEY);
     if (!raw) return [];
-    return JSON.parse(raw);
+    const list = JSON.parse(raw);
+    if (!Array.isArray(list)) return [];
+
+    // Lọc sạch 100% dữ liệu biến động ảo do chế độ tự thiết lập tạo ra
+    const cleaned = list.filter((m: MemberMovementRecord) => {
+      if (m.id && m.id.startsWith("mov_init_")) return false;
+      if (m.memberName && MOCK_MOVEMENT_NAMES.has(m.memberName.trim())) return false;
+      if (m.memberCccd && MOCK_MOVEMENT_CCCDS.has(m.memberCccd.trim())) return false;
+      return true;
+    });
+
+    if (cleaned.length !== list.length) {
+      localStorage.setItem(MOVEMENTS_STORAGE_KEY, JSON.stringify(cleaned));
+    }
+    return cleaned;
   } catch (e) {
     console.error("Lỗi khi đọc movements từ localStorage:", e);
     return [];
@@ -1659,6 +1676,19 @@ export function saveStoredMovements(movements: MemberMovementRecord[]) {
     window.dispatchEvent(new Event("eccb-movements-updated"));
   } catch (e) {
     console.error("Lỗi khi lưu movements vào localStorage:", e);
+  }
+}
+
+export function deleteStoredMovement(id: string): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const current = getStoredMovements();
+    const updated = current.filter((m) => m.id !== id);
+    saveStoredMovements(updated);
+    return true;
+  } catch (e) {
+    console.error("Lỗi khi xóa movement:", e);
+    return false;
   }
 }
 

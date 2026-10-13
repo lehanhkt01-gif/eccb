@@ -42,8 +42,8 @@ export async function POST() {
       where: {
         cccd: { notIn: WHITELIST_CCCD },
         OR: [
-          { fullName: { in: ["Đặng Hữu Phúc", "Nguyễn Đình Quảng", "Nguyễn Văn Hùng", "Lê Bá Tùng"] } },
-          { cccd: { in: ["066067000113", "066068001234", "066058000102", "066055009876"] } },
+          { fullName: { in: ["Đặng Hữu Phúc", "Nguyễn Đình Quảng", "Nguyễn Văn Hùng", "Lê Bá Tùng", "Đặng Văn Hảo", "Lương Thế Vinh", "Ngô Quang Hưng"] } },
+          { cccd: { in: ["066067000113", "066068001234", "066058000102", "066055009876", "066052000101", "066060000111", "066072000109"] } },
         ],
       },
     });
@@ -52,6 +52,20 @@ export async function POST() {
 
     let deletedUsersCount = 0;
     let deletedMembersCount = 0;
+
+    // Xóa tất cả các bản ghi biến động ảo (mock movements)
+    try {
+      await prisma.memberMovement.deleteMany({
+        where: {
+          OR: [
+            { id: { startsWith: "mov_init_" } },
+            { memberId: { in: mockMemberIds } },
+            { member: { fullName: { in: ["Đặng Văn Hảo", "Nguyễn Văn Hùng", "Lương Thế Vinh", "Ngô Quang Hưng"] } } },
+            { member: { cccd: { in: ["066052000101", "066058000102", "066060000111", "066072000109"] } } },
+          ],
+        },
+      });
+    } catch (_) {}
 
     if (mockMemberIds.length > 0) {
       try {
@@ -62,7 +76,6 @@ export async function POST() {
       } catch (_) {}
 
       try { await prisma.attendance.deleteMany({ where: { memberId: { in: mockMemberIds } } }); } catch (_) {}
-      try { await prisma.memberMovement.deleteMany({ where: { memberId: { in: mockMemberIds } } }); } catch (_) {}
       try { await prisma.fundContribution.deleteMany({ where: { memberId: { in: mockMemberIds } } }); } catch (_) {}
       try { await prisma.fundLoan.deleteMany({ where: { memberId: { in: mockMemberIds } } }); } catch (_) {}
 
