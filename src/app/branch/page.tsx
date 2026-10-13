@@ -13,6 +13,13 @@ import {
   MovementType,
   recordLocalMovement,
 } from "@/lib/memberStore";
+import {
+  LectureItem,
+  getStoredLectures,
+  saveStoredLectures,
+  deleteStoredLecture,
+  LECTURES_UPDATED_EVENT,
+} from "@/lib/lectureStore";
 import NotificationBell from "@/components/NotificationBell";
 import DualApprovalModal from "@/components/DualApprovalModal";
 
@@ -158,6 +165,7 @@ export default function BranchMobilePage() {
   const [members, setMembers] = useState<MemberItem[]>(INITIAL_MEMBERS);
   const [isTvFullscreen, setIsTvFullscreen] = useState(false);
   const [isOneTouchMode, setIsOneTouchMode] = useState(false);
+  const [lectures, setLectures] = useState<LectureItem[]>([]);
 
   // Thu quỹ state
   const [fundMemberId, setFundMemberId] = useState("");
@@ -384,6 +392,50 @@ export default function BranchMobilePage() {
     };
     loadServer();
   }, []);
+
+  // Đồng bộ bài giảng & văn bản tuyên truyền
+  const syncLectures = () => {
+    setLectures(getStoredLectures());
+  };
+
+  useEffect(() => {
+    syncLectures();
+    const handleUpdate = () => syncLectures();
+    window.addEventListener(LECTURES_UPDATED_EVENT, handleUpdate);
+    window.addEventListener("storage", handleUpdate);
+    return () => {
+      window.removeEventListener(LECTURES_UPDATED_EVENT, handleUpdate);
+      window.removeEventListener("storage", handleUpdate);
+    };
+  }, []);
+
+  useEffect(() => {
+    const loadServerLectures = async () => {
+      try {
+        const res = await fetch("/api/admin/lectures");
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) {
+            saveStoredLectures(data);
+            setLectures(data);
+          }
+        }
+      } catch {}
+    };
+    loadServerLectures();
+  }, []);
+
+  const handleDeleteLecture = async (id: string, title: string) => {
+    if (!confirm(`Đồng chí có chắc chắn muốn xóa bài giảng/tư liệu:\n"${title}"?`)) return;
+    try {
+      deleteStoredLecture(id);
+      await fetch(`/api/admin/lectures?id=${id}`, { method: "DELETE" });
+      alert("Đã xóa tư liệu thành công!");
+      syncLectures();
+    } catch {
+      alert("Đã xảy ra lỗi khi xóa!");
+    }
+  };
 
   // Xử lý nộp hồ sơ hội viên mới (Mặc định PENDING_APPROVAL)
   const handleAddMember = (e: React.FormEvent) => {
@@ -1196,7 +1248,7 @@ export default function BranchMobilePage() {
         )}
 
         {/* ==================================================================== */}
-        {/* TAB 3: BÀI GIẢNG & PHIM TƯ LIỆU                                      */}
+        {/* TAB 3: BÀI GIẢNG & PHIM TƯ LIỆU — KẾT NỐI SMART TV                   */}
         {/* ==================================================================== */}
         {activeTab === "media" && (
           <div className="space-y-4 animate-in fade-in duration-200">
@@ -1204,15 +1256,45 @@ export default function BranchMobilePage() {
             <div className="flex items-center justify-between pb-2 border-b border-stone-300">
               <button
                 onClick={() => setActiveTab("home")}
-                className="px-3 py-1.5 bg-stone-200 rounded text-sm font-bold text-deep-text active:scale-95"
+                className="px-3 py-1.5 bg-stone-200 rounded text-sm font-bold text-deep-text active:scale-95 cursor-pointer"
               >
                 ← Quay lại
               </button>
               <h2 className="text-base font-bold text-moss-green uppercase">
-                Bài Giảng & Phim Tư Liệu
+                Bài Giảng &amp; Phim Tư Liệu
               </h2>
-              <span className="text-xs font-bold text-flag-red">4 tư liệu</span>
+              <span className="text-xs font-bold text-flag-red">{lectures.length} tư liệu</span>
             </div>
+
+            {/* Thanh Quản Trị Cán Bộ Xã */}
+            {currentUser?.role === "SUPER_ADMIN" && (
+              <div className="bg-amber-50 border-2 border-bronze-gold rounded-xl p-3 shadow-xs space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-bold text-moss-green uppercase flex items-center gap-1.5">
+                    <span>⭐</span>
+                    <span>Quyền Cán Bộ Xã: Quản Trị Tư Liệu &amp; Văn Bản</span>
+                  </span>
+                  <Link
+                    href="/admin/lectures"
+                    className="px-2.5 py-1 bg-moss-green text-white text-xs font-bold rounded shadow-xs hover:bg-emerald-900 transition flex items-center gap-1 shrink-0"
+                  >
+                    <span>⚙️</span>
+                    <span>Trang Quản Trị</span>
+                  </Link>
+                </div>
+                <p className="text-[11px] text-stone-600">
+                  Đồng chí có quyền thêm mới bài giảng, tải lên file PDF/Word văn bản tuyên truyền, cập nhật link video hoặc xóa tư liệu ngay tại hệ thống.
+                </p>
+                <div className="flex gap-2">
+                  <Link
+                    href="/admin/lectures"
+                    className="flex-1 py-1.5 bg-flag-red text-white text-xs font-bold rounded text-center shadow-xs active:scale-95 transition"
+                  >
+                    ➕ Thêm Bài Giảng / Tuyên Truyền Mới
+                  </Link>
+                </div>
+              </div>
+            )}
 
             {/* Banner Loa Kéo & SmartTV */}
             <div className="bg-moss-green text-white p-3.5 rounded-xl border border-bronze-gold flex items-center justify-between">
@@ -1226,59 +1308,123 @@ export default function BranchMobilePage() {
               </div>
               <button
                 onClick={() => alert("Mở phần Cài đặt Bluetooth trên điện thoại để ghép đôi với Loa kéo Nhà văn hóa.")}
-                className="px-3 py-1.5 bg-amber-400 text-moss-green font-bold text-xs rounded shadow-xs shrink-0 active:scale-95"
+                className="px-3 py-1.5 bg-amber-400 text-moss-green font-bold text-xs rounded shadow-xs shrink-0 active:scale-95 cursor-pointer"
               >
                 Kết Nối
               </button>
             </div>
 
-            {/* Danh sách video tư liệu */}
+            {/* Danh sách video tư liệu & văn bản tuyên truyền */}
             <div className="space-y-3">
-              {VIDEOS.map((vid) => (
-                <div
-                  key={vid.id}
-                  className="bg-white border-2 border-stone-300 rounded-xl p-3.5 shadow-xs space-y-2.5"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-stone-100 text-moss-green border border-stone-200">
-                      {vid.badge}
-                    </span>
-                    <span className="text-xs font-bold text-stone-500">⏱️ {vid.duration}</span>
-                  </div>
-
-                  <h3 className="text-base font-bold text-deep-text leading-snug">
-                    {vid.title}
-                  </h3>
-
-                  <p className="text-xs text-deep-muted leading-relaxed">
-                    {vid.desc}
-                  </p>
-
-                  <div className="pt-2 border-t border-stone-100 flex gap-2">
-                    <a
-                      href={vid.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-1 py-2 bg-flag-red text-white text-xs font-bold rounded flex items-center justify-center gap-1.5 active:scale-98 transition shadow-xs"
-                    >
-                      <span>▶️ Xem Video</span>
-                    </a>
-                    <button
-                      onClick={() => {
-                        if (navigator.share) {
-                          navigator.share({ title: vid.title, url: vid.url });
-                        } else {
-                          navigator.clipboard.writeText(vid.url);
-                          alert("Đã sao chép link video để mở trên SmartTV!");
-                        }
-                      }}
-                      className="px-3 py-2 bg-stone-100 text-deep-text border border-stone-300 text-xs font-bold rounded active:scale-98"
-                    >
-                      📺 Chiếu SmartTV
-                    </button>
-                  </div>
+              {lectures.length === 0 ? (
+                <div className="p-8 text-center bg-white rounded-xl border border-dashed border-stone-300 text-stone-500 text-sm">
+                  Chưa có bài giảng hoặc văn bản tuyên truyền nào trong hệ thống.
                 </div>
-              ))}
+              ) : (
+                lectures.map((vid) => (
+                  <div
+                    key={vid.id}
+                    className="bg-white border-2 border-stone-300 rounded-xl p-3.5 shadow-xs space-y-2.5"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-stone-100 text-moss-green border border-stone-200">
+                          {vid.badge}
+                        </span>
+                        {vid.fileUrl && (
+                          <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-red-100 text-flag-red border border-red-200">
+                            📄 Có File Văn Bản
+                          </span>
+                        )}
+                      </div>
+                      {vid.duration && (
+                        <span className="text-xs font-bold text-stone-500 shrink-0">⏱️ {vid.duration}</span>
+                      )}
+                    </div>
+
+                    <h3 className="text-base font-bold text-deep-text leading-snug">
+                      {vid.title}
+                    </h3>
+
+                    {vid.speaker && (
+                      <div className="text-xs text-stone-500 font-medium">
+                        👤 Ban hành/Trình bày: <strong>{vid.speaker}</strong>
+                      </div>
+                    )}
+
+                    {vid.desc && (
+                      <p className="text-xs text-deep-muted leading-relaxed">
+                        {vid.desc}
+                      </p>
+                    )}
+
+                    {/* Khối Nút Tác Nghiệp: Xem video, Tải văn bản, Chiếu SmartTV */}
+                    <div className="pt-2 border-t border-stone-100 space-y-2">
+                      <div className="flex flex-wrap gap-2">
+                        {vid.url && (
+                          <>
+                            <a
+                              href={vid.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex-1 min-w-[120px] py-2 bg-flag-red text-white text-xs font-bold rounded flex items-center justify-center gap-1.5 active:scale-98 transition shadow-xs text-center"
+                            >
+                              <span>▶️ Xem Video</span>
+                            </a>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (navigator.share) {
+                                  navigator.share({ title: vid.title, url: vid.url });
+                                } else if (vid.url) {
+                                  navigator.clipboard.writeText(vid.url);
+                                  alert("Đã sao chép link video để mở trên SmartTV!");
+                                }
+                              }}
+                              className="px-3 py-2 bg-stone-100 text-deep-text border border-stone-300 text-xs font-bold rounded active:scale-98 shrink-0 cursor-pointer"
+                            >
+                              📺 Chiếu SmartTV
+                            </button>
+                          </>
+                        )}
+                      </div>
+
+                      {vid.fileUrl && (
+                        <a
+                          href={vid.fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          download={vid.fileName || true}
+                          className="w-full py-2 bg-moss-green hover:bg-emerald-900 text-white text-xs font-bold rounded flex items-center justify-center gap-1.5 active:scale-98 transition shadow-xs"
+                        >
+                          <span>📄 Đọc Văn Bản / Tải File</span>
+                          {vid.fileName && <span className="text-[11px] opacity-90 truncate max-w-[200px]">({vid.fileName})</span>}
+                          {vid.fileSize && <span className="text-[10px] opacity-75">[{vid.fileSize}]</span>}
+                        </a>
+                      )}
+
+                      {/* Nút sửa / xóa trực tiếp cho Cán bộ xã */}
+                      {currentUser?.role === "SUPER_ADMIN" && (
+                        <div className="flex items-center justify-end gap-2 pt-1 border-t border-stone-100">
+                          <Link
+                            href="/admin/lectures"
+                            className="px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs rounded transition flex items-center gap-1"
+                          >
+                            ✏️ Sửa
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteLecture(vid.id, vid.title)}
+                            className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded transition flex items-center gap-1 cursor-pointer"
+                          >
+                            🗑️ Xóa
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         )}

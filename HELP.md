@@ -179,6 +179,26 @@ Trang quản trị tài khoản và phân quyền gồm 3 tab độc lập:
 
 ---
 
+### 2.9. Quản lý Bài Giảng, Phim Tư Liệu & Văn Bản Tuyên Truyền (`/admin/lectures`)
+
+Cán bộ xã toàn quyền thêm, sửa, xóa các tài liệu bài giảng chính trị, văn bản chỉ đạo và phim tư liệu truyền thống:
+1. **Truy cập:** Menu **"📚 Bài Giảng & Tư Liệu"** tại Sidebar Quản Trị hoặc đường dẫn `/admin/lectures`.
+2. **Thêm mới tài liệu (`➕ Thêm Bài Giảng / Tư Liệu Mới`):**
+   - **Tiêu đề:** Tên bài giảng hoặc văn bản tuyên truyền.
+   - **Chuyên mục:** Lựa chọn từ danh mục chuẩn (*Bài giảng Bác Hồ, Lịch sử truyền thống, Kinh tế CCB, Nghị quyết - Chỉ thị, v.v.*) hoặc tự nhập chuyên mục mới.
+   - **Thời lượng / Dung lượng:** Nhập số phút (video) hoặc số trang (tài liệu).
+   - **Người trình bày / Đơn vị ban hành:** Họ tên báo cáo viên hoặc cơ quan phát hành.
+   - **Liên kết Video / Bài giảng:** Dán đường dẫn YouTube hoặc link video trực tuyến.
+   - **Tải lên File Văn bản Tuyên truyền:** Hỗ trợ tải lên file văn bản định dạng `.pdf`, `.doc`, `.docx`, `.xls`, `.xlsx`, `.pptx` (dung lượng tối đa 25MB). File được lưu trữ an toàn trên máy chủ.
+   - **Nội dung tóm tắt:** Mô tả nội dung bài giảng/văn bản.
+3. **Chỉnh sửa & Cập nhật:** Bấm **"✏️ Sửa"** trên bất kỳ tư liệu nào để cập nhật lại file đính kèm, đường dẫn video hoặc nội dung.
+4. **Xóa tư liệu:** Bấm **"🗑️ Xóa"** để gỡ bỏ tư liệu. Hệ thống sẽ dọn sạch dữ liệu và đồng bộ tức thì đến toàn bộ Chi hội và Hội viên.
+5. **Đồng bộ đa nền tảng:** Mọi thay đổi tại `/admin/lectures` sẽ ngay lập tức xuất hiện tại:
+   - Mục **"Bài Giảng & Phim Tư Liệu"** trên PWA của 20 Chi hội trưởng (`/branch`).
+   - Mục **"Chuyên Đề Học Tập & Văn Bản"** trên Cổng thông tin Hội viên (`/member`).
+
+---
+
 ## 3. HƯỚNG DẪN DÀNH CHO CHI HỘI TRƯỞNG (20 THÔN BUÔN)
 
 ### 3.1. Đăng nhập Chi hội trưởng

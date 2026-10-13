@@ -11,12 +11,18 @@ import {
   setMemberCustomPassword,
 } from "@/lib/authSession";
 import { getStoredMembers, MemberRecord } from "@/lib/memberStore";
+import {
+  LectureItem,
+  getStoredLectures,
+  LECTURES_UPDATED_EVENT,
+} from "@/lib/lectureStore";
 
 export default function MemberPortalPage() {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [member, setMember] = useState<MemberRecord | null>(null);
   const [activeTab, setActiveTab] = useState<"profile" | "funds" | "lectures" | "attendance">("profile");
+  const [lectures, setLectures] = useState<LectureItem[]>([]);
 
   // Modal đổi mật khẩu
   const [isChangePassOpen, setIsChangePassOpen] = useState(false);
@@ -55,6 +61,26 @@ export default function MemberPortalPage() {
       setCheckInTime(savedCheckIn);
     }
   }, [router]);
+
+  // Đồng bộ bài giảng & tài liệu tuyên truyền
+  useEffect(() => {
+    setLectures(getStoredLectures());
+    const handleUpdate = () => setLectures(getStoredLectures());
+    window.addEventListener(LECTURES_UPDATED_EVENT, handleUpdate);
+    window.addEventListener("storage", handleUpdate);
+    fetch("/api/admin/lectures")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setLectures(data);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      window.removeEventListener(LECTURES_UPDATED_EVENT, handleUpdate);
+      window.removeEventListener("storage", handleUpdate);
+    };
+  }, []);
 
   // Xử lý đổi mật khẩu hội viên
   const handleChangePassword = async (e: React.FormEvent) => {
@@ -581,75 +607,80 @@ export default function MemberPortalPage() {
         {/* ==================================================================== */}
         {activeTab === "lectures" && (
           <div className="space-y-6">
-            {/* Nhóm 1: Bài Giảng Chính Trị & Nghị Quyết */}
+            {/* Nhóm 1: Bài Giảng & Văn Bản Tuyên Truyền Cán Bộ Xã Ban Hành */}
             <div className="bg-white rounded-xl border border-stone-200 shadow-sm p-5 space-y-4">
-              <div className="border-b border-stone-200 pb-2">
-                <span className="text-xs font-bold text-flag-red uppercase tracking-wider">CHUYÊN ĐỀ HỌC TẬP</span>
-                <h3 className="text-base sm:text-lg font-bold text-moss-green uppercase">
-                  Bài Giảng Lý Luận Chính Trị &amp; Nghị Quyết Hội CCB
-                </h3>
+              <div className="border-b border-stone-200 pb-2 flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-bold text-flag-red uppercase tracking-wider">CHUYÊN ĐỀ HỌC TẬP &amp; VĂN BẢN</span>
+                  <h3 className="text-base sm:text-lg font-bold text-moss-green uppercase">
+                    Bài Giảng, Phim &amp; Văn Bản Tuyên Truyền Hội CCB
+                  </h3>
+                </div>
+                <span className="text-xs font-bold text-flag-red bg-red-50 border border-red-200 px-2 py-1 rounded">
+                  {lectures.length} tài liệu
+                </span>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-4 bg-stone-50 hover:bg-emerald-50/50 border border-stone-200 rounded-xl space-y-2 transition">
-                  <div className="flex items-center justify-between text-xs text-stone-500">
-                    <span className="font-bold text-flag-red">Nghị Quyết Hội CCB</span>
-                    <span>Thời lượng: 45 phút</span>
-                  </div>
-                  <h4 className="font-bold text-sm sm:text-base text-deep-text">
-                    1. Quán triệt Nghị quyết Đại hội đại biểu Hội CCB các cấp nhiệm kỳ 2022 - 2027
-                  </h4>
-                  <p className="text-xs text-stone-600 line-clamp-2">
-                    Các chỉ tiêu trọng tâm: Không để hội viên tái nghèo, giữ vững 100% chi hội trong sạch vững mạnh, nhân rộng các mô hình làm kinh tế giỏi tại xã Ea Súp.
-                  </p>
-                  <div className="pt-2 flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => alert("Đang mở tài liệu bài giảng trực tuyến.")}
-                      className="px-3 py-1.5 bg-moss-green hover:bg-emerald-900 text-white font-bold text-xs rounded transition flex items-center gap-1 cursor-pointer"
-                    >
-                      <span>📖</span>
-                      <span>Đọc bài giảng</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => alert("Đang tải xuống tài liệu PDF.")}
-                      className="px-3 py-1.5 bg-stone-200 hover:bg-stone-300 text-deep-text font-semibold text-xs rounded transition cursor-pointer"
-                    >
-                      Tải file PDF
-                    </button>
-                  </div>
-                </div>
+                {lectures.map((item) => (
+                  <div
+                    key={item.id}
+                    className="p-4 bg-stone-50 hover:bg-emerald-50/50 border border-stone-200 rounded-xl space-y-2.5 transition flex flex-col justify-between"
+                  >
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between text-xs text-stone-500 gap-2">
+                        <span className="font-bold text-flag-red uppercase text-[11px] bg-red-50 px-2 py-0.5 rounded border border-red-100">
+                          {item.badge}
+                        </span>
+                        {item.duration && <span>⏱️ {item.duration}</span>}
+                      </div>
 
-                <div className="p-4 bg-stone-50 hover:bg-emerald-50/50 border border-stone-200 rounded-xl space-y-2 transition">
-                  <div className="flex items-center justify-between text-xs text-stone-500">
-                    <span className="font-bold text-bronze-gold">Học Tập Bác Hồ</span>
-                    <span>Thời lượng: 60 phút</span>
+                      <h4 className="font-bold text-sm sm:text-base text-deep-text leading-snug">
+                        {item.title}
+                      </h4>
+
+                      {item.speaker && (
+                        <p className="text-xs text-stone-500 font-medium">
+                          👤 Trình bày / Cơ quan: <strong>{item.speaker}</strong>
+                        </p>
+                      )}
+
+                      {item.desc && (
+                        <p className="text-xs text-stone-600 line-clamp-3 leading-relaxed">
+                          {item.desc}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="pt-2 border-t border-stone-200 flex flex-wrap items-center gap-2">
+                      {item.url && (
+                        <a
+                          href={item.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-3 py-1.5 bg-flag-red hover:bg-red-800 text-white font-bold text-xs rounded transition flex items-center gap-1 cursor-pointer"
+                        >
+                          <span>▶️</span>
+                          <span>Xem video</span>
+                        </a>
+                      )}
+
+                      {item.fileUrl && (
+                        <a
+                          href={item.fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          download={item.fileName || true}
+                          className="px-3 py-1.5 bg-moss-green hover:bg-emerald-900 text-white font-bold text-xs rounded transition flex items-center gap-1 cursor-pointer"
+                        >
+                          <span>📄</span>
+                          <span>Đọc / Tải văn bản</span>
+                          {item.fileSize && <span className="opacity-75 text-[10px]">({item.fileSize})</span>}
+                        </a>
+                      )}
+                    </div>
                   </div>
-                  <h4 className="font-bold text-sm sm:text-base text-deep-text">
-                    2. Học tập và làm theo tư tưởng, đạo đức, phong cách Hồ Chí Minh
-                  </h4>
-                  <p className="text-xs text-stone-600 line-clamp-2">
-                    Chuyên đề: &quot;Giữ trọn lời thề người chiến sĩ, phát huy phẩm chất cao đẹp Bộ đội Cụ Hồ trong thời kỳ mới trên mảnh đất vùng biên Ea Súp&quot;.
-                  </p>
-                  <div className="pt-2 flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => alert("Đang mở tài liệu bài giảng trực tuyến.")}
-                      className="px-3 py-1.5 bg-moss-green hover:bg-emerald-900 text-white font-bold text-xs rounded transition flex items-center gap-1 cursor-pointer"
-                    >
-                      <span>📖</span>
-                      <span>Đọc bài giảng</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => alert("Đang tải xuống tài liệu PDF.")}
-                      className="px-3 py-1.5 bg-stone-200 hover:bg-stone-300 text-deep-text font-semibold text-xs rounded transition cursor-pointer"
-                    >
-                      Tải file PDF
-                    </button>
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
 

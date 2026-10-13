@@ -70,6 +70,11 @@ export default function AdminLayout({
       icon: "🔐",
     },
     {
+      href: "/admin/lectures",
+      label: "Bài Giảng & Tư Liệu",
+      icon: "📚",
+    },
+    {
       href: "/branch",
       label: "Chi Hội Trưởng",
       icon: "📱",
