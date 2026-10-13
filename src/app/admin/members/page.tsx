@@ -22,6 +22,7 @@ import {
   approveMember,
   rejectMember,
   updateStoredMember,
+  deleteStoredMember,
   assignBranchLeader,
   HAMLET_LIST,
 } from "@/lib/memberStore";
@@ -269,6 +270,47 @@ export default function AdminMembersPage() {
       alert("Đã xảy ra lỗi khi lưu hồ sơ.");
     } finally {
       setIsSavingEdit(false);
+    }
+  };
+
+  // Xử lý Cán bộ xã Xóa vĩnh viễn hồ sơ hội viên khỏi CSDL PostgreSQL và LocalStore
+  const [isDeletingMember, setIsDeletingMember] = useState(false);
+  const handleDeleteMember = async () => {
+    if (!editingMember) return;
+
+    const confirmDelete = window.confirm(
+      `⚠️ CẢNH BÁO BẢO MẬT TỐI CAO:\n\nĐồng chí có chắc chắn muốn XÓA VĨNH VIỄN hồ sơ hội viên:\n- Họ và tên: ${editingMember.fullName}\n- Số CCCD: ${editingMember.cccd}\n- Chi hội: ${editingMember.hamletName}\n\nHành động này sẽ xóa hoàn toàn hồ sơ khỏi CSDL PostgreSQL máy chủ và không thể hoàn tác!`
+    );
+    if (!confirmDelete) return;
+
+    setIsDeletingMember(true);
+    try {
+      // 1. Gửi request DELETE tới API máy chủ để xóa khỏi PostgreSQL
+      const queryParam = editingMember.id ? `id=${encodeURIComponent(editingMember.id)}` : `cccd=${encodeURIComponent(editingMember.cccd)}`;
+      const res = await fetch(`/api/admin/members?${queryParam}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!data.success) {
+        console.warn("Lưu ý từ server khi xóa hồ sơ:", data.error || data.message);
+      }
+
+      // 2. Xóa trong bộ nhớ local store
+      deleteStoredMember(editingMember.id);
+
+      // 3. Cập nhật state danh sách members
+      setMembers((prev) => prev.filter((m) => m.id !== editingMember.id && m.cccd !== editingMember.cccd));
+
+      // 4. Kích hoạt sự kiện đồng bộ toàn bộ app
+      window.dispatchEvent(new Event("eccb-members-updated"));
+
+      showToast(`✓ Đã xóa vĩnh viễn hồ sơ đồng chí [${editingMember.fullName}] khỏi hệ thống CSDL!`);
+      setEditingMember(null);
+    } catch (err: any) {
+      console.error("Lỗi khi xóa hồ sơ hội viên:", err);
+      alert("Đã xảy ra lỗi khi xóa hồ sơ: " + (err.message || "Không thể kết nối máy chủ"));
+    } finally {
+      setIsDeletingMember(false);
     }
   };
 
@@ -2704,18 +2746,33 @@ export default function AdminMembersPage() {
                 <button
                   type="button"
                   onClick={() => setEditingMember(null)}
-                  className="px-4 py-2.5 bg-stone-200 hover:bg-stone-300 font-bold rounded-xl text-deep-text text-xs transition"
+                  className="px-4 py-2.5 bg-stone-200 hover:bg-stone-300 font-bold rounded-xl text-deep-text text-xs transition cursor-pointer"
                 >
                   Hủy Bỏ
                 </button>
 
-                <button
-                  type="submit"
-                  disabled={isSavingEdit}
-                  className="px-6 py-2.5 bg-moss-green hover:bg-moss-green-light text-white font-bold rounded-xl text-xs shadow-md border border-bronze-gold transition flex items-center gap-1.5 active:scale-95"
-                >
-                  <span>{isSavingEdit ? "⏳ Đang Lưu..." : "💾 Lưu Thay Đổi Hồ Sơ"}</span>
-                </button>
+                <div className="flex items-center gap-2.5">
+                  {/* Nút Xóa Hồ Sơ (Dành cho Cán bộ xã) */}
+                  <button
+                    type="button"
+                    disabled={isDeletingMember || isSavingEdit}
+                    onClick={handleDeleteMember}
+                    className="px-4 py-2.5 bg-red-50 hover:bg-red-100 text-flag-red font-bold rounded-xl text-xs border border-red-300 shadow-xs transition flex items-center gap-1.5 active:scale-95 cursor-pointer disabled:opacity-50"
+                    title="Xóa vĩnh viễn hồ sơ hội viên này khỏi CSDL PostgreSQL"
+                  >
+                    <span>🗑️</span>
+                    <span>{isDeletingMember ? "Đang Xóa..." : "Xóa Hồ Sơ"}</span>
+                  </button>
+
+                  {/* Nút Lưu Thay Đổi Hồ Sơ */}
+                  <button
+                    type="submit"
+                    disabled={isSavingEdit || isDeletingMember}
+                    className="px-6 py-2.5 bg-moss-green hover:bg-moss-green-dark text-white font-bold rounded-xl text-xs shadow-md border border-bronze-gold transition flex items-center gap-1.5 active:scale-95 cursor-pointer disabled:opacity-50"
+                  >
+                    <span>{isSavingEdit ? "⏳ Đang Lưu..." : "💾 Lưu Thay Đổi Hồ Sơ"}</span>
+                  </button>
+                </div>
               </div>
             </form>
           </div>

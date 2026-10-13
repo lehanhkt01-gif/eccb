@@ -1118,6 +1118,23 @@ export function updateStoredMember(id: string, updatedData: Partial<MemberRecord
   return updated;
 }
 
+/**
+ * Xóa hồ sơ hội viên khỏi bộ nhớ local store
+ */
+export function deleteStoredMember(id: string): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const currentList = getStoredMembers();
+    const updatedList = currentList.filter((m) => m.id !== id && m.cccd !== id);
+    saveStoredMembers(updatedList);
+    window.dispatchEvent(new CustomEvent("eccb-members-updated"));
+    return true;
+  } catch (err) {
+    console.error("Lỗi khi xóa hội viên trong localStorage:", err);
+    return false;
+  }
+}
+
 export function createPendingMember(member: Partial<MemberRecord>): MemberRecord {
   const currentList = getStoredMembers();
   const id = `MEM_${Date.now()}`;
