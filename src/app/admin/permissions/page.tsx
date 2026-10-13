@@ -149,8 +149,8 @@ export default function PermissionsManagementPage() {
     }
   }, [selectedBranchHamlet, newRole, hamletOfficialMembers]);
 
-  // Nạp danh sách hội viên chính thức từ memberStore và localStorage
-  const syncPermissionsData = (customMembers?: MemberRecord[]) => {
+  // Nạp danh sách hội viên chính thức từ memberStore và CSDL
+  const syncPermissionsData = (customMembers?: MemberRecord[], customAdmins?: AccountItem[]) => {
     // 1. Lấy danh sách hội viên chính thức (CHỈ HỘI VIÊN CHÍNH THỨC, KHÔNG LẤY HỒ SƠ ẢO)
     const rawList = customMembers && customMembers.length > 0 ? customMembers : getStoredMembers();
     const officialMembers = rawList.filter(
@@ -159,35 +159,29 @@ export default function PermissionsManagementPage() {
              !["Đặng Hữu Phúc", "Nguyễn Đình Quảng", "Nguyễn Văn Hùng", "Lê Bá Tùng", "Đặng Văn Hảo", "Lương Thế Vinh", "Ngô Quang Hưng"].includes(m.fullName)
     );
 
-    let loadedAdmins = INITIAL_ADMINS;
-    let loadedBranches = [...INITIAL_BRANCH_LEADERS];
-
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY_PERMISSIONS);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (parsed.admins && Array.isArray(parsed.admins)) loadedAdmins = parsed.admins;
-        if (parsed.branches && Array.isArray(parsed.branches) && parsed.branches.length > 0) {
-          loadedBranches = parsed.branches;
+    // 2. Danh sách Cán bộ xã: Ưu tiên danh sách nạp từ PostgreSQL máy chủ
+    let loadedAdmins = customAdmins || adminAccounts;
+    if (!loadedAdmins || loadedAdmins.length === 0) {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY_PERMISSIONS);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed.admins && Array.isArray(parsed.admins) && parsed.admins.length > 0) {
+            loadedAdmins = parsed.admins;
+          }
         }
+      } catch {
+        // Bỏ qua lỗi parse
       }
-    } catch {
-      // Bỏ qua lỗi parse
+    }
+    if (!loadedAdmins || loadedAdmins.length === 0) {
+      loadedAdmins = INITIAL_ADMINS;
     }
 
-    // Luôn đảm bảo số tài khoản hội viên trùng khớp chính xác 1:1 với danh sách hội viên chính thức
-    const loadedMembers: AccountItem[] = officialMembers.map((m) => ({
-      id: `mem_user_${m.id}`,
-      fullName: m.fullName,
-      unit: m.hamletName,
-      username: m.cccd, // Tên đăng nhập là số CCCD 12 số
-      phone: m.phone,
-      role: "MEMBER",
-      isActive: true,
-      passwordStatus: "MẶC_ĐỊNH",
-    }));
+    // 3. Danh sách Chi hội trưởng: Luôn bảo toàn chuẩn 20 Chi hội trưởng của 20 thôn buôn
+    let loadedBranches = [...INITIAL_BRANCH_LEADERS];
 
-    // Cập nhật và bổ sung tất cả Chi hội trưởng từ danh sách hội viên (Hỗ trợ 1 thôn có nhiều CHT)
+    // Cập nhật và bổ sung tất cả Chi hội trưởng từ danh sách hội viên thực tế
     const leadersInStore = officialMembers.filter((m) => m.associationRole === "Chi hội trưởng");
     for (const leader of leadersInStore) {
       const cleanHamlet = leader.hamletName.replace(/^Chi hội\s+/i, "").trim().toLowerCase();
@@ -226,8 +220,21 @@ export default function PermissionsManagementPage() {
       }
     }
 
-    setAdminAccounts((prev) => (prev.length > loadedAdmins.length ? prev : loadedAdmins));
-    setBranchAccounts((prev) => (prev.length > loadedBranches.length ? prev : loadedBranches));
+    // 4. Luôn đảm bảo số tài khoản hội viên trùng khớp chính xác 100% với danh sách hội viên chính thức
+    const loadedMembers: AccountItem[] = officialMembers.map((m) => ({
+      id: `mem_user_${m.id}`,
+      fullName: m.fullName,
+      unit: m.hamletName,
+      username: m.cccd, // Tên đăng nhập là số CCCD 12 số
+      phone: m.phone,
+      role: "MEMBER",
+      isActive: true,
+      passwordStatus: "MẶC_ĐỊNH",
+    }));
+
+    // Cập nhật đồng bộ duy nhất 1 lần, triệt tiêu 100% hiện tượng chớp nháy số
+    setAdminAccounts(loadedAdmins);
+    setBranchAccounts(loadedBranches);
     setMemberAccounts(loadedMembers);
     saveState(loadedAdmins, loadedBranches, loadedMembers);
   };
@@ -235,49 +242,40 @@ export default function PermissionsManagementPage() {
   // Nạp 100% dữ liệu tài khoản và hội viên từ CSDL PostgreSQL của máy chủ để đồng bộ toàn hệ thống
   const loadServerData = async () => {
     try {
-      // 1. Nạp danh sách tài khoản thực tế từ PostgreSQL (/api/admin/users)
-      const usersRes = await fetch("/api/admin/users");
+      // Tải song song cả danh sách tài khoản và danh sách hội viên từ máy chủ
+      const [usersRes, membersRes] = await Promise.all([
+        fetch("/api/admin/users"),
+        fetch("/api/admin/members"),
+      ]);
+
+      let loadedAdmins: AccountItem[] | undefined = undefined;
       if (usersRes.ok) {
         const usersData = await usersRes.json();
-        if (usersData.success) {
-          if (Array.isArray(usersData.admins) && usersData.admins.length > 0) {
-            setAdminAccounts(usersData.admins);
-          }
-          if (Array.isArray(usersData.branches) && usersData.branches.length > 0) {
-            setBranchAccounts(usersData.branches);
-          }
-          if (Array.isArray(usersData.members) && usersData.members.length > 0) {
-            setMemberAccounts(usersData.members);
-          }
-          saveState(
-            usersData.admins || adminAccounts,
-            usersData.branches || branchAccounts,
-            usersData.members || memberAccounts
-          );
+        if (usersData.success && Array.isArray(usersData.admins) && usersData.admins.length > 0) {
+          loadedAdmins = usersData.admins;
         }
       }
 
-      // 2. Nạp danh sách hồ sơ hội viên Mẫu 02 từ PostgreSQL (/api/admin/members)
-      const res = await fetch("/api/admin/members");
-      if (res.ok) {
-        const data = await res.json();
-        const memberList = Array.isArray(data) ? data : data.members || [];
+      let memberList: any[] = [];
+      if (membersRes.ok) {
+        const data = await membersRes.json();
+        memberList = Array.isArray(data) ? data : data.members || [];
         if (Array.isArray(memberList) && memberList.length > 0) {
           saveStoredMembers(memberList);
-          syncPermissionsData(memberList);
         }
       }
+
+      // Đồng bộ dữ liệu hợp nhất chuẩn xác 1 lần duy nhất
+      syncPermissionsData(memberList, loadedAdmins);
     } catch (err) {
       console.error("Lỗi fetch /api/admin/users hoặc /api/admin/members:", err);
     }
   };
 
   useEffect(() => {
-    syncPermissionsData();
     loadServerData();
 
     const handleUpdated = () => {
-      syncPermissionsData();
       loadServerData();
     };
 
