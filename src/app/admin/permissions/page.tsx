@@ -226,25 +226,49 @@ export default function PermissionsManagementPage() {
       }
     }
 
-    setAdminAccounts(loadedAdmins);
-    setBranchAccounts(loadedBranches);
+    setAdminAccounts((prev) => (prev.length > loadedAdmins.length ? prev : loadedAdmins));
+    setBranchAccounts((prev) => (prev.length > loadedBranches.length ? prev : loadedBranches));
     setMemberAccounts(loadedMembers);
     saveState(loadedAdmins, loadedBranches, loadedMembers);
   };
 
-  // Nạp 100% dữ liệu hội viên từ CSDL PostgreSQL của máy chủ để đồng bộ toàn hệ thống
+  // Nạp 100% dữ liệu tài khoản và hội viên từ CSDL PostgreSQL của máy chủ để đồng bộ toàn hệ thống
   const loadServerData = async () => {
     try {
+      // 1. Nạp danh sách tài khoản thực tế từ PostgreSQL (/api/admin/users)
+      const usersRes = await fetch("/api/admin/users");
+      if (usersRes.ok) {
+        const usersData = await usersRes.json();
+        if (usersData.success) {
+          if (Array.isArray(usersData.admins) && usersData.admins.length > 0) {
+            setAdminAccounts(usersData.admins);
+          }
+          if (Array.isArray(usersData.branches) && usersData.branches.length > 0) {
+            setBranchAccounts(usersData.branches);
+          }
+          if (Array.isArray(usersData.members) && usersData.members.length > 0) {
+            setMemberAccounts(usersData.members);
+          }
+          saveState(
+            usersData.admins || adminAccounts,
+            usersData.branches || branchAccounts,
+            usersData.members || memberAccounts
+          );
+        }
+      }
+
+      // 2. Nạp danh sách hồ sơ hội viên Mẫu 02 từ PostgreSQL (/api/admin/members)
       const res = await fetch("/api/admin/members");
       if (res.ok) {
         const data = await res.json();
-        if (Array.isArray(data) && data.length > 0) {
-          saveStoredMembers(data);
-          syncPermissionsData(data);
+        const memberList = Array.isArray(data) ? data : data.members || [];
+        if (Array.isArray(memberList) && memberList.length > 0) {
+          saveStoredMembers(memberList);
+          syncPermissionsData(memberList);
         }
       }
     } catch (err) {
-      console.error("Lỗi fetch /api/admin/members:", err);
+      console.error("Lỗi fetch /api/admin/users hoặc /api/admin/members:", err);
     }
   };
 
@@ -254,13 +278,14 @@ export default function PermissionsManagementPage() {
 
     const handleUpdated = () => {
       syncPermissionsData();
+      loadServerData();
     };
 
     window.addEventListener("eccb-members-updated", handleUpdated);
     return () => window.removeEventListener("eccb-members-updated", handleUpdated);
   }, []);
 
-  // Lưu trạng thái vào localStorage khi có thay đổi
+  // Lưu trạng thái vào localStorage khi có thay đổi (dự phòng offline)
   const saveState = (admins: AccountItem[], branches: AccountItem[], members: AccountItem[]) => {
     try {
       localStorage.setItem(
@@ -272,17 +297,30 @@ export default function PermissionsManagementPage() {
     }
   };
 
-
-  // 1. Chức năng Đặt lại mật khẩu (Reset về 12345678@ từ file .env)
-  const handleResetPassword = (account: AccountItem) => {
+  // 1. Chức năng Đặt lại mật khẩu (Reset về mật khẩu mặc định và lưu trực tiếp vào CSDL)
+  const handleResetPassword = async (account: AccountItem) => {
     const confirmReset = window.confirm(
       `Đồng chí có chắc chắn muốn đặt lại mật khẩu cho tài khoản "${account.fullName}" (${account.username}) về mật khẩu mặc định theo quy chuẩn hệ thống?`
     );
     if (!confirmReset) return;
 
+    try {
+      await fetch("/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: account.id.startsWith("acc_") || account.id.startsWith("mem_user_") || account.id.startsWith("bl_") ? undefined : account.id,
+          username: account.username,
+          resetPassword: true,
+        }),
+      });
+    } catch (e) {
+      console.warn("Lỗi sync reset password lên DB:", e);
+    }
+
     const updater = (list: AccountItem[]) =>
       list.map((item) =>
-        item.id === account.id ? { ...item, passwordStatus: "ĐÃ_RESET" as const } : item
+        item.id === account.id || item.username === account.username ? { ...item, passwordStatus: "ĐÃ_RESET" as const } : item
       );
 
     if (account.role === "SUPER_ADMIN") {
@@ -302,17 +340,31 @@ export default function PermissionsManagementPage() {
     showToast(`✓ Đã đặt lại mật khẩu thành công cho [${account.fullName}].`);
   };
 
-  // 2. Chức năng Khóa / Mở khóa tài khoản
-  const handleToggleStatus = (account: AccountItem) => {
+  // 2. Chức năng Khóa / Mở khóa tài khoản (Lưu trực tiếp vào CSDL PostgreSQL)
+  const handleToggleStatus = async (account: AccountItem) => {
     const actionName = account.isActive ? "KHÓA" : "MỞ KHÓA";
     const confirmToggle = window.confirm(
       `Đồng chí có chắc chắn muốn ${actionName} quyền đăng nhập của tài khoản "${account.fullName}"?`
     );
     if (!confirmToggle) return;
 
+    try {
+      await fetch("/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: account.id.startsWith("acc_") || account.id.startsWith("mem_user_") || account.id.startsWith("bl_") ? undefined : account.id,
+          username: account.username,
+          isActive: !account.isActive,
+        }),
+      });
+    } catch (e) {
+      console.warn("Lỗi sync toggle status lên DB:", e);
+    }
+
     const updater = (list: AccountItem[]) =>
       list.map((item) =>
-        item.id === account.id ? { ...item, isActive: !item.isActive } : item
+        item.id === account.id || item.username === account.username ? { ...item, isActive: !item.isActive } : item
       );
 
     if (account.role === "SUPER_ADMIN") {
@@ -332,7 +384,48 @@ export default function PermissionsManagementPage() {
     showToast(`✓ Đã ${account.isActive ? "khóa quyền truy cập" : "mở khóa hoạt động"} cho [${account.fullName}].`);
   };
 
-  // 3. Chức năng Cấp tài khoản mới / Cấp quyền Chi hội trưởng (Đồng bộ trực tiếp PostgreSQL và Toàn hệ thống)
+  // 3. Chức năng Xóa tài khoản (Lưu trực tiếp vào CSDL PostgreSQL)
+  const handleDeleteAccount = async (account: AccountItem) => {
+    if (
+      account.username === "lehanhkt01" ||
+      account.username === "trunghieuktkt" ||
+      account.username === "lehanhkt01@gmail.com" ||
+      account.username === "trunghieuktkt@gmail.com"
+    ) {
+      alert("Không thể xóa tài khoản Quản trị viên cấp cao mặc định của hệ thống.");
+      return;
+    }
+
+    const confirmDelete = window.confirm(
+      `Đồng chí có chắc chắn muốn XÓA VĨNH VIỄN tài khoản "${account.fullName}" (${account.username}) khỏi hệ thống?`
+    );
+    if (!confirmDelete) return;
+
+    try {
+      const res = await fetch(`/api/admin/users?username=${encodeURIComponent(account.username)}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!data.success) {
+        throw new Error(data.error || "Lỗi xóa tài khoản");
+      }
+    } catch (e: any) {
+      console.warn("Lỗi sync delete tài khoản:", e);
+    }
+
+    if (account.role === "SUPER_ADMIN") {
+      setAdminAccounts((prev) => prev.filter((a) => a.username !== account.username));
+    } else if (account.role === "BRANCH_LEADER") {
+      setBranchAccounts((prev) => prev.filter((b) => b.username !== account.username));
+    } else {
+      setMemberAccounts((prev) => prev.filter((m) => m.username !== account.username));
+    }
+
+    await loadServerData();
+    showToast(`✓ Đã xóa vĩnh viễn tài khoản [${account.fullName}] khỏi CSDL.`);
+  };
+
+  // 4. Chức năng Cấp tài khoản mới / Cấp quyền Chi hội trưởng (Đồng bộ trực tiếp PostgreSQL và Toàn hệ thống)
   const handleCreateAccount = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreateError("");
@@ -495,37 +588,56 @@ export default function PermissionsManagementPage() {
 
       // TRƯỜNG HỢP 2: CÁC VAI TRÒ KHÁC (SUPER_ADMIN HOẶC MEMBER)
       if (!newFullName.trim() || !newUsername.trim()) {
-        setCreateError("Vui lòng điền đầy đủ Họ tên và Tên đăng nhập / CCCD.");
+        setCreateError("Vui lòng điền đầy đủ Họ tên và Tên đăng nhập / CCCD / Email.");
         setIsSubmitting(false);
         return;
       }
 
+      // Lưu trực tiếp vĩnh viễn vào CSDL PostgreSQL
+      const createRes = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fullName: newFullName.trim(),
+          username: newUsername.trim(),
+          email: newRole === "SUPER_ADMIN" ? newUsername.trim() : undefined,
+          phone: newPhone.trim() || undefined,
+          role: newRole,
+          unit: newUnit,
+        }),
+      });
+
+      const createData = await createRes.json();
+      if (!createData.success) {
+        throw new Error(createData.error || "Không thể lưu tài khoản vào cơ sở dữ liệu PostgreSQL.");
+      }
+
       const newItem: AccountItem = {
-        id: `acc_${Date.now()}`,
+        id: createData.user?.id || `acc_${Date.now()}`,
         fullName: newFullName.trim(),
         unit: newUnit,
         username: newUsername.trim(),
         phone: newPhone.trim(),
         role: newRole,
         isActive: true,
+        lastLogin: "Vừa tạo",
         passwordStatus: "MẶC_ĐỊNH",
       };
 
       if (newRole === "SUPER_ADMIN") {
-        const updated = [newItem, ...adminAccounts];
-        setAdminAccounts(updated);
-        saveState(updated, branchAccounts, memberAccounts);
+        setAdminAccounts((prev) => [newItem, ...prev.filter((a) => a.username !== newItem.username)]);
       } else {
-        const updated = [newItem, ...memberAccounts];
-        setMemberAccounts(updated);
-        saveState(adminAccounts, branchAccounts, updated);
+        setMemberAccounts((prev) => [newItem, ...prev.filter((m) => m.username !== newItem.username)]);
       }
+
+      // Nạp lại dữ liệu đồng bộ tức thì từ PostgreSQL
+      await loadServerData();
 
       setIsCreateModalOpen(false);
       setNewFullName("");
       setNewUsername("");
       setNewPhone("");
-      showToast(`✓ Cấp tài khoản mới thành công cho đồng chí [${newItem.fullName}].`);
+      showToast(`✓ Đã cấp tài khoản và lưu vĩnh viễn vào CSDL cho đồng chí [${newItem.fullName}].`);
     } catch (err: any) {
       setCreateError(err.message || "Đã xảy ra lỗi khi cấp tài khoản.");
     } finally {
@@ -833,6 +945,21 @@ export default function PermissionsManagementPage() {
                           <span>{acc.isActive ? "🔒" : "🔓"}</span>
                           <span className="hidden sm:inline">{acc.isActive ? "Khóa" : "Mở"}</span>
                         </button>
+
+                        {/* Nút Xóa tài khoản */}
+                        {acc.username !== "lehanhkt01" &&
+                          acc.username !== "trunghieuktkt" &&
+                          acc.username !== "lehanhkt01@gmail.com" &&
+                          acc.username !== "trunghieuktkt@gmail.com" && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteAccount(acc)}
+                              className="px-2 py-1 bg-stone-100 hover:bg-red-100 text-stone-500 hover:text-flag-red font-bold text-xs rounded border border-stone-300 hover:border-red-300 transition flex items-center gap-1 cursor-pointer"
+                              title="Xóa tài khoản khỏi CSDL"
+                            >
+                              <span>🗑️</span>
+                            </button>
+                          )}
                       </div>
                     </td>
                   </tr>

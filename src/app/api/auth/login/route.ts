@@ -139,13 +139,15 @@ export async function POST(req: Request) {
       }
     }
 
-    // 4. KIỂM TRA TÀI KHOẢN QUA CSDL PRISMA (HỖ TRỢ CCCD, USERNAME HOẶC SỐ ĐIỆN THOẠI)
+    // 4. KIỂM TRA TÀI KHOẢN QUA CSDL PRISMA (HỖ TRỢ EMAIL, CCCD, USERNAME HOẶC SỐ ĐIỆN THOẠI)
     let dbUser: any = null;
     try {
       dbUser = await prisma.user.findFirst({
         where: {
           OR: [
             { username: cleanInput },
+            { username: cleanInputLower },
+            { email: cleanInputLower },
             { phone: cleanInput },
             { member: { cccd: cleanInput } },
           ],
@@ -188,6 +190,7 @@ export async function POST(req: Request) {
           user: {
             id: dbUser.id,
             username: dbUser.username,
+            email: dbUser.email || undefined,
             cccd: dbUser.member?.cccd || dbUser.username,
             fullName: dbUser.fullName,
             phone: dbUser.phone || dbUser.member?.phone || "",
