@@ -7,6 +7,16 @@
 
 ---
 
+## 0. Môi Trường Triển Khai & Vị Trí Lưu Trữ Cố Định (Fixed Environments)
+
+* **Máy tính phát triển (Local Path):** `D:\1. VPS Maydell\4. Antigravity\11.E-CCB`
+* **Kho lưu trữ GitHub (Repository):** [https://github.com/lehanhkt01-gif/eccb.git](https://github.com/lehanhkt01-gif/eccb.git) (Nhánh chính: `main`)
+* **Thư mục trên máy chủ VPS Maydell:** `/var/www/ECCB`
+* **Tên miền chính thức (Production Domain):** `https://ccb.easupso.com`
+* **Cổng dịch vụ Host (Docker Port):** `3011:3000` (Forward qua Nginx Proxy Manager)
+
+---
+
 ## 1. Tech Stack Cốt Lõi (Standard Architecture)
 
 | Thành phần | Công nghệ / Phiên bản | Ghi chú & Vai trò |
@@ -119,7 +129,7 @@ Dự án phục vụ Hội Cựu Chiến Binh xã Ea Súp, mang tính trang tr�
 | **30** | **Khóa Giữ Sticky Sidebar 'Chức Năng Điều Hành'** | Nâng cấp Header lên z-index 50 (luôn trên cùng); Cấu hình Sidebar cố định `lg:sticky top-[96px]` khi lăn chuột cuộn danh sách hội viên; Định vị mép dưới header, triệt tiêu 100% lỗi che lấp logo và tiêu đề phía trên | ✅ **Đã hoàn thành** |
 | **32** | **Sắp Xếp Hội Viên Chi Hội & Cấp Quyền CHT Trực Quan (Ảnh 1 & Ảnh 2)** | Thêm số thứ tự (STT: ⭐ cho CHT, 1..N cho hội viên); Chi hội trưởng luôn xếp lên đầu danh sách; Họ tên và năm sinh nằm trên 1 hàng không bị ngắt chữ; Cụm nút tác nghiệp bên phải tinh gọn không bóp méo nội dung; Cấp quyền 'Chi hội trưởng' sổ list lựa chọn theo từng chi hội, chỉ chọn hội viên chính thức để phân quyền, hiển thị thẻ thông tin tự động, không cần nhập thủ công phức tạp | ✅ **Đã hoàn thành** |
 | **33** | **Cấp Quyền Nhiều CHT Cho 1 Chi Hội & Đồng Bộ Hai Chiều Toàn Hệ Thống** | Sửa triệt để lỗi không cập nhật thêm CHT: Trang `/admin/permissions` tự động nạp 100% hội viên từ CSDL PostgreSQL (`/api/admin/members`); Cho phép 1 chi hội có nhiều CHT (không hạ bệ CHT cũ); Hỗ trợ cả 2 chế độ (Chọn từ danh sách thôn & Nhập trực tiếp CHT mới); Nâng cấp API `/api/admin/assign-branch-leader` tạo/cập nhật User `BRANCH_LEADER` và bảng Hamlet; Thêm nút `⭐ CHT` trên bảng hội viên và Modal Chi tiết `/admin/members`; Đồng bộ tức thì toàn diện hai chiều DB và PWA Chi hội | ✅ **Đã hoàn thành** |
-| **34** | **Triển khai VPS & SSL HTTPS** | Docker compose up trên VPS Maydell, cấu hình Nginx Proxy Manager domain `ccb.easupso.com` | ⏳ *Giai đoạn kế tiếp* |
+| **34** | **Triển khai VPS & SSL HTTPS** | Docker compose up trên VPS Maydell tại thư mục `/var/www/ECCB`, cấu hình Nginx Proxy Manager domain `ccb.easupso.com` (Port 3011) | ⏳ *Giai đoạn kế tiếp* |
 | **35** | **Khắc Phục Lỗi Cấp Tài Khoản Mới & Bảo Toàn CSDL Vĩnh Viễn** | Tạo API CRUD `/api/admin/users` kết nối trực tiếp PostgreSQL Prisma; Cập nhật logic tạo tài khoản (Cán bộ xã, Chi hội trưởng, Hội viên) lưu vĩnh viễn vào DB; Nâng cấp `/api/auth/login` đăng nhập tức thì cho tài khoản mới qua Email/CCCD; Tự động đồng bộ và bảo tồn tài khoản khi người dùng xóa cache hoặc đổi trình duyệt | ✅ **Đã hoàn thành** |
 
 
