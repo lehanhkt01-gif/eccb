@@ -1565,6 +1565,21 @@ export function assignBranchLeader(memberId: string): {
     }
   } catch {}
 
+  // Gỡ khỏi danh sách đen đã xóa nếu trước đó từng bị xóa
+  try {
+    const rawDeleted = localStorage.getItem("eccb_deleted_branch_leaders_v1");
+    if (rawDeleted) {
+      const deletedArr: string[] = JSON.parse(rawDeleted);
+      const cleanCccd = target.cccd?.trim().toLowerCase();
+      const cleanPhone = target.phone?.trim().toLowerCase();
+      const cleanName = target.fullName?.trim().toLowerCase();
+      const newArr = deletedArr.filter(
+        (x) => x !== cleanCccd && x !== cleanPhone && x !== cleanName && !x.startsWith(cleanName + "_")
+      );
+      localStorage.setItem("eccb_deleted_branch_leaders_v1", JSON.stringify(newArr));
+    }
+  } catch {}
+
   // Tạo thông báo chuông cho Thường trực Xã
   try {
     createNotification({
@@ -1582,6 +1597,43 @@ export function assignBranchLeader(memberId: string): {
     message: `Đã cấp quyền Chi hội trưởng ${hamletName} cho đồng chí [${target.fullName}] thành công!`,
     targetMember: { ...target, associationRole: "Chi hội trưởng" },
   };
+}
+
+/**
+ * Gỡ bỏ chức danh Chi hội trưởng (chuyển về Hội viên)
+ */
+export function demoteBranchLeader(identifier: string): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const currentList = getStoredMembers();
+    const cleanId = identifier.trim().toLowerCase();
+    let updated = false;
+
+    const newList = currentList.map((m) => {
+      const match =
+        m.id === identifier ||
+        m.cccd === identifier ||
+        (m.phone && m.phone === identifier) ||
+        m.fullName.toLowerCase() === cleanId;
+      if (match && m.associationRole === "Chi hội trưởng") {
+        updated = true;
+        return {
+          ...m,
+          associationRole: "Hội viên",
+        };
+      }
+      return m;
+    });
+
+    if (updated) {
+      saveStoredMembers(newList);
+      window.dispatchEvent(new CustomEvent("eccb-members-updated"));
+    }
+    return true;
+  } catch (err) {
+    console.error("Lỗi gỡ bỏ CHT trong memberStore:", err);
+    return false;
+  }
 }
 
 const MOVEMENTS_STORAGE_KEY = "eccb-easup_movements_v1";

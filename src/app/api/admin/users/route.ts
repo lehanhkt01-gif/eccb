@@ -442,16 +442,47 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json();
-    const { userId, username, isActive, resetPassword } = body;
+    const { userId, username, phone, fullName, isActive, resetPassword } = body;
 
-    const user = await prisma.user.findFirst({
+    let user = await prisma.user.findFirst({
       where: {
         OR: [
-          ...(userId ? [{ id: userId }] : []),
-          ...(username ? [{ username }] : []),
+          ...(userId && !userId.startsWith("bl_") && !userId.startsWith("acc_") && !userId.startsWith("mem_") ? [{ id: userId }] : []),
+          ...(username ? [{ username }, { phone: username }] : []),
+          ...(phone ? [{ phone }, { username: phone }] : []),
         ],
       },
     });
+
+    // Nếu chưa có tài khoản trong User table nhưng có trong Member table, tạo user để lưu trạng thái
+    if (!user && (username || phone || fullName)) {
+      const member = await prisma.member.findFirst({
+        where: {
+          OR: [
+            ...(username ? [{ cccd: username }, { phone: username }] : []),
+            ...(phone ? [{ phone }] : []),
+            ...(fullName ? [{ fullName }] : []),
+          ],
+        },
+      });
+
+      if (member) {
+        const defaultPass = process.env.MEMBER_DEFAULT_PASSWORD || "12345678@";
+        const passwordHash = await bcrypt.hash(defaultPass, 10);
+        user = await prisma.user.create({
+          data: {
+            username: member.phone || member.cccd,
+            passwordHash,
+            fullName: member.fullName,
+            phone: member.phone || undefined,
+            role: member.associationRole === "Chi hội trưởng" ? Role.BRANCH_LEADER : Role.MEMBER,
+            memberId: member.id,
+            hamletId: member.hamletId,
+            isActive: typeof isActive === "boolean" ? isActive : true,
+          },
+        });
+      }
+    }
 
     if (!user) {
       return NextResponse.json(
@@ -496,36 +527,33 @@ export async function PATCH(req: NextRequest) {
 
 /**
  * DELETE /api/admin/users
- * Xóa tài khoản (bảo vệ 2 SuperAdmin mặc định)
+ * Xóa tài khoản & Gỡ bỏ vai trò Chi hội trưởng nếu có
  */
 export async function DELETE(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get("id");
     const username = searchParams.get("username");
+    const phone = searchParams.get("phone");
+    const fullName = searchParams.get("fullName");
 
     const user = await prisma.user.findFirst({
       where: {
         OR: [
-          ...(userId ? [{ id: userId }] : []),
-          ...(username ? [{ username }] : []),
+          ...(userId && !userId.startsWith("bl_") && !userId.startsWith("acc_") && !userId.startsWith("mem_") ? [{ id: userId }] : []),
+          ...(username ? [{ username }, { phone: username }] : []),
+          ...(phone ? [{ phone }, { username: phone }] : []),
         ],
       },
     });
 
-    if (!user) {
-      return NextResponse.json(
-        { success: false, error: "Không tìm thấy người dùng cần xóa." },
-        { status: 404 }
-      );
-    }
-
     // Bảo vệ không cho xóa 2 super admin mặc định
     if (
-      user.username === "lehanhkt01" ||
-      user.username === "trunghieuktkt" ||
-      user.email === "lehanhkt01@gmail.com" ||
-      user.email === "trunghieuktkt@gmail.com"
+      user &&
+      (user.username === "lehanhkt01" ||
+        user.username === "trunghieuktkt" ||
+        user.email === "lehanhkt01@gmail.com" ||
+        user.email === "trunghieuktkt@gmail.com")
     ) {
       return NextResponse.json(
         { success: false, error: "Không thể xóa tài khoản Quản trị viên mặc định của hệ thống!" },
@@ -533,13 +561,49 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
-    await prisma.user.delete({
-      where: { id: user.id },
+    // 1. Nếu user có liên kết memberId hoặc tìm thấy member tương ứng, gỡ chức danh Chi hội trưởng
+    const targetMember = await prisma.member.findFirst({
+      where: {
+        OR: [
+          ...(user?.memberId ? [{ id: user.memberId }] : []),
+          ...(username ? [{ cccd: username }, { phone: username }] : []),
+          ...(phone ? [{ phone }] : []),
+          ...(fullName ? [{ fullName }] : []),
+        ],
+      },
     });
+
+    if (targetMember) {
+      await prisma.member.update({
+        where: { id: targetMember.id },
+        data: { associationRole: "Hội viên" },
+      });
+
+      await prisma.hamlet.updateMany({
+        where: { branchLeaderId: targetMember.id },
+        data: { branchLeaderId: null, branchLeaderName: null, branchLeaderPhone: null },
+      });
+    }
+
+    // 2. Gỡ bỏ đại diện CHT khỏi bảng hamlet nếu có thông tin phone hoặc tên
+    if (phone || username) {
+      const searchPhone = phone || username;
+      await prisma.hamlet.updateMany({
+        where: { branchLeaderPhone: searchPhone },
+        data: { branchLeaderId: null, branchLeaderName: null, branchLeaderPhone: null },
+      });
+    }
+
+    // 3. Xóa bản ghi trong bảng User nếu có
+    if (user) {
+      await prisma.user.delete({
+        where: { id: user.id },
+      });
+    }
 
     return NextResponse.json({
       success: true,
-      message: `Đã xóa tài khoản [${user.fullName}] khỏi hệ thống thành công!`,
+      message: `Đã xóa tài khoản và gỡ bỏ quyền Chi hội trưởng thành công!`,
     });
   } catch (error: any) {
     console.error("Lỗi xóa tài khoản:", error);

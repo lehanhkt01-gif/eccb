@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { getStoredMembers, saveStoredMembers, assignBranchLeader, MemberRecord } from "@/lib/memberStore";
+import { getStoredMembers, saveStoredMembers, assignBranchLeader, demoteBranchLeader, MemberRecord } from "@/lib/memberStore";
 import { EA_SUP_HAMLETS } from "@/lib/constants/hamlets";
 
 export type RoleType = "SUPER_ADMIN" | "BRANCH_LEADER" | "MEMBER";
@@ -16,6 +16,43 @@ export interface AccountItem {
   isActive: boolean;
   lastLogin?: string;
   passwordStatus: "MẶC_ĐỊNH" | "ĐÃ_ĐỔI" | "ĐÃ_RESET";
+}
+
+const KEY_DELETED_LEADERS = "eccb_deleted_branch_leaders_v1";
+const KEY_LEADER_STATUS = "eccb_branch_leader_status_v1";
+
+function getDeletedBranchLeaders(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = localStorage.getItem(KEY_DELETED_LEADERS);
+    return raw ? new Set(JSON.parse(raw)) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+function saveDeletedBranchLeaders(set: Set<string>) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(KEY_DELETED_LEADERS, JSON.stringify(Array.from(set)));
+  } catch {}
+}
+
+function getLeaderStatusMap(): Record<string, boolean> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = localStorage.getItem(KEY_LEADER_STATUS);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveLeaderStatusMap(map: Record<string, boolean>) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(KEY_LEADER_STATUS, JSON.stringify(map));
+  } catch {}
 }
 
 // Danh sách ban đầu 02 Cán bộ xã SuperAdmin
@@ -150,13 +187,18 @@ export default function PermissionsManagementPage() {
   }, [selectedBranchHamlet, newRole, hamletOfficialMembers]);
 
   // Nạp danh sách hội viên chính thức từ memberStore và CSDL
-  const syncPermissionsData = (customMembers?: MemberRecord[], customAdmins?: AccountItem[]) => {
+  const syncPermissionsData = (
+    customMembers?: MemberRecord[],
+    customAdmins?: AccountItem[],
+    customBranches?: AccountItem[]
+  ) => {
     // 1. Lấy danh sách hội viên chính thức (CHỈ HỘI VIÊN CHÍNH THỨC, KHÔNG LẤY HỒ SƠ ẢO)
     const rawList = customMembers && customMembers.length > 0 ? customMembers : getStoredMembers();
     const officialMembers = rawList.filter(
-      (m) => (m.status === "CHINH_THUC" || (m.status as any) === "ACTIVE") &&
-             !FAKE_CCCD_SET.has(m.cccd) &&
-             !["Đặng Hữu Phúc", "Nguyễn Đình Quảng", "Nguyễn Văn Hùng", "Lê Bá Tùng", "Đặng Văn Hảo", "Lương Thế Vinh", "Ngô Quang Hưng"].includes(m.fullName)
+      (m) =>
+        (m.status === "CHINH_THUC" || (m.status as any) === "ACTIVE") &&
+        !FAKE_CCCD_SET.has(m.cccd) &&
+        !["Đặng Hữu Phúc", "Nguyễn Đình Quảng", "Nguyễn Văn Hùng", "Lê Bá Tùng", "Đặng Văn Hảo", "Lương Thế Vinh", "Ngô Quang Hưng"].includes(m.fullName)
     );
 
     // 2. Danh sách Cán bộ xã: Ưu tiên danh sách nạp từ PostgreSQL máy chủ
@@ -178,14 +220,56 @@ export default function PermissionsManagementPage() {
       loadedAdmins = INITIAL_ADMINS;
     }
 
-    // 3. Danh sách Chi hội trưởng: Luôn bảo toàn chuẩn 20 Chi hội trưởng của 20 thôn buôn
-    let loadedBranches = [...INITIAL_BRANCH_LEADERS];
+    // 3. Danh sách Chi hội trưởng
+    const deletedLeaders = getDeletedBranchLeaders();
+    const statusMap = getLeaderStatusMap();
+
+    const isLeaderDeleted = (item: { username?: string; phone?: string; fullName?: string; unit?: string }) => {
+      const u = item.username?.trim().toLowerCase();
+      const p = item.phone?.trim().toLowerCase();
+      const f = item.fullName?.trim().toLowerCase();
+      if (u && deletedLeaders.has(u)) return true;
+      if (p && deletedLeaders.has(p)) return true;
+      if (f && deletedLeaders.has(f)) return true;
+      if (f && item.unit && deletedLeaders.has(`${f}_${item.unit.trim().toLowerCase()}`)) return true;
+      return false;
+    };
+
+    // Bắt đầu từ danh sách mẫu 20 CHT (loại trừ các CHT đã bị xóa)
+    let loadedBranches: AccountItem[] = INITIAL_BRANCH_LEADERS.filter((b) => !isLeaderDeleted(b));
+
+    // Bổ sung và đồng bộ các tài khoản Chi hội trưởng từ CSDL PostgreSQL của máy chủ
+    if (customBranches && Array.isArray(customBranches)) {
+      for (const sb of customBranches) {
+        if (isLeaderDeleted(sb)) continue;
+        const cleanServerUnit = (sb.unit || "").replace(/^Chi hội\s+/i, "").trim().toLowerCase();
+        const existingIdx = loadedBranches.findIndex(
+          (b) =>
+            (sb.username && (b.username === sb.username || b.phone === sb.username)) ||
+            (sb.phone && (b.phone === sb.phone || b.username === sb.phone)) ||
+            (sb.fullName && b.fullName.toLowerCase() === sb.fullName.toLowerCase() &&
+              b.unit.replace(/^Chi hội\s+/i, "").trim().toLowerCase() === cleanServerUnit)
+        );
+
+        if (existingIdx !== -1) {
+          loadedBranches[existingIdx] = {
+            ...loadedBranches[existingIdx],
+            ...sb,
+            isActive: sb.isActive !== undefined ? sb.isActive : loadedBranches[existingIdx].isActive,
+          };
+        } else {
+          loadedBranches.push(sb);
+        }
+      }
+    }
 
     // Cập nhật và bổ sung tất cả Chi hội trưởng từ danh sách hội viên thực tế
     const leadersInStore = officialMembers.filter((m) => m.associationRole === "Chi hội trưởng");
     for (const leader of leadersInStore) {
+      if (isLeaderDeleted({ username: leader.cccd, phone: leader.phone, fullName: leader.fullName, unit: leader.hamletName })) {
+        continue;
+      }
       const cleanHamlet = leader.hamletName.replace(/^Chi hội\s+/i, "").trim().toLowerCase();
-      // Tìm xem CHT này đã có tài khoản trong danh sách chưa (so sánh chính xác theo CCCD hoặc SĐT hoặc Họ tên + Thôn)
       const existingIdx = loadedBranches.findIndex(
         (br) =>
           (leader.cccd && (br.username === leader.cccd || (br as any).cccd === leader.cccd)) ||
@@ -194,43 +278,74 @@ export default function PermissionsManagementPage() {
             br.unit.replace(/^Chi hội\s+/i, "").trim().toLowerCase() === cleanHamlet)
       );
 
+      const leaderPhone = leader.phone || "";
+      const leaderUsername = leaderPhone || leader.cccd;
+      const initialActive =
+        statusMap[leader.id] ??
+        statusMap[leader.cccd] ??
+        (leaderPhone ? statusMap[leaderPhone] : undefined) ??
+        true;
+
       if (existingIdx !== -1) {
-        // Cập nhật thông tin mới nhất
+        const cur = loadedBranches[existingIdx];
+        const resolvedActive =
+          statusMap[cur.id] ??
+          statusMap[cur.username] ??
+          (cur.phone ? statusMap[cur.phone] : undefined) ??
+          cur.isActive;
+
         loadedBranches[existingIdx] = {
-          ...loadedBranches[existingIdx],
+          ...cur,
           fullName: leader.fullName,
-          phone: leader.phone || loadedBranches[existingIdx].phone,
-          username: leader.phone || leader.cccd || loadedBranches[existingIdx].username,
+          phone: leader.phone || cur.phone,
+          username: leaderPhone || leader.cccd || cur.username,
           unit: `Chi hội ${leader.hamletName.replace(/^Chi hội\s+/i, "")}`,
           role: "BRANCH_LEADER",
-          isActive: true,
+          isActive: resolvedActive,
         };
       } else {
-        // Bổ sung thêm vào danh sách tài khoản Chi hội trưởng (không ghi đè CHT khác cùng thôn)
         loadedBranches.push({
           id: `bl_${leader.id || Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
           fullName: leader.fullName,
           unit: `Chi hội ${leader.hamletName.replace(/^Chi hội\s+/i, "")}`,
-          username: leader.phone || leader.cccd,
+          username: leaderUsername,
           phone: leader.phone,
           role: "BRANCH_LEADER",
-          isActive: true,
+          isActive: initialActive,
           passwordStatus: "MẶC_ĐỊNH",
         });
       }
     }
 
+    // Áp dụng statusMap lên toàn bộ danh sách Chi hội trưởng
+    loadedBranches = loadedBranches.map((br) => {
+      const explicitStatus =
+        statusMap[br.id] ??
+        statusMap[br.username] ??
+        (br.phone ? statusMap[br.phone] : undefined);
+      return {
+        ...br,
+        isActive: explicitStatus !== undefined ? explicitStatus : br.isActive,
+      };
+    });
+
     // 4. Luôn đảm bảo số tài khoản hội viên trùng khớp chính xác 100% với danh sách hội viên chính thức
-    const loadedMembers: AccountItem[] = officialMembers.map((m) => ({
-      id: `mem_user_${m.id}`,
-      fullName: m.fullName,
-      unit: m.hamletName,
-      username: m.cccd, // Tên đăng nhập là số CCCD 12 số
-      phone: m.phone,
-      role: "MEMBER",
-      isActive: true,
-      passwordStatus: "MẶC_ĐỊNH",
-    }));
+    const loadedMembers: AccountItem[] = officialMembers.map((m) => {
+      const explicitStatus =
+        statusMap[m.id] ??
+        statusMap[m.cccd] ??
+        (m.phone ? statusMap[m.phone] : undefined);
+      return {
+        id: `mem_user_${m.id}`,
+        fullName: m.fullName,
+        unit: m.hamletName,
+        username: m.cccd, // Tên đăng nhập là số CCCD 12 số
+        phone: m.phone,
+        role: "MEMBER",
+        isActive: explicitStatus !== undefined ? explicitStatus : true,
+        passwordStatus: "MẶC_ĐỊNH",
+      };
+    });
 
     // Cập nhật đồng bộ duy nhất 1 lần, triệt tiêu 100% hiện tượng chớp nháy số
     setAdminAccounts(loadedAdmins);
@@ -249,10 +364,17 @@ export default function PermissionsManagementPage() {
       ]);
 
       let loadedAdmins: AccountItem[] | undefined = undefined;
+      let serverBranches: AccountItem[] | undefined = undefined;
+
       if (usersRes.ok) {
         const usersData = await usersRes.json();
-        if (usersData.success && Array.isArray(usersData.admins) && usersData.admins.length > 0) {
-          loadedAdmins = usersData.admins;
+        if (usersData.success) {
+          if (Array.isArray(usersData.admins) && usersData.admins.length > 0) {
+            loadedAdmins = usersData.admins;
+          }
+          if (Array.isArray(usersData.branches)) {
+            serverBranches = usersData.branches;
+          }
         }
       }
 
@@ -266,7 +388,7 @@ export default function PermissionsManagementPage() {
       }
 
       // Đồng bộ dữ liệu hợp nhất chuẩn xác 1 lần duy nhất
-      syncPermissionsData(memberList, loadedAdmins);
+      syncPermissionsData(memberList, loadedAdmins, serverBranches);
     } catch (err) {
       console.error("Lỗi fetch /api/admin/users hoặc /api/admin/members:", err);
     }
@@ -340,29 +462,26 @@ export default function PermissionsManagementPage() {
 
   // 2. Chức năng Khóa / Mở khóa tài khoản (Lưu trực tiếp vào CSDL PostgreSQL)
   const handleToggleStatus = async (account: AccountItem) => {
-    const actionName = account.isActive ? "KHÓA" : "MỞ KHÓA";
+    const nextStatus = !account.isActive;
+    const actionName = nextStatus ? "MỞ KHÓA" : "KHÓA";
     const confirmToggle = window.confirm(
       `Đồng chí có chắc chắn muốn ${actionName} quyền đăng nhập của tài khoản "${account.fullName}"?`
     );
     if (!confirmToggle) return;
 
-    try {
-      await fetch("/api/admin/users", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: account.id.startsWith("acc_") || account.id.startsWith("mem_user_") || account.id.startsWith("bl_") ? undefined : account.id,
-          username: account.username,
-          isActive: !account.isActive,
-        }),
-      });
-    } catch (e) {
-      console.warn("Lỗi sync toggle status lên DB:", e);
-    }
+    // 1. Lưu vào statusMap trong localStorage để bảo lưu trạng thái
+    const statusMap = getLeaderStatusMap();
+    if (account.id) statusMap[account.id] = nextStatus;
+    if (account.username) statusMap[account.username] = nextStatus;
+    if (account.phone) statusMap[account.phone] = nextStatus;
+    saveLeaderStatusMap(statusMap);
 
+    // 2. Cập nhật local state ngay lập tức để UI phản hồi tức thì
     const updater = (list: AccountItem[]) =>
       list.map((item) =>
-        item.id === account.id || item.username === account.username ? { ...item, isActive: !item.isActive } : item
+        item.id === account.id || item.username === account.username || (item.phone && account.phone && item.phone === account.phone)
+          ? { ...item, isActive: nextStatus }
+          : item
       );
 
     if (account.role === "SUPER_ADMIN") {
@@ -379,10 +498,27 @@ export default function PermissionsManagementPage() {
       saveState(adminAccounts, branchAccounts, updated);
     }
 
-    showToast(`✓ Đã ${account.isActive ? "khóa quyền truy cập" : "mở khóa hoạt động"} cho [${account.fullName}].`);
+    // 3. Gửi PATCH lên API máy chủ để lưu vào PostgreSQL
+    try {
+      await fetch("/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: account.id.startsWith("acc_") || account.id.startsWith("mem_user_") || account.id.startsWith("bl_") ? undefined : account.id,
+          username: account.username,
+          phone: account.phone,
+          fullName: account.fullName,
+          isActive: nextStatus,
+        }),
+      });
+    } catch (e) {
+      console.warn("Lỗi sync toggle status lên DB:", e);
+    }
+
+    showToast(`✓ Đã ${nextStatus ? "mở khóa hoạt động" : "khóa quyền truy cập"} cho [${account.fullName}].`);
   };
 
-  // 3. Chức năng Xóa tài khoản (Lưu trực tiếp vào CSDL PostgreSQL)
+  // 3. Chức năng Xóa tài khoản (Lưu trực tiếp vào CSDL PostgreSQL & Triệt tiêu hoàn toàn không bị hồi sinh)
   const handleDeleteAccount = async (account: AccountItem) => {
     if (
       account.username === "lehanhkt01" ||
@@ -399,26 +535,52 @@ export default function PermissionsManagementPage() {
     );
     if (!confirmDelete) return;
 
+    // 1. Nếu là Chi hội trưởng:
+    if (account.role === "BRANCH_LEADER") {
+      // Thêm vào danh sách đen deletedLeaders để không bao giờ bị nạp lại từ INITIAL_BRANCH_LEADERS
+      const deleted = getDeletedBranchLeaders();
+      if (account.username) deleted.add(account.username.toLowerCase());
+      if (account.phone) deleted.add(account.phone.toLowerCase());
+      if (account.fullName) deleted.add(account.fullName.toLowerCase());
+      if (account.fullName && account.unit) deleted.add(`${account.fullName.toLowerCase()}_${account.unit.toLowerCase()}`);
+      saveDeletedBranchLeaders(deleted);
+
+      // Gỡ bỏ chức danh Chi hội trưởng trong memberStore về "Hội viên"
+      demoteBranchLeader(account.username);
+      if (account.phone) demoteBranchLeader(account.phone);
+      if (account.fullName) demoteBranchLeader(account.fullName);
+    }
+
+    // 2. Gửi request DELETE lên server
     try {
-      const res = await fetch(`/api/admin/users?username=${encodeURIComponent(account.username)}`, {
+      const params = new URLSearchParams({
+        username: account.username || "",
+        phone: account.phone || "",
+        fullName: account.fullName || "",
+        userId: account.id || "",
+      });
+      const res = await fetch(`/api/admin/users?${params.toString()}`, {
         method: "DELETE",
       });
       const data = await res.json();
       if (!data.success) {
-        throw new Error(data.error || "Lỗi xóa tài khoản");
+        console.warn("Lưu ý từ server khi xóa user:", data.error || data.message);
       }
     } catch (e: any) {
       console.warn("Lỗi sync delete tài khoản:", e);
     }
 
+    // 3. Cập nhật state ngay lập tức
     if (account.role === "SUPER_ADMIN") {
-      setAdminAccounts((prev) => prev.filter((a) => a.username !== account.username));
+      setAdminAccounts((prev) => prev.filter((a) => a.username !== account.username && a.id !== account.id));
     } else if (account.role === "BRANCH_LEADER") {
-      setBranchAccounts((prev) => prev.filter((b) => b.username !== account.username));
+      setBranchAccounts((prev) => prev.filter((b) => b.username !== account.username && b.id !== account.id && b.fullName !== account.fullName));
     } else {
-      setMemberAccounts((prev) => prev.filter((m) => m.username !== account.username));
+      setMemberAccounts((prev) => prev.filter((m) => m.username !== account.username && m.id !== account.id));
     }
 
+    // Kích hoạt đồng bộ app và tải lại dữ liệu mới nhất
+    window.dispatchEvent(new Event("eccb-members-updated"));
     await loadServerData();
     showToast(`✓ Đã xóa vĩnh viễn tài khoản [${account.fullName}] khỏi CSDL.`);
   };
@@ -442,6 +604,16 @@ export default function PermissionsManagementPage() {
             setIsSubmitting(false);
             return;
           }
+
+          // 0. Gỡ khỏi danh sách đen đã xóa nếu trước đó từng bị xóa
+          const deleted = getDeletedBranchLeaders();
+          if (selectedMemberForLeader.cccd) deleted.delete(selectedMemberForLeader.cccd.toLowerCase());
+          if (selectedMemberForLeader.phone) deleted.delete(selectedMemberForLeader.phone.toLowerCase());
+          if (selectedMemberForLeader.fullName) deleted.delete(selectedMemberForLeader.fullName.toLowerCase());
+          deleted.delete(`${selectedMemberForLeader.fullName.toLowerCase()}_chi hội ${cleanHamlet.toLowerCase()}`);
+          deleted.delete(`${selectedMemberForLeader.fullName.toLowerCase()}_thôn ${cleanHamlet.toLowerCase()}`);
+          deleted.delete(`${selectedMemberForLeader.fullName.toLowerCase()}_${cleanHamlet.toLowerCase()}`);
+          saveDeletedBranchLeaders(deleted);
 
           // 1. Gửi request đồng bộ CSDL PostgreSQL máy chủ
           try {
@@ -467,7 +639,7 @@ export default function PermissionsManagementPage() {
           // 2. Cập nhật trong Local Store memberStore
           assignBranchLeader(selectedMemberForLeader.id);
 
-          // 3. Cập nhật và bổ sung tài khoản vào branchAccounts (không ghi đè CHT khác cùng thôn)
+          // 3. Cập nhật và bổ sung tài khoản vào branchAccounts
           let updatedBranches = [...branchAccounts];
           const existingIdx = updatedBranches.findIndex(
             (b) =>
@@ -497,10 +669,9 @@ export default function PermissionsManagementPage() {
           setBranchAccounts(updatedBranches);
           saveState(adminAccounts, updatedBranches, memberAccounts);
 
-          // Kích hoạt đồng bộ toàn bộ app
+          // Kích hoạt đồng bộ toàn bộ app và tải lại dữ liệu mới nhất
           window.dispatchEvent(new Event("eccb-members-updated"));
-          syncPermissionsData();
-          loadServerData();
+          await loadServerData();
 
           setIsCreateModalOpen(false);
           showToast(`✓ Đã cấp quyền Chi hội trưởng [${cleanHamlet}] cho đồng chí [${selectedMemberForLeader.fullName}] thành công!`);
@@ -513,6 +684,15 @@ export default function PermissionsManagementPage() {
           setIsSubmitting(false);
           return;
         }
+
+        // 0. Gỡ khỏi danh sách đen đã xóa nếu trước đó từng bị xóa
+        const deletedManual = getDeletedBranchLeaders();
+        if (manualCccd.trim()) deletedManual.delete(manualCccd.trim().toLowerCase());
+        if (manualPhone.trim()) deletedManual.delete(manualPhone.trim().toLowerCase());
+        if (manualFullName.trim()) deletedManual.delete(manualFullName.trim().toLowerCase());
+        deletedManual.delete(`${manualFullName.trim().toLowerCase()}_chi hội ${cleanHamlet.toLowerCase()}`);
+        deletedManual.delete(`${manualFullName.trim().toLowerCase()}_${cleanHamlet.toLowerCase()}`);
+        saveDeletedBranchLeaders(deletedManual);
 
         // 1. Tạo hồ sơ hội viên mới và tài khoản trong PostgreSQL
         try {
@@ -571,10 +751,9 @@ export default function PermissionsManagementPage() {
         setBranchAccounts(updatedBranches);
         saveState(adminAccounts, updatedBranches, memberAccounts);
 
-        // Kích hoạt đồng bộ toàn bộ app
+        // Kích hoạt đồng bộ toàn bộ app và tải lại dữ liệu mới nhất
         window.dispatchEvent(new Event("eccb-members-updated"));
-        syncPermissionsData();
-        loadServerData();
+        await loadServerData();
 
         setIsCreateModalOpen(false);
         setManualFullName("");
