@@ -23,6 +23,10 @@ import {
   rejectMember,
   updateStoredMember,
   deleteStoredMember,
+  moveToTrashStoredMember,
+  restoreStoredMember,
+  restoreAllStoredMembers,
+  emptyTrashStoredMembers,
   assignBranchLeader,
   HAMLET_LIST,
 } from "@/lib/memberStore";
@@ -30,7 +34,7 @@ import MemberImportModal from "@/components/MemberImportModal";
 import * as XLSX from "xlsx";
 
 export default function AdminMembersPage() {
-  const [activeTab, setActiveTab] = useState<"active" | "pending_admin" | "pending_branch" | "rejected" | "movements">("active");
+  const [activeTab, setActiveTab] = useState<"active" | "pending_admin" | "pending_branch" | "rejected" | "movements" | "trash">("active");
   const [members, setMembers] = useState<MemberRecord[]>([]);
   const [movements, setMovements] = useState<MemberMovementRecord[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -101,25 +105,31 @@ export default function AdminMembersPage() {
   // Các danh sách phân loại theo quy trình 2 cấp chặt chẽ:
   // 1. Hội viên chính thức (CHINH_THUC hoặc ACTIVE)
   const activeMembers = useMemo(
-    () => members.filter((m) => m.status === "CHINH_THUC" || (m.status as any) === "ACTIVE"),
+    () => members.filter((m) => !m.isDeleted && (m.status === "CHINH_THUC" || (m.status as any) === "ACTIVE")),
     [members]
   );
 
   // 2. Cấp 2: Chờ Thường trực Xã phê duyệt (CHO_XA_PHE_DUYET hoặc đã branchApproved)
   const pendingAdminMembers = useMemo(
-    () => members.filter((m) => m.status === "CHO_XA_PHE_DUYET" || ((m.status as any) === "PENDING_APPROVAL" && m.branchApproved)),
+    () => members.filter((m) => !m.isDeleted && (m.status === "CHO_XA_PHE_DUYET" || ((m.status as any) === "PENDING_APPROVAL" && m.branchApproved))),
     [members]
   );
 
   // 3. Cấp 1: Chờ Chi hội xác minh (CHO_CHI_HOI_DUYET hoặc chưa branchApproved)
   const pendingBranchMembers = useMemo(
-    () => members.filter((m) => m.status === "CHO_CHI_HOI_DUYET" || ((m.status as any) === "PENDING_APPROVAL" && !m.branchApproved)),
+    () => members.filter((m) => !m.isDeleted && (m.status === "CHO_CHI_HOI_DUYET" || ((m.status as any) === "PENDING_APPROVAL" && !m.branchApproved))),
     [members]
   );
 
   // 4. Hồ sơ bị từ chối
   const rejectedMembers = useMemo(
-    () => members.filter((m) => m.status === "TU_CHOI" || (m.status as any) === "REJECTED"),
+    () => members.filter((m) => !m.isDeleted && (m.status === "TU_CHOI" || (m.status as any) === "REJECTED")),
+    [members]
+  );
+
+  // 5. Hồ sơ trong Thùng rác (Đã xóa nhưng có thể khôi phục)
+  const trashedMembers = useMemo(
+    () => members.filter((m) => Boolean(m.isDeleted)),
     [members]
   );
 
@@ -273,46 +283,172 @@ export default function AdminMembersPage() {
     }
   };
 
-  // Xử lý Cán bộ xã Xóa vĩnh viễn hồ sơ hội viên khỏi CSDL PostgreSQL và LocalStore
+  // Xử lý Cán bộ xã Chuyển hồ sơ hội viên vào Thùng Rác (Soft Delete)
   const [isDeletingMember, setIsDeletingMember] = useState(false);
   const handleDeleteMember = async () => {
     if (!editingMember) return;
 
     const confirmDelete = window.confirm(
-      `⚠️ CẢNH BÁO BẢO MẬT TỐI CAO:\n\nĐồng chí có chắc chắn muốn XÓA VĨNH VIỄN hồ sơ hội viên:\n- Họ và tên: ${editingMember.fullName}\n- Số CCCD: ${editingMember.cccd}\n- Chi hội: ${editingMember.hamletName}\n\nHành động này sẽ xóa hoàn toàn hồ sơ khỏi CSDL PostgreSQL máy chủ và không thể hoàn tác!`
+      `Đồng chí có chắc chắn muốn CHUYỂN VÀO THÙNG RÁC hồ sơ hội viên:\n- Họ và tên: ${editingMember.fullName}\n- Số CCCD: ${editingMember.cccd}\n- Chi hội: ${editingMember.hamletName}\n\nHồ sơ sẽ được lưu an toàn trong mục "Thùng rác". Cán bộ xã có thể xem danh sách và khôi phục lại bất kỳ lúc nào!`
     );
     if (!confirmDelete) return;
 
     setIsDeletingMember(true);
     try {
-      // 1. Gửi request DELETE tới API máy chủ để xóa khỏi PostgreSQL
+      // 1. Gửi request DELETE tới API máy chủ để chuyển vào thùng rác (soft delete)
       const queryParam = editingMember.id ? `id=${encodeURIComponent(editingMember.id)}` : `cccd=${encodeURIComponent(editingMember.cccd)}`;
-      const res = await fetch(`/api/admin/members?${queryParam}`, {
+      const res = await fetch(`/api/admin/members?${queryParam}&reason=${encodeURIComponent("Cán bộ xã chuyển vào Thùng rác")}`, {
         method: "DELETE",
       });
       const data = await res.json();
       if (!data.success) {
-        console.warn("Lưu ý từ server khi xóa hồ sơ:", data.error || data.message);
+        console.warn("Lưu ý từ server khi chuyển vào thùng rác:", data.error || data.message);
       }
 
-      // 2. Xóa trong bộ nhớ local store
-      deleteStoredMember(editingMember.id);
+      // 2. Cập nhật trong bộ nhớ local store
+      moveToTrashStoredMember(editingMember.id);
 
       // 3. Cập nhật state danh sách members
-      setMembers((prev) => prev.filter((m) => m.id !== editingMember.id && m.cccd !== editingMember.cccd));
+      const nowIso = new Date().toISOString();
+      setMembers((prev) =>
+        prev.map((m) =>
+          m.id === editingMember.id || m.cccd === editingMember.cccd
+            ? { ...m, isDeleted: true, deletedAt: nowIso, deletedReason: "Cán bộ xã chuyển vào Thùng rác" }
+            : m
+        )
+      );
 
       // 4. Kích hoạt sự kiện đồng bộ toàn bộ app
       window.dispatchEvent(new Event("eccb-members-updated"));
 
-      showToast(`✓ Đã xóa vĩnh viễn hồ sơ đồng chí [${editingMember.fullName}] khỏi hệ thống CSDL!`);
+      showToast(`🗑️ Đã chuyển hồ sơ đ/c [${editingMember.fullName}] vào Thùng Rác! Đồng chí có thể khôi phục lại khi cần.`);
       setEditingMember(null);
     } catch (err: any) {
-      console.error("Lỗi khi xóa hồ sơ hội viên:", err);
-      alert("Đã xảy ra lỗi khi xóa hồ sơ: " + (err.message || "Không thể kết nối máy chủ"));
+      console.error("Lỗi khi chuyển hồ sơ vào thùng rác:", err);
+      alert("Đã xảy ra lỗi: " + (err.message || "Không thể kết nối máy chủ"));
     } finally {
       setIsDeletingMember(false);
     }
   };
+
+  // Khôi phục 1 hồ sơ từ Thùng rác về danh sách chính thức
+  const handleRestoreMember = async (member: MemberRecord) => {
+    if (!confirm(`Đồng chí có chắc chắn muốn KHÔI PHỤC hồ sơ hội viên:\n- Họ và tên: ${member.fullName}\n- Chi hội: ${member.hamletName}\nvề lại danh sách hội viên chính thức?`)) return;
+
+    try {
+      // 1. Cập nhật qua API
+      await fetch("/api/admin/members/trash", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "restore", id: member.id, cccd: member.cccd }),
+      });
+
+      // 2. Cập nhật local store
+      restoreStoredMember(member.id);
+
+      // 3. Cập nhật state
+      setMembers((prev) =>
+        prev.map((m) =>
+          m.id === member.id || m.cccd === member.cccd
+            ? { ...m, isDeleted: false, deletedAt: undefined, deletedReason: undefined }
+            : m
+        )
+      );
+      window.dispatchEvent(new Event("eccb-members-updated"));
+      showToast(`♻️ Đã khôi phục thành công hồ sơ đồng chí [${member.fullName}] về danh sách chính thức!`);
+    } catch (err) {
+      console.error("Lỗi khôi phục:", err);
+      alert("Có lỗi xảy ra khi khôi phục hồ sơ.");
+    }
+  };
+
+  // Khôi phục tất cả hồ sơ trong Thùng rác
+  const handleRestoreAll = async () => {
+    if (trashedMembers.length === 0) return;
+    if (!confirm(`Đồng chí có chắc chắn muốn KHÔI PHỤC TOÀN BỘ ${trashedMembers.length} hồ sơ trong Thùng Rác về lại danh sách chính thức?`)) return;
+
+    try {
+      await fetch("/api/admin/members/trash", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "restore_all" }),
+      });
+
+      restoreAllStoredMembers();
+      setMembers((prev) =>
+        prev.map((m) =>
+          m.isDeleted
+            ? { ...m, isDeleted: false, deletedAt: undefined, deletedReason: undefined }
+            : m
+        )
+      );
+      window.dispatchEvent(new Event("eccb-members-updated"));
+      showToast(`♻️ Đã khôi phục toàn bộ ${trashedMembers.length} hồ sơ về danh sách chính thức!`);
+    } catch (err) {
+      console.error("Lỗi khôi phục tất cả:", err);
+      alert("Có lỗi xảy ra khi khôi phục tất cả hồ sơ.");
+    }
+  };
+
+  // Xóa vĩnh viễn 1 hồ sơ khỏi CSDL PostgreSQL
+  const handlePermanentDelete = async (member: MemberRecord) => {
+    const ok = confirm(`⚠️ CẢNH BÁO BẢO MẬT TỐI CAO:\n\nĐồng chí có chắc chắn muốn XÓA VĨNH VIỄN hồ sơ:\n- Họ và tên: ${member.fullName}\n- CCCD: ${member.cccd}\n- Chi hội: ${member.hamletName}\n\nDữ liệu sẽ bị xóa triệt để khỏi máy chủ và CSDL PostgreSQL, KHÔNG THỂ khôi phục lại!`);
+    if (!ok) return;
+
+    try {
+      await fetch("/api/admin/members/trash", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "permanent_delete", id: member.id, cccd: member.cccd }),
+      });
+
+      deleteStoredMember(member.id);
+      setMembers((prev) => prev.filter((m) => m.id !== member.id && m.cccd !== member.cccd));
+      window.dispatchEvent(new Event("eccb-members-updated"));
+      showToast(`🗑️ Đã xóa vĩnh viễn hồ sơ [${member.fullName}] khỏi CSDL!`);
+    } catch (err) {
+      console.error("Lỗi xóa vĩnh viễn:", err);
+      alert("Có lỗi xảy ra khi xóa vĩnh viễn hồ sơ.");
+    }
+  };
+
+  // Dọn sạch thùng rác (xóa vĩnh viễn tất cả)
+  const handleEmptyTrash = async () => {
+    if (trashedMembers.length === 0) return;
+    const ok = confirm(`⚠️ CẢNH BÁO NGUY HIỂM:\n\nĐồng chí có chắc chắn muốn DỌN SẠCH THÙNG RÁC (XÓA VĨNH VIỄN TOÀN BỘ ${trashedMembers.length} HỒ SƠ)?\n\nHành động này sẽ xóa sạch vĩnh viễn mọi dữ liệu liên quan khỏi CSDL PostgreSQL và KHÔNG THỂ hoàn tác!`);
+    if (!ok) return;
+
+    try {
+      await fetch("/api/admin/members/trash", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "empty_trash" }),
+      });
+
+      emptyTrashStoredMembers();
+      setMembers((prev) => prev.filter((m) => !m.isDeleted));
+      window.dispatchEvent(new Event("eccb-members-updated"));
+      showToast(`🧹 Đã dọn sạch thùng rác thành công!`);
+    } catch (err) {
+      console.error("Lỗi dọn sạch thùng rác:", err);
+      alert("Có lỗi xảy ra khi dọn thùng rác.");
+    }
+  };
+
+  // Bộ lọc danh sách hồ sơ trong Thùng rác
+  const filteredTrashedMembers = useMemo(() => {
+    return trashedMembers.filter((m) => {
+      const query = searchQuery.toLowerCase().trim();
+      if (query) {
+        const matchName = m.fullName.toLowerCase().includes(query);
+        const matchCccd = m.cccd.includes(query);
+        const matchPhone = m.phone.includes(query);
+        if (!matchName && !matchCccd && !matchPhone) return false;
+      }
+      if (selectedHamlet !== "all" && m.hamletName !== selectedHamlet) return false;
+      return true;
+    });
+  }, [trashedMembers, searchQuery, selectedHamlet]);
 
   // Bộ lọc thông minh 35 trường thông tin áp dụng cho danh sách hội viên chính thức
   const filteredActiveMembers = useMemo(() => {
@@ -1146,6 +1282,27 @@ export default function AdminMembersPage() {
             {movements.length}
           </span>
         </button>
+
+        <button
+          onClick={() => setActiveTab("trash")}
+          className={`py-3 px-3 sm:px-5 font-bold text-xs sm:text-sm border-b-4 transition flex items-center gap-1.5 shrink-0 ${
+            activeTab === "trash"
+              ? "border-flag-red text-flag-red bg-white rounded-t-xl shadow-xs"
+              : "border-transparent text-stone-500 hover:text-deep-text"
+          }`}
+        >
+          <span>🗑️</span>
+          <span>Thùng Rác</span>
+          {trashedMembers.length > 0 ? (
+            <span className="px-2 py-0.5 bg-red-100 text-flag-red text-xs rounded-full font-black animate-pulse">
+              {trashedMembers.length}
+            </span>
+          ) : (
+            <span className="px-2 py-0.5 bg-stone-200 text-stone-600 text-xs rounded-full font-bold">
+              0
+            </span>
+          )}
+        </button>
       </div>
 
       {/* ==================================================================== */}
@@ -1865,6 +2022,203 @@ export default function AdminMembersPage() {
               </table>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ==================================================================== */}
+      {/* TAB 6: THÙNG RÁC — HỒ SƠ ĐÃ XÓA (CÁN BỘ XÃ XEM & KHÔI PHỤC)          */}
+      {/* ==================================================================== */}
+      {activeTab === "trash" && (
+        <div className="space-y-4 animate-in fade-in duration-200">
+          {/* Banner Thùng rác */}
+          <div className="bg-red-50 border-2 border-red-300 rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-xs">
+            <div className="flex items-start gap-3">
+              <span className="text-3xl mt-0.5">🗑️</span>
+              <div className="space-y-1">
+                <h4 className="font-bold text-flag-red text-sm uppercase">
+                  Thùng Rác Hồ Sơ Hội Viên CCB (Lưu Tạm & Khôi Phục)
+                </h4>
+                <p className="text-xs text-red-950 leading-relaxed font-medium">
+                  Nơi lưu trữ các hồ sơ đã bị xóa khỏi danh sách sinh hoạt. Cán bộ xã có thể xem lại chi tiết thông tin, bấm <strong>Khôi phục</strong> để đưa trở lại danh sách chính thức, hoặc <strong>Xóa vĩnh viễn</strong> nếu muốn gỡ bỏ hoàn toàn khỏi CSDL.
+                </p>
+              </div>
+            </div>
+
+            {/* Cụm nút tác vụ hàng loạt của Thùng rác */}
+            {trashedMembers.length > 0 && (
+              <div className="flex items-center gap-2 shrink-0 self-end md:self-center">
+                <button
+                  type="button"
+                  onClick={handleRestoreAll}
+                  className="px-3.5 py-2 bg-moss-green hover:bg-moss-green-light active:scale-95 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-sm transition cursor-pointer"
+                  title="Khôi phục toàn bộ hồ sơ trong thùng rác về lại danh sách chính thức"
+                >
+                  <span>♻️</span>
+                  <span>Khôi Phục Tất Cả ({trashedMembers.length})</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleEmptyTrash}
+                  className="px-3.5 py-2 bg-red-700 hover:bg-red-800 active:scale-95 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-sm transition cursor-pointer border border-red-800"
+                  title="Xóa sạch vĩnh viễn toàn bộ hồ sơ trong thùng rác khỏi CSDL PostgreSQL"
+                >
+                  <span>🧹</span>
+                  <span>Dọn Sạch Thùng Rác</span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Thanh tìm kiếm & lọc nhanh trong Thùng rác */}
+          <div className="bg-white p-3 rounded-xl border border-stone-300 flex flex-col sm:flex-row items-center gap-3">
+            <div className="relative flex-1 w-full">
+              <input
+                type="text"
+                placeholder="Tìm trong thùng rác theo tên, CCCD, SĐT..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 text-xs sm:text-sm bg-stone-50 border border-stone-300 rounded-lg focus:outline-none focus:border-flag-red text-deep-text font-medium"
+              />
+              <span className="absolute left-3 top-2.5 text-stone-400 text-xs">🔍</span>
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2.5 top-2.5 text-xs text-stone-400 hover:text-stone-700 font-bold"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            <div className="w-full sm:w-auto shrink-0 flex items-center gap-2">
+              <select
+                value={selectedHamlet}
+                onChange={(e) => setSelectedHamlet(e.target.value)}
+                className="w-full sm:w-56 p-2 text-xs bg-stone-50 border border-stone-300 rounded-lg font-bold text-deep-text focus:outline-none focus:border-flag-red"
+              >
+                <option value="all">Tất cả thôn / buôn ({trashedMembers.length})</option>
+                {HAMLET_LIST.map((h) => {
+                  const count = trashedMembers.filter((m) => m.hamletName === h).length;
+                  return (
+                    <option key={h} value={h}>
+                      {h} {count > 0 ? `(${count})` : ""}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+          </div>
+
+          {/* Bảng danh sách hồ sơ trong Thùng rác */}
+          {filteredTrashedMembers.length === 0 ? (
+            <div className="bg-white rounded-xl border-2 border-stone-300 p-12 text-center space-y-3">
+              <span className="text-5xl block">🎉</span>
+              <h3 className="text-base font-bold text-deep-text">
+                {trashedMembers.length === 0
+                  ? "Thùng rác hiện đang trống!"
+                  : "Không tìm thấy hồ sơ phù hợp trong Thùng rác"}
+              </h3>
+              <p className="text-xs text-deep-muted max-w-md mx-auto">
+                {trashedMembers.length === 0
+                  ? "Không có hồ sơ hội viên nào bị xóa hoặc tất cả hồ sơ đã được khôi phục về danh sách chính thức."
+                  : "Vui lòng kiểm tra lại từ khóa tìm kiếm hoặc bộ lọc thôn/buôn."}
+              </p>
+            </div>
+          ) : (
+            <div className="bg-white rounded-xl border-2 border-stone-300 shadow-sm overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-stone-100 text-stone-700 uppercase font-black tracking-wider border-b border-stone-300">
+                      <th className="py-3 px-3 text-center w-12">STT</th>
+                      <th className="py-3 px-3">Họ Và Tên</th>
+                      <th className="py-3 px-3 text-center w-24">Năm Sinh</th>
+                      <th className="py-3 px-3">Số CCCD / SĐT</th>
+                      <th className="py-3 px-3">Chi Hội Sinh Hoạt</th>
+                      <th className="py-3 px-3">Ngày Xóa / Lý Do</th>
+                      <th className="py-3 px-3 text-center w-48">Thao Tác Tác Nghiệp</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-stone-200">
+                    {filteredTrashedMembers.map((m, idx) => (
+                      <tr key={m.id || m.cccd} className="hover:bg-red-50/40 transition">
+                        <td className="py-3 px-3 text-center font-bold text-stone-500">
+                          {idx + 1}
+                        </td>
+                        <td className="py-3 px-3 font-bold text-deep-text">
+                          <div className="text-sm font-black text-flag-red flex items-center gap-1.5">
+                            <span>{m.fullName}</span>
+                            <span className="text-[10px] px-1.5 py-0.5 bg-red-100 text-flag-red rounded font-bold border border-red-200">
+                              Đã Xóa
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-stone-500 font-normal mt-0.5">
+                            Chức vụ cũ: {m.associationRole || "Hội viên"} • {m.gender}
+                          </div>
+                        </td>
+                        <td className="py-3 px-3 text-center font-bold text-stone-700">
+                          {m.birthYear || (m.birthDate ? m.birthDate.slice(0, 4) : "—")}
+                        </td>
+                        <td className="py-3 px-3 font-mono">
+                          <div className="font-bold text-stone-800">{m.cccd}</div>
+                          {m.phone && <div className="text-stone-500 text-[11px]">{m.phone}</div>}
+                        </td>
+                        <td className="py-3 px-3">
+                          <span className="px-2 py-1 bg-stone-100 text-stone-800 font-bold rounded text-xs border border-stone-300">
+                            {m.hamletName}
+                          </span>
+                        </td>
+                        <td className="py-3 px-3">
+                          <div className="text-stone-800 font-medium">
+                            {m.deletedAt ? new Date(m.deletedAt).toLocaleString("vi-VN") : "Gần đây"}
+                          </div>
+                          <div className="text-stone-500 text-[11px] italic">
+                            {m.deletedReason || "Cán bộ xã chuyển vào Thùng rác"}
+                          </div>
+                        </td>
+                        <td className="py-3 px-3 text-center">
+                          <div className="flex items-center justify-center gap-1.5">
+                            {/* Nút Khôi Phục */}
+                            <button
+                              type="button"
+                              onClick={() => handleRestoreMember(m)}
+                              className="px-2.5 py-1.5 bg-moss-green hover:bg-moss-green-light active:scale-95 text-white font-bold rounded-lg text-xs shadow-xs transition flex items-center gap-1 cursor-pointer whitespace-nowrap"
+                              title="Khôi phục hồ sơ này về lại danh sách hội viên chính thức"
+                            >
+                              <span>♻️</span>
+                              <span>Khôi Phục</span>
+                            </button>
+
+                            {/* Nút Xem Chi Tiết */}
+                            <button
+                              type="button"
+                              onClick={() => setActiveModalMember(m)}
+                              className="px-2 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold rounded-lg text-xs border border-stone-300 transition cursor-pointer"
+                              title="Xem chi tiết 35 trường thông tin của hồ sơ"
+                            >
+                              <span>👁️</span>
+                            </button>
+
+                            {/* Nút Xóa Vĩnh Viễn */}
+                            <button
+                              type="button"
+                              onClick={() => handlePermanentDelete(m)}
+                              className="px-2.5 py-1.5 bg-red-100 hover:bg-red-200 text-flag-red font-bold rounded-lg text-xs border border-red-300 transition flex items-center gap-1 cursor-pointer whitespace-nowrap"
+                              title="Xóa vĩnh viễn hồ sơ này khỏi CSDL PostgreSQL (không thể hoàn tác)"
+                            >
+                              <span>🗑️</span>
+                              <span>Xóa Hẳn</span>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -2752,16 +3106,16 @@ export default function AdminMembersPage() {
                 </button>
 
                 <div className="flex items-center gap-2.5">
-                  {/* Nút Xóa Hồ Sơ (Dành cho Cán bộ xã) */}
+                  {/* Nút Xóa Hồ Sơ (Chuyển vào Thùng Rác) */}
                   <button
                     type="button"
                     disabled={isDeletingMember || isSavingEdit}
                     onClick={handleDeleteMember}
                     className="px-4 py-2.5 bg-red-50 hover:bg-red-100 text-flag-red font-bold rounded-xl text-xs border border-red-300 shadow-xs transition flex items-center gap-1.5 active:scale-95 cursor-pointer disabled:opacity-50"
-                    title="Xóa vĩnh viễn hồ sơ hội viên này khỏi CSDL PostgreSQL"
+                    title="Chuyển hồ sơ hội viên này vào Thùng rác (Cán bộ xã có thể khôi phục lại bất kỳ lúc nào)"
                   >
                     <span>🗑️</span>
-                    <span>{isDeletingMember ? "Đang Xóa..." : "Xóa Hồ Sơ"}</span>
+                    <span>{isDeletingMember ? "Đang Chuyển..." : "Xóa Hồ Sơ"}</span>
                   </button>
 
                   {/* Nút Lưu Thay Đổi Hồ Sơ */}

@@ -80,6 +80,9 @@ export interface MemberRecord {
   isExpelled?: boolean;
   expelledDate?: string;
   expelledReason?: string;
+  isDeleted?: boolean;
+  deletedAt?: string;
+  deletedReason?: string;
 
   // Quản lý trạng thái phê duyệt song trùng 2 cấp (Dual Approval Workflow)
   status: ApprovalStatus;
@@ -1119,7 +1122,98 @@ export function updateStoredMember(id: string, updatedData: Partial<MemberRecord
 }
 
 /**
- * Xóa hồ sơ hội viên khỏi bộ nhớ local store
+ * Chuyển hồ sơ hội viên vào Thùng rác (Soft delete)
+ */
+export function moveToTrashStoredMember(id: string, reason?: string): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const currentList = getStoredMembers();
+    const index = currentList.findIndex((m) => m.id === id || m.cccd === id);
+    if (index === -1) return false;
+    currentList[index] = {
+      ...currentList[index],
+      isDeleted: true,
+      deletedAt: new Date().toISOString(),
+      deletedReason: reason || "Cán bộ xã chuyển vào Thùng rác",
+    };
+    saveStoredMembers(currentList);
+    window.dispatchEvent(new CustomEvent("eccb-members-updated"));
+    return true;
+  } catch (err) {
+    console.error("Lỗi khi chuyển hội viên vào thùng rác trong localStorage:", err);
+    return false;
+  }
+}
+
+/**
+ * Khôi phục hồ sơ hội viên từ Thùng rác
+ */
+export function restoreStoredMember(id: string): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const currentList = getStoredMembers();
+    const index = currentList.findIndex((m) => m.id === id || m.cccd === id);
+    if (index === -1) return false;
+    currentList[index] = {
+      ...currentList[index],
+      isDeleted: false,
+      deletedAt: undefined,
+      deletedReason: undefined,
+    };
+    saveStoredMembers(currentList);
+    window.dispatchEvent(new CustomEvent("eccb-members-updated"));
+    return true;
+  } catch (err) {
+    console.error("Lỗi khi khôi phục hội viên trong localStorage:", err);
+    return false;
+  }
+}
+
+/**
+ * Khôi phục tất cả hồ sơ trong Thùng rác
+ */
+export function restoreAllStoredMembers(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const currentList = getStoredMembers();
+    const updated = currentList.map((m) =>
+      m.isDeleted
+        ? {
+            ...m,
+            isDeleted: false,
+            deletedAt: undefined,
+            deletedReason: undefined,
+          }
+        : m
+    );
+    saveStoredMembers(updated);
+    window.dispatchEvent(new CustomEvent("eccb-members-updated"));
+    return true;
+  } catch (err) {
+    console.error("Lỗi khi khôi phục tất cả hội viên trong localStorage:", err);
+    return false;
+  }
+}
+
+/**
+ * Dọn sạch thùng rác (xóa vĩnh viễn tất cả hội viên có isDeleted = true)
+ */
+export function emptyTrashStoredMembers(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const currentList = getStoredMembers();
+    const updated = currentList.filter((m) => !m.isDeleted);
+    saveStoredMembers(updated);
+    window.dispatchEvent(new CustomEvent("eccb-members-updated"));
+    return true;
+  } catch (err) {
+    console.error("Lỗi khi dọn sạch thùng rác trong localStorage:", err);
+    return false;
+  }
+}
+
+/**
+ * Xóa vĩnh viễn hồ sơ hội viên khỏi bộ nhớ local store
  */
 export function deleteStoredMember(id: string): boolean {
   if (typeof window === "undefined") return false;
@@ -1130,7 +1224,7 @@ export function deleteStoredMember(id: string): boolean {
     window.dispatchEvent(new CustomEvent("eccb-members-updated"));
     return true;
   } catch (err) {
-    console.error("Lỗi khi xóa hội viên trong localStorage:", err);
+    console.error("Lỗi khi xóa vĩnh viễn hội viên trong localStorage:", err);
     return false;
   }
 }

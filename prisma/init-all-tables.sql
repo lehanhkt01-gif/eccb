@@ -138,6 +138,9 @@ CREATE TABLE IF NOT EXISTS "members" (
     "isExpelled" BOOLEAN NOT NULL DEFAULT false,
     "expelledDate" TIMESTAMP(3),
     "expelledReason" TEXT,
+    "isDeleted" BOOLEAN NOT NULL DEFAULT false,
+    "deletedAt" TIMESTAMP(3),
+    "deletedReason" TEXT,
     "totalDebt" DECIMAL(15,2) NOT NULL DEFAULT 0,
     "loanGroupId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -369,3 +372,10 @@ ON CONFLICT ("username") DO NOTHING;
 
 -- 6. XÓA SỐ DƯ NỢ ẢO ĐỂ TRẢ VỀ 0 THEO YÊU CẦU NGHIỆP VỤ
 UPDATE "members" SET "totalDebt" = 0 WHERE "totalDebt" > 0;
+
+-- 7. ĐỒNG BỘ CỘT THÙNG RÁC (RECYCLE BIN / SOFT DELETE) CHO BẢNG MEMBERS
+ALTER TABLE "members" ADD COLUMN IF NOT EXISTS "isDeleted" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "members" ADD COLUMN IF NOT EXISTS "deletedAt" TIMESTAMP(3);
+ALTER TABLE "members" ADD COLUMN IF NOT EXISTS "deletedReason" TEXT;
+CREATE INDEX IF NOT EXISTS "members_isDeleted_idx" ON "members"("isDeleted");
+

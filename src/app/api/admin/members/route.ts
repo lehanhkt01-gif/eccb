@@ -141,6 +141,10 @@ function mapPrismaToMemberRecord(m: any) {
     adminApprovedBy: m.adminApprovedBy || "",
     adminNotes: m.adminNotes || "",
 
+    isDeleted: Boolean(m.isDeleted),
+    deletedAt: formatDateStr(m.deletedAt),
+    deletedReason: m.deletedReason || "",
+
     isUserCreated: true, // Bảo vệ vĩnh viễn không bao giờ bị lọc mất
     createdAt: m.createdAt ? m.createdAt.toISOString() : "",
     updatedAt: m.updatedAt ? m.updatedAt.toISOString() : "",
@@ -394,6 +398,12 @@ export async function PUT(req: NextRequest) {
     }
     if (updates.rejectionReason !== undefined) dataToUpdate.rejectionReason = updates.rejectionReason;
 
+    if (updates.isDeleted !== undefined) {
+      dataToUpdate.isDeleted = Boolean(updates.isDeleted);
+      dataToUpdate.deletedAt = updates.isDeleted ? new Date() : null;
+      dataToUpdate.deletedReason = updates.deletedReason || (updates.isDeleted ? "Chuyển vào Thùng rác" : null);
+    }
+
     // Tìm và cập nhật theo id hoặc cccd
     let updated;
     if (id) {
@@ -467,35 +477,72 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ success: true, message: "Hồ sơ không tồn tại hoặc đã được xóa." });
     }
 
-    // Xóa liên kết user nếu có
-    await prisma.user.deleteMany({
-      where: {
-        OR: [
-          { memberId: member.id },
-          { username: member.cccd },
-        ],
-      },
-    });
+    const permanent = searchParams.get("permanent") === "true";
 
-    // Gỡ liên kết branchLeaderId trong Hamlet
-    await prisma.hamlet.updateMany({
-      where: { branchLeaderId: member.id },
-      data: { branchLeaderId: null },
-    });
+    if (permanent) {
+      // 1. XÓA VĨNH VIỄN KHỎI CƠ SỞ DỮ LIỆU
+      await prisma.user.deleteMany({
+        where: {
+          OR: [
+            { memberId: member.id },
+            { username: member.cccd },
+          ],
+        },
+      });
 
-    // Xóa các bảng con
-    await prisma.attendance.deleteMany({ where: { memberId: member.id } });
-    await prisma.fundContribution.deleteMany({ where: { memberId: member.id } });
-    await prisma.fundLoan.deleteMany({ where: { memberId: member.id } });
-    await prisma.memberMovement.deleteMany({ where: { memberId: member.id } });
+      await prisma.hamlet.updateMany({
+        where: { branchLeaderId: member.id },
+        data: { branchLeaderId: null },
+      });
 
-    // Xóa Member
-    await prisma.member.delete({ where: { id: member.id } });
+      await prisma.attendance.deleteMany({ where: { memberId: member.id } });
+      await prisma.fundContribution.deleteMany({ where: { memberId: member.id } });
+      await prisma.fundLoan.deleteMany({ where: { memberId: member.id } });
+      await prisma.memberMovement.deleteMany({ where: { memberId: member.id } });
 
-    return NextResponse.json({
-      success: true,
-      message: "Đã xóa vĩnh viễn hồ sơ khỏi CSDL PostgreSQL!",
-    });
+      await prisma.member.delete({ where: { id: member.id } });
+
+      return NextResponse.json({
+        success: true,
+        message: "Đã xóa vĩnh viễn hồ sơ khỏi CSDL PostgreSQL!",
+      });
+    } else {
+      // 2. CHUYỂN VÀO THÙNG RÁC (SOFT DELETE - CÓ THỂ KHÔI PHỤC)
+      const reason = searchParams.get("reason") || "Cán bộ xã chuyển vào Thùng rác";
+
+      // Tạm ngưng quyền truy cập User nếu có
+      await prisma.user.updateMany({
+        where: {
+          OR: [
+            { memberId: member.id },
+            { username: member.cccd },
+          ],
+        },
+        data: { isActive: false },
+      });
+
+      // Tạm gỡ chức danh CHT khỏi Hamlet
+      await prisma.hamlet.updateMany({
+        where: { branchLeaderId: member.id },
+        data: { branchLeaderId: null },
+      });
+
+      const trashed = await prisma.member.update({
+        where: { id: member.id },
+        data: {
+          isDeleted: true,
+          deletedAt: new Date(),
+          deletedReason: reason,
+        },
+        include: { hamlet: true },
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: "Đã chuyển hồ sơ vào Thùng rác thành công!",
+        member: mapPrismaToMemberRecord(trashed),
+      });
+    }
   } catch (error: any) {
     console.error("Lỗi khi xóa hội viên:", error);
     return NextResponse.json(

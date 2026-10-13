@@ -132,6 +132,8 @@ Dự án phục vụ Hội Cựu Chiến Binh xã Ea Súp, mang tính trang tr�
 | **34** | **Triển khai VPS & SSL HTTPS** | Docker compose up trên VPS Maydell tại thư mục `/var/www/ECCB`, cấu hình Nginx Proxy Manager domain `ccb.easupso.com` (Port 3011) | ⏳ *Giai đoạn kế tiếp* |
 | **35** | **Khắc Phục Lỗi Cấp Tài Khoản Mới & Bảo Toàn CSDL Vĩnh Viễn** | Tạo API CRUD `/api/admin/users` kết nối trực tiếp PostgreSQL Prisma; Cập nhật logic tạo tài khoản (Cán bộ xã, Chi hội trưởng, Hội viên) lưu vĩnh viễn vào DB; Nâng cấp `/api/auth/login` đăng nhập tức thì cho tài khoản mới qua Email/CCCD; Tự động đồng bộ và bảo tồn tài khoản khi người dùng xóa cache hoặc đổi trình duyệt | ✅ **Đã hoàn thành** |
 | **36** | **Nút Xóa Hồ Sơ Hội Viên Cho Cán Bộ Xã Trong Modal 35 Trường** | Thêm nút '🗑️ Xóa Hồ Sơ' (màu đỏ cờ Hallmark) cạnh nút 'Lưu Thay Đổi Hồ Sơ'; Cơ chế xác nhận bảo mật nghiêm ngặt (`confirm`); Kết nối trực tiếp API máy chủ `DELETE /api/admin/members` gỡ bỏ sạch hồ sơ (cascade User, Attendance, Funds, Movements, CHT Hamlet) và đồng bộ tức thì toàn hệ thống | ✅ **Đã hoàn thành** |
+| **37** | **Thùng Rác Hồ Sơ Hội Viên (Soft Delete, Xem & Khôi Phục Dành Cho Cán Bộ Xã)** | Thêm cờ `isDeleted`, `deletedAt`, `deletedReason` vào Prisma & PostgreSQL; Bấm xóa sẽ chuyển an toàn vào Thùng rác; Tab '🗑️ Thùng Rác' trên `/admin/members` hiển thị danh sách hồ sơ đã xóa, bộ lọc thôn buôn/tìm kiếm; Nút '♻️ Khôi Phục' từng người và 'Khôi Phục Tất Cả' đưa về danh sách chính thức; Nút 'Xóa Hẳn' và 'Dọn Sạch Thùng Rác'; API `/api/admin/members/trash` đồng bộ 2 chiều | ✅ **Đã hoàn thành** |
+
 
 
 

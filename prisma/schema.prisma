@@ -255,6 +255,9 @@ model Member {
   isExpelled             Boolean   @default(false) // Bị xóa tên khỏi danh sách hội viên
   expelledDate           DateTime? // Ngày có quyết định xóa tên
   expelledReason         String? // Lý do xóa tên
+  isDeleted              Boolean   @default(false) // Đã chuyển vào Thùng rác (Soft delete)
+  deletedAt              DateTime? // Ngày giờ chuyển vào Thùng rác
+  deletedReason          String? // Lý do chuyển vào Thùng rác
   totalDebt              Decimal   @default(0) @db.Decimal(15, 2) // Tổng dư nợ vay vốn hiện tại (VNĐ)
 
   // --- [7] KHÓA NGOẠI VÀ QUAN HỆ LIÊN KẾT 3NF ---
@@ -278,6 +281,7 @@ model Member {
   @@index([period])
   @@index([isDeceased])
   @@index([isPoorHousehold])
+  @@index([isDeleted])
   @@map("members")
 }
 
