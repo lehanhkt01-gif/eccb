@@ -136,7 +136,7 @@ export default function AdminLayout({
                 <span>🏠</span>
                 <span className="hidden min-[380px]:inline">Trang chủ</span>
               </Link>
-              <div className="text-xs sm:text-sm font-serif italic text-amber-100/90 tracking-wide truncate hidden sm:block select-none">
+              <div className="text-xs sm:text-sm slogan-traditional [font-family:'Times_New_Roman',Times,'Noto_Serif',serif] italic font-semibold text-amber-100/90 tracking-wide truncate hidden sm:block select-none">
                 Trung thành – Đoàn kết – Gương mẫu – Đổi mới
               </div>
             </div>

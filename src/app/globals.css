@@ -64,3 +64,13 @@ h1, h2, h3, h4, h5, h6,
   font-style: normal !important;
   letter-spacing: -0.01em;
 }
+
+/* Khẩu hiệu truyền thống Hội CCB: Font Times New Roman chuẩn NĐ 30, định dạng nghiêng, chống triệt để lỗi tách dấu tiếng Việt */
+.slogan-traditional {
+  font-family: "Times New Roman", Times, "Noto Serif", serif !important;
+  font-style: italic !important;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
