@@ -257,17 +257,16 @@ export default function HomePage() {
         onOpenMemberModal={() => setIsMemberModalOpen(true)}
       />
 
-      {/* Hero Section với hình nền Bộ đội Cụ Hồ & Non sông Ea Súp */}
-      {/* Khoảng cách thu gọn sát lại (py-6 sm:py-8 md:py-10) */}
-      <section className="relative overflow-hidden border-b border-stone-200 py-6 sm:py-8 md:py-10 px-4 bg-cream-surface">
-        {/* Hình nền hạ độ phân giải WebP tối ưu tải trang */}
+      {/* 2. KHU VỰC HERO BANNER QUÂN ĐỘI — ĐẠI HỘI ĐẠI BIỂU HỘI CCB XÃ EA SÚP */}
+      <section className="relative overflow-hidden border-b border-stone-200 py-6 sm:py-8 md:py-12 px-4 bg-cream-bg">
+        {/* Hình nền Đại hội Đại biểu Hội CCB Xã Ea Súp đã được hòa sắc thẩm mỹ */}
         <div
           className="absolute inset-0 bg-cover bg-center md:bg-right bg-no-repeat"
-          style={{ backgroundImage: `url('${basePath}/images/hero-military-bg.webp')` }}
+          style={{ backgroundImage: `url('${basePath}/images/hero-easup-congress.jpg')` }}
         />
-        {/* Lớp phủ chuyển sắc hài hòa, giữ trọn chuẩn tương phản WCAG AAA */}
-        <div className="absolute inset-0 bg-gradient-to-r from-cream-bg via-cream-bg/92 to-cream-bg/40 sm:to-cream-bg/25" />
-        <div className="absolute inset-0 bg-gradient-to-t from-cream-bg via-transparent to-transparent" />
+        {/* Lớp phủ chuyển sắc thông minh: bên trái êm dịu bảo vệ chữ, bên phải sáng rõ hình ảnh Đại hội */}
+        <div className="absolute inset-0 bg-gradient-to-r from-cream-bg via-cream-bg/88 sm:via-cream-bg/75 md:via-cream-bg/60 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-cream-bg via-transparent to-transparent md:hidden" />
 
         {/* Nội dung Hero tinh gọn, trang trọng */}
         <div className="relative z-10 max-w-6xl mx-auto">
@@ -284,6 +283,11 @@ export default function HomePage() {
             <p className="text-base sm:text-lg text-deep-muted leading-relaxed font-medium">
               Hệ thống E-CCB Ea Súp giúp hiện đại hóa công tác quản trị hội viên, kết nối thông suốt 20 chi hội thôn, buôn trực thuộc Hội CCB xã Ea Súp, tạo cầu nối hỗ trợ kinh tế và bảo đảm an sinh cho các cựu chiến binh, cựu quân nhân trên địa bàn.
             </p>
+
+            <div className="pt-1 flex items-center justify-center md:justify-start gap-2 text-[11px] sm:text-xs text-stone-600 font-semibold">
+              <span className="inline-block w-2 h-2 rounded-full bg-bronze-gold"></span>
+              <span className="italic">Hình ảnh: Đại hội Đại biểu Hội Cựu Chiến Binh Xã Ea Súp</span>
+            </div>
           </div>
         </div>
       </section>
