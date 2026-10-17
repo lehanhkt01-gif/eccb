@@ -49,17 +49,8 @@ fi
 
 # 3. BƯỚC 2: KÉO MÃ NGUỒN MỚI NHẤT TỪ GIT
 echo -e "\n${YELLOW}[BƯỚC 2/5] Cập nhật mã nguồn từ Git (origin/main)...${NC}"
-# Bảo vệ nguyên vẹn file logo vip tải trực tiếp trên VPS (chống lỗi xung đột git merge)
-if [ -f public/images/logovip.png ]; then
-  cp -f public/images/logovip.png /tmp/logovip_vps_backup.png
-  rm -f public/images/logovip.png
-fi
 git fetch origin main
 git pull origin main
-if [ -f /tmp/logovip_vps_backup.png ]; then
-  cp -f /tmp/logovip_vps_backup.png public/images/logovip.png
-  echo -e "${GREEN}✓ Đã bảo tồn nguyên vẹn file logovip.png trên VPS.${NC}"
-fi
 echo -e "${GREEN}✓ Đã kéo mã nguồn mới nhất thành công.${NC}"
 
 # 4. BƯỚC 3: BUILD LẠI DOCKER IMAGE CHO APP (TẬN DỤNG CACHE TĂNG TỐC)
