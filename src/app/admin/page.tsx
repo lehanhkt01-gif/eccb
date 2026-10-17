@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { getStoredMembers, saveStoredMembers, MemberRecord } from "@/lib/memberStore";
+import ExportReportModal from "@/components/ExportReportModal";
+import { classifyCombatPeriod, classifyPolicyStatus, COMBAT_PERIODS } from "@/lib/memberClassifiers";
 
 // 20 Thôn, Buôn xã Ea Súp với danh sách 20 Chi hội trưởng chuẩn xác thực tế
 const BASE_HAMLETS = [
@@ -31,6 +33,7 @@ const BASE_HAMLETS = [
 export default function AdminDashboardPage() {
   const [filterStatus, setFilterStatus] = useState<"all" | "overdue" | "housing">("all");
   const [members, setMembers] = useState<MemberRecord[]>([]);
+  const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
 
   useEffect(() => {
     // 1. Nạp nhanh từ bộ nhớ đệm
@@ -104,18 +107,48 @@ export default function AdminDashboardPage() {
     return true;
   });
 
-  // Phân bổ thời kỳ chiến đấu từ hồ sơ hội viên
-  const periodDistribution = [
-    { name: "Chiến Tranh Bảo Vệ Biên Giới Phía Bắc", count: members.filter((m) => (m.period || "").includes("Phía Bắc")).length, color: "bg-moss-green" },
-    { name: "Chiến Tranh Bảo Vệ Biên Giới Tây Nam", count: members.filter((m) => (m.period || "").includes("Tây Nam")).length, color: "bg-moss-green-light" },
-    { name: "Kháng Chiến Chống Mỹ Cứu Nước", count: members.filter((m) => (m.period || "").includes("Chống Mỹ")).length, color: "bg-flag-red" },
-    { name: "Cựu Quân Nhân Thời Bình", count: members.filter((m) => (m.period || "").includes("Thời Bình") || m.isCQN).length, color: "bg-bronze-gold" },
-    { name: "Làm Nhiệm Vụ Quốc Tế (Campuchia/Lào)", count: members.filter((m) => (m.period || "").includes("Quốc Tế") || (m.period || "").includes("Campuchia")).length, color: "bg-amber-600" },
-  ];
+  // Phân bổ thời kỳ chiến đấu từ hồ sơ hội viên (chuẩn hóa đồng bộ 100% từ hồ sơ Mẫu 02)
+  const periodDistribution = useMemo(() => {
+    const counts: Record<string, number> = {
+      BIEN_GIOI_BAC: 0,
+      TAY_NAM: 0,
+      CHONG_MY: 0,
+      CUU_QUAN_NHAN: 0,
+      QUOC_TE: 0,
+    };
 
-  const woundedCount = members.filter((m) => (m.policyStatus || "").includes("Thương binh")).length;
-  const sickCount = members.filter((m) => (m.policyStatus || "").includes("Bệnh binh")).length;
-  const agentOrangeCount = members.filter((m) => (m.policyStatus || "").includes("Da cam")).length;
+    members.forEach((m) => {
+      const key = classifyCombatPeriod(m);
+      counts[key] = (counts[key] || 0) + 1;
+    });
+
+    return COMBAT_PERIODS.map((item) => ({
+      key: item.key,
+      name: item.name,
+      count: counts[item.key] || 0,
+      color: item.color,
+    }));
+  }, [members]);
+
+  // Thống kê chính sách người có công (Thương binh, Bệnh binh, Da cam)
+  const { woundedCount, sickCount, agentOrangeCount } = useMemo(() => {
+    let wounded = 0;
+    let sick = 0;
+    let orange = 0;
+
+    members.forEach((m) => {
+      const p = classifyPolicyStatus(m);
+      if (p.isWounded) wounded++;
+      if (p.isSick) sick++;
+      if (p.isAgentOrange) orange++;
+    });
+
+    return {
+      woundedCount: wounded,
+      sickCount: sick,
+      agentOrangeCount: orange,
+    };
+  }, [members]);
 
   return (
     <div className="space-y-6">
@@ -226,7 +259,7 @@ export default function AdminDashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         {/* Biểu đồ phân bổ 5 thời kỳ */}
         <div className="lg:col-span-7 bg-white p-5 rounded-xl border-2 border-stone-300 shadow-sm space-y-4">
-          <div className="flex items-center justify-between pb-2 border-b border-stone-200">
+          <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-stone-200">
             <div>
               <h3 className="text-base font-bold text-deep-text uppercase">
                 Phân Bổ Hội Viên Theo Thời Kỳ Chiến Đấu
@@ -235,9 +268,20 @@ export default function AdminDashboardPage() {
                 Thống kê chuẩn hóa theo hồ sơ quản trị Mẫu 02
               </p>
             </div>
-            <span className="text-xs px-2.5 py-1 rounded bg-stone-100 font-bold text-moss-green">
-              Tổng: {totalMembers} đ/c
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs px-2.5 py-1 rounded bg-stone-100 font-bold text-moss-green">
+                Tổng: {totalMembers} đ/c
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsExportModalOpen(true)}
+                className="px-3 py-1.5 text-xs font-bold rounded-lg bg-moss-green hover:bg-moss-green-light text-white shadow-sm transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+                title="Xuất file Excel báo cáo thống kê theo các trường thông tin có dấu tích"
+              >
+                <span>📊</span>
+                <span>Xuất Báo Cáo Excel</span>
+              </button>
+            </div>
           </div>
 
           {/* Thanh biểu đồ Tremor Bar Chart */}
@@ -467,6 +511,12 @@ export default function AdminDashboardPage() {
           ))}
         </div>
       </div>
+      {/* Modal Xuất Báo Cáo Thống Kê Chi Tiết Tùy Chọn Trường Thông Tin */}
+      <ExportReportModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        members={members}
+      />
     </div>
   );
 }

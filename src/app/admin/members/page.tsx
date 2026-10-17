@@ -31,6 +31,7 @@ import {
   HAMLET_LIST,
 } from "@/lib/memberStore";
 import MemberImportModal from "@/components/MemberImportModal";
+import ExportReportModal from "@/components/ExportReportModal";
 import * as XLSX from "xlsx";
 
 export default function AdminMembersPage() {
@@ -54,6 +55,7 @@ export default function AdminMembersPage() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isExportReportModalOpen, setIsExportReportModalOpen] = useState(false);
   const [dbSyncStatus, setDbSyncStatus] = useState<"syncing" | "synced" | "offline">("syncing");
 
   const loadData = async () => {
@@ -1162,9 +1164,18 @@ export default function AdminMembersPage() {
               <span>Nhập File Hội Viên</span>
             </button>
 
-            {/* 4. Nút Xuất File Excel Mẫu 02 */}
+            {/* 4. Nút Xuất Báo Cáo Tùy Chọn Trường & Nút Xuất File Excel Mẫu 02 */}
             {activeTab === "active" && (
               <>
+                <button
+                  onClick={() => setIsExportReportModalOpen(true)}
+                  className="px-3 py-1.5 sm:py-2 bg-moss-green hover:bg-moss-green-light active:scale-95 text-white text-xs sm:text-sm font-bold rounded-lg shadow-xs transition flex items-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap"
+                  title="Tùy chọn kết xuất báo cáo thống kê các trường thông tin có dấu tích ra Excel (.xlsx)"
+                >
+                  <span>📋</span>
+                  <span>Báo Cáo Tùy Chọn Trường</span>
+                </button>
+
                 <button
                   onClick={() => exportExcel(filteredActiveMembers)}
                   className="px-3 py-1.5 sm:py-2 bg-emerald-700 hover:bg-emerald-800 active:scale-95 text-white text-xs sm:text-sm font-bold rounded-lg shadow-xs transition flex items-center gap-1.5 cursor-pointer border border-emerald-600 shrink-0 whitespace-nowrap"
@@ -3142,6 +3153,15 @@ export default function AdminMembersPage() {
           setToastMessage(`✓ Đã nhập thành công ${count} hồ sơ hội viên chính thức cho ${hamletName}!`);
           setTimeout(() => setToastMessage(null), 4000);
         }}
+      />
+
+      {/* MODAL XUẤT BÁO CÁO THỐNG KÊ CHI TIẾT TÙY CHỌN TRƯỜNG DẤU TÍCH */}
+      <ExportReportModal
+        isOpen={isExportReportModalOpen}
+        onClose={() => setIsExportReportModalOpen(false)}
+        members={members}
+        initialHamlet={selectedHamlet}
+        initialPeriod={selectedPeriod}
       />
     </div>
   );
