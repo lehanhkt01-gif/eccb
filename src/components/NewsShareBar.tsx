@@ -81,11 +81,10 @@ export default function NewsShareBar({ title, url, summary }: NewsShareBarProps)
         </div>
       )}
 
-      {/* Cụm Tiêu đề và 2 Nút Chia Sẻ Tinh Gọn */}
+      {/* Cụm Nút Chia Sẻ Tinh Gọn */}
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-xs font-bold uppercase tracking-wider text-stone-500 flex items-center gap-1 shrink-0">
-          <span>📢</span>
-          <span>CHIA SẺ BẢN TIN:</span>
+        <span className="text-sm sm:text-base select-none shrink-0" title="Chia sẻ bản tin">
+          📢
         </span>
 
         {/* Nút 1: Chia Sẻ (Đa nền tảng: mở Zalo, Messenger, SMS, Telegram, Viber, Gmail...) */}
