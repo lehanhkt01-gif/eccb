@@ -13,9 +13,9 @@ export const metadata: Metadata = {
     title: "E-CCB Ea Súp",
   },
   icons: {
-    icon: "/images/logo-ccb.png",
-    shortcut: "/images/logo-ccb.png",
-    apple: "/images/logo-ccb.png",
+    icon: "/images/logovip.png",
+    shortcut: "/images/logovip.png",
+    apple: "/images/logovip.png",
   },
   openGraph: {
     title: "Cổng Thông Tin Hội Cựu Chiến Binh Xã Ea Súp | E-CCB Ea Súp",
@@ -65,8 +65,8 @@ export default function RootLayout({
   return (
     <html lang="vi">
       <head>
-        <link rel="apple-touch-icon" href="/images/logo-ccb.png" />
-        <link rel="icon" href="/images/logo-ccb.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/images/logovip.png" />
+        <link rel="icon" href="/images/logovip.png" type="image/png" />
         <meta name="apple-mobile-web-app-title" content="E-CCB Ea Súp" />
       </head>
       <body className="min-h-screen bg-cream-bg text-deep-text antialiased">

@@ -668,7 +668,7 @@ export default function HomePage() {
               <div className="flex items-center gap-3">
                 <div className="relative w-11 h-11 rounded-full bg-white border-2 border-bronze-gold flex items-center justify-center shadow-inner overflow-hidden shrink-0">
                   <Image
-                    src="/images/logo-ccb.png"
+                    src="/images/logovip.png"
                     alt="Logo Hội CCB Việt Nam"
                     width={40}
                     height={40}

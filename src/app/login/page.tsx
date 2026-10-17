@@ -236,7 +236,7 @@ export default function LoginPage() {
         <div className="text-center space-y-2">
           <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white border-4 border-bronze-gold flex items-center justify-center shadow-lg mx-auto overflow-hidden">
             <Image
-              src="/images/logo-ccb.png"
+              src="/images/logovip.png"
               alt="Logo Hội CCB Việt Nam"
               width={70}
               height={70}

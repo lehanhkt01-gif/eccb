@@ -779,7 +779,7 @@ export default function BranchMobilePage() {
           >
             <div className="w-10 h-10 rounded-full border-2 border-bronze-gold bg-white shrink-0 flex items-center justify-center p-0.5 shadow overflow-hidden group-hover:scale-105 transition-transform duration-200">
               <Image
-                src="/images/logo-ccb.png"
+                src="/images/logovip.png"
                 alt="Logo Hội CCB Việt Nam"
                 width={40}
                 height={40}

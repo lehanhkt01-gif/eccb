@@ -198,7 +198,7 @@ export default function MemberPortalPage() {
               title="Về trang chủ"
             >
               <Image
-                src="/images/logo-ccb.png"
+                src="/images/logovip.png"
                 alt="Logo Hội CCB Việt Nam"
                 width={40}
                 height={40}

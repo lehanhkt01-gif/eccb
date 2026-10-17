@@ -104,7 +104,7 @@ export default function AdminLayout({
           <Link href="/admin" className="flex items-center space-x-2.5 sm:space-x-3 flex-1 min-w-0 group" title="Về Trung tâm Quản trị">
             <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full border-2 border-bronze-gold bg-white flex-shrink-0 flex items-center justify-center p-0.5 shadow overflow-hidden group-hover:scale-105 transition-transform duration-200">
               <Image
-                src="/images/logo-ccb.png"
+                src="/images/logovip.png"
                 alt="Logo Hội CCB Việt Nam"
                 width={42}
                 height={42}

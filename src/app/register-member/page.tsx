@@ -236,7 +236,7 @@ export default function RegisterMemberPage() {
           <div className="flex items-center gap-3">
             <div className="relative w-11 h-11 shrink-0 rounded-full border-2 border-bronze-gold overflow-hidden bg-white shadow-sm flex items-center justify-center">
               <Image
-                src="/images/logo-ccb.png"
+                src="/images/logovip.png"
                 alt="Logo Hội CCB Việt Nam"
                 width={40}
                 height={40}
