@@ -51,7 +51,7 @@ export default function NewsShareBar({ title, url, summary }: NewsShareBarProps)
     }
   };
 
-  // 2. Chia sẻ qua Web Share API (Đa nền tảng di động: Zalo, Messenger, SMS, Viber, Telegram, Gmail...)
+  // 2. Chia sẻ qua Web Share API (Đa nền tảng: Zalo, Messenger, SMS, Viber, Telegram, Gmail...)
   const handleNativeShare = async () => {
     const fullUrl = getFullUrl();
     if (typeof navigator !== "undefined" && navigator.share) {
@@ -67,23 +67,9 @@ export default function NewsShareBar({ title, url, summary }: NewsShareBarProps)
         }
       }
     } else {
-      // Fallback nếu trình duyệt không hỗ trợ Web Share API
+      // Fallback nếu trình duyệt không hỗ trợ Web Share API (ví dụ trình duyệt cũ)
       handleCopy();
     }
-  };
-
-  // 3. Chia sẻ trực tiếp qua Zalo
-  const handleZaloShare = () => {
-    const fullUrl = getFullUrl();
-    const zaloUrl = `https://zalo.me/share?url=${encodeURIComponent(fullUrl)}&title=${encodeURIComponent(shareTitle)}`;
-    window.open(zaloUrl, "_blank", "width=600,height=520,noopener,noreferrer");
-  };
-
-  // 4. Chia sẻ trực tiếp qua Facebook
-  const handleFacebookShare = () => {
-    const fullUrl = getFullUrl();
-    const fbUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(fullUrl)}`;
-    window.open(fbUrl, "_blank", "width=600,height=520,noopener,noreferrer");
   };
 
   return (
@@ -95,57 +81,31 @@ export default function NewsShareBar({ title, url, summary }: NewsShareBarProps)
         </div>
       )}
 
-      {/* Cụm Tiêu đề và Các Nút Chia Sẻ Đa Kênh */}
+      {/* Cụm Tiêu đề và 2 Nút Chia Sẻ Tinh Gọn */}
       <div className="flex items-center gap-2 flex-wrap">
         <span className="text-xs font-bold uppercase tracking-wider text-stone-500 flex items-center gap-1 shrink-0">
           <span>📢</span>
           <span>CHIA SẺ BẢN TIN:</span>
         </span>
 
-        {/* Nút 1: Zalo */}
-        <button
-          type="button"
-          onClick={handleZaloShare}
-          className="px-2.5 py-1.5 text-xs font-bold rounded-lg shadow-2xs flex items-center gap-1.5 transition cursor-pointer bg-[#0068FF] hover:bg-[#0052cc] active:scale-95 text-white border border-[#0052cc]"
-          title="Chia sẻ bản tin qua Zalo (Bạn bè, Nhóm Chi hội)"
-        >
-          <span className="font-black text-[11px] bg-white text-[#0068FF] px-1 py-0.2 rounded font-sans leading-none">
-            Zalo
-          </span>
-          <span className="hidden sm:inline">Zalo</span>
-        </button>
-
-        {/* Nút 2: Facebook */}
-        <button
-          type="button"
-          onClick={handleFacebookShare}
-          className="px-2.5 py-1.5 text-xs font-bold rounded-lg shadow-2xs flex items-center gap-1.5 transition cursor-pointer bg-[#1877F2] hover:bg-[#1464cc] active:scale-95 text-white border border-[#1464cc]"
-          title="Chia sẻ bản tin lên Facebook"
-        >
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
-            <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-          </svg>
-          <span className="hidden sm:inline">Facebook</span>
-        </button>
-
-        {/* Nút 3: Ứng dụng khác (Native Share API: Mở Zalo, Messenger, SMS, Viber, Telegram, Gmail...) */}
+        {/* Nút 1: Chia Sẻ (Đa nền tảng: mở Zalo, Messenger, SMS, Telegram, Viber, Gmail...) */}
         <button
           type="button"
           onClick={handleNativeShare}
-          className="px-2.5 py-1.5 text-xs font-bold rounded-lg shadow-2xs flex items-center gap-1.5 transition cursor-pointer bg-moss-green hover:bg-moss-green-dark active:scale-95 text-white border border-moss-green-light"
-          title="Chia sẻ đến các ứng dụng khác trên thiết bị (Zalo, Messenger, Tin nhắn SMS, Gmail, Telegram...)"
+          className="px-3.5 py-1.5 text-xs font-bold rounded-lg shadow-2xs flex items-center gap-1.5 transition cursor-pointer bg-moss-green hover:bg-moss-green-dark active:scale-95 text-white border border-moss-green-light"
+          title="Chia sẻ bản tin đến các ứng dụng trên thiết bị (Zalo, Messenger, Tin nhắn SMS, Gmail, Telegram...)"
         >
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="18" cy="5" r="3" />
             <circle cx="6" cy="12" r="3" />
             <circle cx="18" cy="19" r="3" />
             <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
             <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
           </svg>
-          <span>Ứng dụng khác...</span>
+          <span>Chia Sẻ</span>
         </button>
 
-        {/* Nút 4: Sao chép link */}
+        {/* Nút 2: Sao chép link */}
         <button
           type="button"
           onClick={handleCopy}
