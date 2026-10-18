@@ -317,7 +317,6 @@ export async function POST(req: Request) {
       if (isMemberPassValid) {
         // Kiểm tra xem hội viên này có chức danh Chi hội trưởng / Chi hội phó không
         const isChtRole =
-          matchedCht !== undefined ||
           targetMember?.associationRole === "Chi hội trưởng" ||
           targetMember?.associationRole === "Phó Chi hội trưởng" ||
           targetMember?.associationRole === "Chi hội phó" ||
@@ -354,8 +353,8 @@ export async function POST(req: Request) {
             cccd: targetMember ? targetMember.cccd : cleanInput,
             fullName: targetMember ? targetMember.fullName : "Hội viên Cựu Chiến Binh",
             phone: targetMember ? targetMember.phone : "",
-            hamletName: targetMember?.hamletName || targetMember?.hamlet?.name || matchedCht?.name || "Hội CCB Xã Ea Súp",
-            hamletCode: targetMember?.hamlet?.code || matchedCht?.code || "",
+            hamletName: targetMember?.hamletName || targetMember?.hamlet?.name || "Hội CCB Xã Ea Súp",
+            hamletCode: targetMember?.hamlet?.code || "",
             memberId: targetMember ? targetMember.id : cleanInput,
             role: memberRole,
           },
