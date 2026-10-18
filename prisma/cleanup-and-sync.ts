@@ -4,7 +4,7 @@ import * as bcrypt from "bcryptjs";
 const prisma = new PrismaClient();
 
 export const VALID_20_CHT = [
-  { hamletName: "Buôn A", fullName: "Y Nô Rcăm", cccd: "0982257421", phone: "0982257421", dob: "1986-03-17" },
+  { hamletName: "Buôn A", fullName: "Y Nô Rcăm", cccd: "0372989270", phone: "0372989270", dob: "1986-03-17" },
   { hamletName: "Buôn B", fullName: "Đoàn Hữu Tiến", cccd: "034050005833", phone: "0935833737", dob: "1950-03-20" },
   { hamletName: "Buôn C", fullName: "Y Dyơng Êban", cccd: "0839931193", phone: "0839931193", dob: "1993-06-15" },
   { hamletName: "Thôn Hòa Bình", fullName: "Lê Văn Hồng", cccd: "0420670022", phone: "0977979709", dob: "1967-01-01" },
@@ -12,7 +12,7 @@ export const VALID_20_CHT = [
   { hamletName: "Thôn Đoàn Kết", fullName: "Nguyễn Văn Sơn", cccd: "040059000718", phone: "0913779468", dob: "1959-06-20" },
   { hamletName: "Thôn Bình Lợi", fullName: "Lục Văn Cường", cccd: "004082002052", phone: "0338561794", dob: "1982-06-04" },
   { hamletName: "Thôn 1", fullName: "Hồ Sỹ Tuấn", cccd: "0986042302", phone: "0986042302", dob: "1964-10-15" },
-  { hamletName: "Thôn 2", fullName: "Nguyễn Đức Lợi", cccd: "049068000884", phone: "0356912318", dob: "1968-05-21" },
+  { hamletName: "Thôn 2", fullName: "Nguyễn Đức Lợi", cccd: "049068000834", phone: "0356912318", dob: "1970-05-21" },
   { hamletName: "Thôn 3", fullName: "Nguyễn Văn Dũng", cccd: "034079011156", phone: "0342302292", dob: "1979-02-20" },
   { hamletName: "Thôn 4", fullName: "Nguyễn Phú Bốn", cccd: "038065009462", phone: "0367875231", dob: "1965-05-18" },
   { hamletName: "Thôn 5", fullName: "Vũ Văn Đạt", cccd: "034065009537", phone: "0327560358", dob: "1965-07-14" },

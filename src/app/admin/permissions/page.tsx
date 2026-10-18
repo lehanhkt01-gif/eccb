@@ -83,15 +83,15 @@ const INITIAL_ADMINS: AccountItem[] = [
 
 // Danh sách chuẩn 20 Chi hội trưởng các thôn, buôn (20 Chi hội trưởng chuẩn xác)
 const INITIAL_BRANCH_LEADERS: AccountItem[] = [
-  { id: "bl_1", fullName: "Y Nô Rcăm", unit: "Chi hội Buôn A", username: "0982257421", phone: "0982257421", role: "BRANCH_LEADER", isActive: true, passwordStatus: "MẶC_ĐỊNH" },
-  { id: "bl_2", fullName: "Đoàn Hữu Tiến", unit: "Chi hội Buôn B", username: "034050005833", phone: "0935833737", role: "BRANCH_LEADER", isActive: true, passwordStatus: "MẶC_ĐỊNH" },
+  { id: "bl_1", fullName: "Y Nô Rcăm", unit: "Chi hội Buôn A", username: "0372989270", phone: "0372989270", role: "BRANCH_LEADER", isActive: true, passwordStatus: "MẶC_ĐỊNH" },
+  { id: "bl_2", fullName: "Đoàn Hữu Tiến", unit: "Chi hội Buôn B", username: "0935833737", phone: "0935833737", role: "BRANCH_LEADER", isActive: true, passwordStatus: "MẶC_ĐỊNH" },
   { id: "bl_3", fullName: "Y Dyơng Êban", unit: "Chi hội Buôn C", username: "0839931193", phone: "0839931193", role: "BRANCH_LEADER", isActive: true, passwordStatus: "MẶC_ĐỊNH" },
   { id: "bl_4", fullName: "Lê Văn Hồng", unit: "Chi hội Thôn Hòa Bình", username: "0420670022", phone: "0977979709", role: "BRANCH_LEADER", isActive: true, passwordStatus: "MẶC_ĐỊNH" },
   { id: "bl_5", fullName: "Nguyễn Văn Đông", unit: "Chi hội Thôn Thắng Lợi", username: "025065000445", phone: "0828838929", role: "BRANCH_LEADER", isActive: true, passwordStatus: "MẶC_ĐỊNH" },
   { id: "bl_6", fullName: "Nguyễn Văn Sơn", unit: "Chi hội Thôn Đoàn Kết", username: "040059000718", phone: "0913779468", role: "BRANCH_LEADER", isActive: true, passwordStatus: "MẶC_ĐỊNH" },
   { id: "bl_7", fullName: "Lục Văn Cường", unit: "Chi hội Thôn Bình Lợi", username: "004082002052", phone: "0338561794", role: "BRANCH_LEADER", isActive: true, passwordStatus: "MẶC_ĐỊNH" },
   { id: "bl_8", fullName: "Hồ Sỹ Tuấn", unit: "Chi hội Thôn 1", username: "0986042302", phone: "0986042302", role: "BRANCH_LEADER", isActive: true, passwordStatus: "MẶC_ĐỊNH" },
-  { id: "bl_9", fullName: "Nguyễn Đức Lợi", unit: "Chi hội Thôn 2", username: "049068000884", phone: "0356912318", role: "BRANCH_LEADER", isActive: true, passwordStatus: "MẶC_ĐỊNH" },
+  { id: "bl_9", fullName: "Nguyễn Đức Lợi", unit: "Chi hội Thôn 2", username: "049068000834", phone: "0356912318", role: "BRANCH_LEADER", isActive: true, passwordStatus: "MẶC_ĐỊNH" },
   { id: "bl_10", fullName: "Nguyễn Văn Dũng", unit: "Chi hội Thôn 3", username: "034079011156", phone: "0342302292", role: "BRANCH_LEADER", isActive: true, passwordStatus: "MẶC_ĐỊNH" },
   { id: "bl_11", fullName: "Nguyễn Phú Bốn", unit: "Chi hội Thôn 4", username: "038065009462", phone: "0367875231", role: "BRANCH_LEADER", isActive: true, passwordStatus: "MẶC_ĐỊNH" },
   { id: "bl_12", fullName: "Vũ Văn Đạt", unit: "Chi hội Thôn 5", username: "034065009537", phone: "0327560358", role: "BRANCH_LEADER", isActive: true, passwordStatus: "MẶC_ĐỊNH" },

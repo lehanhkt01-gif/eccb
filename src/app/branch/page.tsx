@@ -151,6 +151,12 @@ export default function BranchMobilePage() {
     }
     setCurrentUser(user);
 
+    // CHỈ CÓ CHI HỘI TRƯỞNG VÀ CÁN BỘ XÃ MỚI ĐƯỢC PHÉP TRUY CẬP TRANG CHI HỘI
+    if (user.role !== "BRANCH_LEADER" && user.role !== "SUPER_ADMIN") {
+      router.push("/member");
+      return;
+    }
+
     // KHI LÀ CHI HỘI TRƯỞNG: CHỈ ĐƯỢC PHÉP TRUY CẬP ĐÚNG 1 THÔN DUY NHẤT
     if (user.role === "BRANCH_LEADER") {
       const myHamlet = resolveBranchHamlet(user);

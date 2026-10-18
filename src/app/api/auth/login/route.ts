@@ -6,7 +6,7 @@ import { getStoredMembers } from "@/lib/memberStore";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { username, password } = body;
+    const { username, password, requestedRole } = body;
 
     if (!username || !password) {
       return NextResponse.json(
@@ -84,29 +84,34 @@ export async function POST(req: Request) {
       }
     }
 
-    // 3. KIỂM TRA TÀI KHOẢN CHI HỘI TRƯỞNG (chihoi_thon_01, ...) HOẶC ĐĂNG NHẬP BẰNG SỐ CCCD CỦA CHI HỘI TRƯỞNG
-    const hamletMap: Record<string, { code: string; name: string; leader: string; phone: string; cccd: string }> = {
-      thon_01: { code: "THON_01", name: "Thôn 1", leader: "Hồ Sỹ Tuấn", phone: "0986042302", cccd: "0986042302" },
-      thon_02: { code: "THON_02", name: "Thôn 2", leader: "Nguyễn Đức Lợi", phone: "0356912318", cccd: "049068000884" },
-      thon_03: { code: "THON_03", name: "Thôn 3", leader: "Nguyễn Văn Dũng", phone: "0342302292", cccd: "034079011156" },
-      thon_04: { code: "THON_04", name: "Thôn 4", leader: "Nguyễn Phú Bốn", phone: "0367875231", cccd: "038065009462" },
-      thon_05: { code: "THON_05", name: "Thôn 5", leader: "Vũ Văn Đạt", phone: "0327560358", cccd: "034065009537" },
-      thon_06: { code: "THON_06", name: "Thôn 6", leader: "Đỗ Thị Lan", phone: "0343800948", cccd: "033155002814" },
-      thon_07: { code: "THON_07", name: "Thôn 7", leader: "Nguyễn Văn Minh", phone: "0975384025", cccd: "024055000072" },
-      thon_08: { code: "THON_08", name: "Thôn 8", leader: "Trần Thanh Hùng", phone: "0397508052", cccd: "048069000332" },
-      thon_09: { code: "THON_09", name: "Thôn 9", leader: "Trần Văn Cảnh", phone: "0342869974", cccd: "066089001142" },
-      thon_10: { code: "THON_10", name: "Thôn 10", leader: "Nguyễn Lai", phone: "0986911610", cccd: "048068000489" },
-      thon_11: { code: "THON_11", name: "Thôn 11", leader: "Huỳnh Công Dũng", phone: "0359326437", cccd: "049060000688" },
-      thon_12: { code: "THON_12", name: "Thôn 12", leader: "Triệu Đức Quyên", phone: "0857603535", cccd: "006089000161" },
-      thon_13: { code: "THON_13", name: "Thôn 13", leader: "Hoàng Văn Tuyên", phone: "0984594812", cccd: "004077000098" },
-      thon_hoabinh: { code: "THON_HOABINH", name: "Thôn Hòa Bình", leader: "Lê Văn Hồng", phone: "0977979709", cccd: "0420670022" },
-      thon_thangloi: { code: "THON_THANGLOI", name: "Thôn Thắng Lợi", leader: "Nguyễn Văn Đông", phone: "0828838929", cccd: "025065000445" },
-      thon_doanket: { code: "THON_DOANKET", name: "Thôn Đoàn Kết", leader: "Nguyễn Văn Sơn", phone: "0913779468", cccd: "040059000718" },
-      thon_binhloi: { code: "THON_BINHLOI", name: "Thôn Bình Lợi", leader: "Lục Văn Cường", phone: "0338561794", cccd: "004082002052" },
-      buon_a: { code: "BUON_A", name: "Buôn A", leader: "Y Nô Rcăm", phone: "0982257421", cccd: "0982257421" },
-      buon_b: { code: "BUON_B", name: "Buôn B", leader: "Đoàn Hữu Tiến", phone: "0935833737", cccd: "034050005833" },
-      buon_c: { code: "BUON_C", name: "Buôn C", leader: "Y Dyơng Êban", phone: "0839931193", cccd: "0839931193" },
+    // 3. DANH SÁCH 20 CHI HỘI TRƯỞNG CHUẨN XÁC TOÀN HỆ THỐNG
+    const hamletMap: Record<string, { code: string; name: string; leader: string; phones: string[]; cccds: string[] }> = {
+      thon_01: { code: "THON_01", name: "Thôn 1", leader: "Hồ Sỹ Tuấn", phones: ["0986042302"], cccds: ["0986042302"] },
+      thon_02: { code: "THON_02", name: "Thôn 2", leader: "Nguyễn Đức Lợi", phones: ["0356912318"], cccds: ["049068000834", "049068000884"] },
+      thon_03: { code: "THON_03", name: "Thôn 3", leader: "Nguyễn Văn Dũng", phones: ["0342302292"], cccds: ["034079011156"] },
+      thon_04: { code: "THON_04", name: "Thôn 4", leader: "Nguyễn Phú Bốn", phones: ["0367875231"], cccds: ["038065009462"] },
+      thon_05: { code: "THON_05", name: "Thôn 5", leader: "Vũ Văn Đạt", phones: ["0327560358"], cccds: ["034065009537"] },
+      thon_06: { code: "THON_06", name: "Thôn 6", leader: "Đỗ Thị Lan", phones: ["0343800948"], cccds: ["033155002814"] },
+      thon_07: { code: "THON_07", name: "Thôn 7", leader: "Nguyễn Văn Minh", phones: ["0975384025"], cccds: ["024055000072"] },
+      thon_08: { code: "THON_08", name: "Thôn 8", leader: "Trần Thanh Hùng", phones: ["0397508052"], cccds: ["048069000332"] },
+      thon_09: { code: "THON_09", name: "Thôn 9", leader: "Trần Văn Cảnh", phones: ["0342869974"], cccds: ["066089001142"] },
+      thon_10: { code: "THON_10", name: "Thôn 10", leader: "Nguyễn Lai", phones: ["0986911610"], cccds: ["048068000489"] },
+      thon_11: { code: "THON_11", name: "Thôn 11", leader: "Huỳnh Công Dũng", phones: ["0359326437"], cccds: ["049060000688"] },
+      thon_12: { code: "THON_12", name: "Thôn 12", leader: "Triệu Đức Quyên", phones: ["0857603535"], cccds: ["006089000161"] },
+      thon_13: { code: "THON_13", name: "Thôn 13", leader: "Hoàng Văn Tuyên", phones: ["0984594812"], cccds: ["004077000098"] },
+      thon_hoabinh: { code: "THON_HOABINH", name: "Thôn Hòa Bình", leader: "Lê Văn Hồng", phones: ["0977979709"], cccds: ["0420670022", "042067000022"] },
+      thon_thangloi: { code: "THON_THANGLOI", name: "Thôn Thắng Lợi", leader: "Nguyễn Văn Đông", phones: ["0828838929"], cccds: ["025065000445"] },
+      thon_doanket: { code: "THON_DOANKET", name: "Thôn Đoàn Kết", leader: "Nguyễn Văn Sơn", phones: ["0913779468"], cccds: ["040059000718"] },
+      thon_binhloi: { code: "THON_BINHLOI", name: "Thôn Bình Lợi", leader: "Lục Văn Cường", phones: ["0338561794"], cccds: ["004082002052"] },
+      buon_a: { code: "BUON_A", name: "Buôn A", leader: "Y Nô Rcăm", phones: ["0372989270", "0982257421"], cccds: ["0372989270", "0982257421"] },
+      buon_b: { code: "BUON_B", name: "Buôn B", leader: "Đoàn Hữu Tiến", phones: ["0935833737"], cccds: ["034050005833", "0935833737"] },
+      buon_c: { code: "BUON_C", name: "Buôn C", leader: "Y Dyơng Êban", phones: ["0839931193"], cccds: ["0839931193"] },
     };
+
+    // Tìm xem input có khớp với Chi hội trưởng nào trong danh sách 20 thôn buôn không
+    const matchedCht = Object.values(hamletMap).find(
+      (h) => h.cccds.includes(cleanInput) || h.phones.includes(cleanInput)
+    );
 
     // Kiểm tra đăng nhập dạng alias: chihoi_...
     if (cleanInputLower.startsWith("chihoi_")) {
@@ -115,17 +120,17 @@ export async function POST(req: Request) {
       const isPasswordValid =
         password === adminDefaultPassword ||
         password === "123456" ||
-        (branchInfo && password === branchInfo.phone);
+        (branchInfo && branchInfo.phones.includes(password));
 
       if (isPasswordValid && branchInfo) {
         return NextResponse.json({
           success: true,
           role: "BRANCH_LEADER",
           user: {
-            username: branchInfo.cccd,
-            cccd: branchInfo.cccd,
+            username: branchInfo.cccds[0],
+            cccd: branchInfo.cccds[0],
             fullName: `Đ/c ${branchInfo.leader}`,
-            phone: branchInfo.phone,
+            phone: branchInfo.phones[0],
             role: "BRANCH_LEADER",
             hamletCode: branchInfo.code,
             hamletName: branchInfo.name,
@@ -150,6 +155,7 @@ export async function POST(req: Request) {
             { email: cleanInputLower },
             { phone: cleanInput },
             { member: { cccd: cleanInput } },
+            { member: { phone: cleanInput } },
           ],
         },
         include: {
@@ -180,9 +186,39 @@ export async function POST(req: Request) {
       }
 
       if (isPassValid) {
-        const role = dbUser.role || (dbUser.member?.associationRole === "Chi hội trưởng" ? "BRANCH_LEADER" : "MEMBER");
-        const hamletName = dbUser.hamlet?.name || dbUser.member?.hamlet?.name || "Hội CCB Xã Ea Súp";
-        const hamletCode = dbUser.hamlet?.code || dbUser.member?.hamlet?.code || "";
+        let role = dbUser.role || "MEMBER";
+        if (
+          dbUser.role === "BRANCH_LEADER" ||
+          dbUser.member?.associationRole === "Chi hội trưởng" ||
+          matchedCht !== undefined
+        ) {
+          role = "BRANCH_LEADER";
+        }
+
+        // KIỂM TRA PHÂN QUYỀN ĐĂNG NHẬP (RBAC & THEO TAB YÊU CẦU)
+        if (requestedRole === "branch" && role !== "BRANCH_LEADER" && role !== "SUPER_ADMIN") {
+          return NextResponse.json(
+            { success: false, message: "Bạn chưa được cấp quyền chi hội trưởng" },
+            { status: 403 }
+          );
+        }
+        if (requestedRole === "admin" && role !== "SUPER_ADMIN") {
+          return NextResponse.json(
+            { success: false, message: "Bạn không có quyền quản trị Cán bộ xã." },
+            { status: 403 }
+          );
+        }
+
+        const hamletName =
+          dbUser.hamlet?.name ||
+          dbUser.member?.hamlet?.name ||
+          matchedCht?.name ||
+          "Hội CCB Xã Ea Súp";
+        const hamletCode =
+          dbUser.hamlet?.code ||
+          dbUser.member?.hamlet?.code ||
+          matchedCht?.code ||
+          "";
 
         return NextResponse.json({
           success: true,
@@ -191,9 +227,9 @@ export async function POST(req: Request) {
             id: dbUser.id,
             username: dbUser.username,
             email: dbUser.email || undefined,
-            cccd: dbUser.member?.cccd || dbUser.username,
-            fullName: dbUser.fullName,
-            phone: dbUser.phone || dbUser.member?.phone || "",
+            cccd: dbUser.member?.cccd || (matchedCht ? matchedCht.cccds[0] : dbUser.username),
+            fullName: dbUser.fullName || dbUser.member?.fullName || (matchedCht ? `Đ/c ${matchedCht.leader}` : "Hội viên"),
+            phone: dbUser.phone || dbUser.member?.phone || (matchedCht ? matchedCht.phones[0] : ""),
             role,
             hamletCode,
             hamletName,
@@ -209,25 +245,30 @@ export async function POST(req: Request) {
     }
 
     // 5. FALLBACK CHI HỘI TRƯỞNG THEO DANH SÁCH 20 ĐỒNG CHÍ (KHI CHẠY LOCAL HOẶC CHƯA SEED DB)
-    const matchedCht = Object.values(hamletMap).find(
-      (h) => h.cccd === cleanInput || h.phone === cleanInput
-    );
-
     if (matchedCht) {
       const isChtPassValid =
-        password === matchedCht.phone ||
+        matchedCht.phones.includes(password) ||
+        matchedCht.cccds.includes(password) ||
         password === "123456" ||
-        password === adminDefaultPassword;
+        password === adminDefaultPassword ||
+        password === memberDefaultPassword;
 
       if (isChtPassValid) {
+        if (requestedRole === "admin") {
+          return NextResponse.json(
+            { success: false, message: "Bạn không có quyền quản trị Cán bộ xã." },
+            { status: 403 }
+          );
+        }
+
         return NextResponse.json({
           success: true,
           role: "BRANCH_LEADER",
           user: {
-            username: matchedCht.cccd,
-            cccd: matchedCht.cccd,
+            username: cleanInput,
+            cccd: matchedCht.cccds[0],
             fullName: `Đ/c ${matchedCht.leader}`,
-            phone: matchedCht.phone,
+            phone: matchedCht.phones[0],
             role: "BRANCH_LEADER",
             hamletCode: matchedCht.code,
             hamletName: matchedCht.name,
@@ -244,29 +285,75 @@ export async function POST(req: Request) {
       }
     }
 
-    // 6. FALLBACK HỘI VIÊN BẰNG CCCD (TÌM TRONG MEMBER STORE)
+    // 6. KIỂM TRA HỘI VIÊN BẰNG CCCD HOẶC SĐT (TRONG PRISMA MEMBER HOẶC MEMBER STORE)
+    let dbMember: any = null;
+    try {
+      dbMember = await prisma.member.findFirst({
+        where: {
+          OR: [
+            { cccd: cleanInput },
+            { phone: cleanInput },
+          ],
+        },
+        include: { hamlet: true },
+      });
+    } catch {
+      // Fallback
+    }
+
     const isCccdFormat = /^\d{10,12}$/.test(cleanInput);
     const allMembers = getStoredMembers();
-    const localMem = allMembers.find((m) => m.cccd === cleanInput);
+    const localMem = allMembers.find((m) => m.cccd === cleanInput || m.phone === cleanInput);
+    const targetMember = dbMember || localMem;
 
-    if (localMem || isCccdFormat) {
+    if (targetMember || isCccdFormat) {
       const isMemberPassValid =
         password === memberDefaultPassword ||
         password === "123456" ||
-        (localMem && password === localMem.phone);
+        (targetMember && (password === targetMember.phone || password === targetMember.cccd));
 
       if (isMemberPassValid) {
+        // Kiểm tra xem hội viên này có chức danh Chi hội trưởng không
+        const isChtRole =
+          matchedCht !== undefined ||
+          targetMember?.associationRole === "Chi hội trưởng" ||
+          targetMember?.id?.startsWith("CHT_") ||
+          (targetMember?.hamlet?.branchLeaderPhone === cleanInput || targetMember?.hamlet?.branchLeaderId === targetMember?.id);
+
+        const memberRole = isChtRole ? "BRANCH_LEADER" : "MEMBER";
+
+        // CHẶN QUYỀN NẾU ĐĂNG NHẬP VÀO TAB CHI HỘI TRƯỞNG MÀ CHƯA ĐƯỢC CẤP QUYỀN
+        if (requestedRole === "branch") {
+          if (!isChtRole) {
+            return NextResponse.json(
+              {
+                success: false,
+                message: "Bạn chưa được cấp quyền chi hội trưởng",
+              },
+              { status: 403 }
+            );
+          }
+        }
+
+        if (requestedRole === "admin") {
+          return NextResponse.json(
+            { success: false, message: "Bạn không có quyền quản trị Cán bộ xã." },
+            { status: 403 }
+          );
+        }
+
         return NextResponse.json({
           success: true,
-          role: "MEMBER",
+          role: memberRole,
           user: {
-            username: localMem ? localMem.cccd : cleanInput,
-            cccd: localMem ? localMem.cccd : cleanInput,
-            fullName: localMem ? localMem.fullName : "Hội viên Cựu Chiến Binh",
-            phone: localMem ? localMem.phone : "",
-            hamletName: localMem?.hamletName || "Hội CCB Xã Ea Súp",
-            memberId: localMem ? localMem.id : cleanInput,
-            role: "MEMBER",
+            username: targetMember ? (targetMember.cccd || targetMember.phone) : cleanInput,
+            cccd: targetMember ? targetMember.cccd : cleanInput,
+            fullName: targetMember ? targetMember.fullName : "Hội viên Cựu Chiến Binh",
+            phone: targetMember ? targetMember.phone : "",
+            hamletName: targetMember?.hamletName || targetMember?.hamlet?.name || matchedCht?.name || "Hội CCB Xã Ea Súp",
+            hamletCode: targetMember?.hamlet?.code || matchedCht?.code || "",
+            memberId: targetMember ? targetMember.id : cleanInput,
+            role: memberRole,
           },
         });
       } else {

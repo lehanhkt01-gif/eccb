@@ -4,14 +4,17 @@ const prisma = new PrismaClient();
 
 // Danh sách CCCD của 20 Chi hội trưởng thật cần BẢO TỒN TUYỆT ĐỐI
 const WHITELIST_CCCD = [
+  "0372989270",   // Y Nô Rcăm (Buôn A)
   "0982257421",   // Y Nô Rcăm (Buôn A)
   "034050005833", // Đoàn Hữu Tiến (Buôn B)
+  "0935833737",   // Đoàn Hữu Tiến (Buôn B)
   "0839931193",   // Y Dyơng Êban (Buôn C)
   "0420670022",   // Lê Văn Hồng (Thôn Hòa Bình)
   "025065000445", // Nguyễn Văn Đông (Thôn Thắng Lợi)
   "040059000718", // Nguyễn Văn Sơn (Thôn Đoàn Kết)
   "004082002052", // Lục Văn Cường (Thôn Bình Lợi)
   "0986042302",   // Hồ Sỹ Tuấn (Thôn 1)
+  "049068000834", // Nguyễn Đức Lợi (Thôn 2)
   "049068000884", // Nguyễn Đức Lợi (Thôn 2)
   "034079011156", // Nguyễn Văn Dũng (Thôn 3)
   "038065009462", // Nguyễn Phú Bốn (Thôn 4)

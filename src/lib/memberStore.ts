@@ -495,10 +495,10 @@ export const OFFICIAL_BRANCH_LEADERS: MemberRecord[] = [
   },
   {
     id: "CHT_THON_02",
-    cccd: "049068000884",
+    cccd: "049068000834",
     fullName: "Nguyễn Đức Lợi",
-    birthDate: "21/05/1968",
-    birthYear: 1968,
+    birthDate: "21/05/1970",
+    birthYear: 1970,
     gender: "Nam",
     hometown: "Huyện Thăng Bình, tỉnh Quảng Nam",
     ethnicity: "Kinh",
@@ -506,10 +506,10 @@ export const OFFICIAL_BRANCH_LEADERS: MemberRecord[] = [
     hamletName: "Thôn 2",
     currentAddress: "Thôn 2, Xã Ea Súp, Tỉnh Đắk Lắk",
     phone: "0356912318",
-    enlistmentDate: "03/1986",
-    dischargeDate: "09/1990",
-    militaryRank: "Thượng úy",
-    militaryPosition: "Trung đội trưởng",
+    enlistmentDate: "03/1988",
+    dischargeDate: "09/1992",
+    militaryRank: "Hạ sỹ",
+    militaryPosition: "Chiến sỹ",
     period: "Biên giới Tây Nam",
     isCQN: false,
     isHouseholdHead: true,
@@ -999,8 +999,8 @@ export const STORAGE_KEY_MEMBERS = "eccb_easup_members_v8";
 const STORAGE_KEY = STORAGE_KEY_MEMBERS;
 
 export const VALID_20_CHT_CCCD = [
-  "0982257421", "034050005833", "0839931193", "0420670022", "025065000445",
-  "040059000718", "004082002052", "0986042302", "049068000884", "034079011156",
+  "0372989270", "0982257421", "034050005833", "0935833737", "0839931193", "0420670022", "025065000445",
+  "040059000718", "004082002052", "0986042302", "049068000834", "049068000884", "034079011156",
   "038065009462", "034065009537", "033155002814", "024055000072", "048069000332",
   "066089001142", "048068000489", "049060000688", "006089000161", "004077000098"
 ];
