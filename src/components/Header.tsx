@@ -194,13 +194,10 @@ export default function Header({
                             router.push("/login?role=member");
                           }
                         }}
-                        className="w-full text-left flex items-center gap-3 px-4 py-3 text-sm hover:bg-emerald-50 transition border-l-4 border-moss-green cursor-pointer"
+                        className="w-full text-left flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-emerald-50 transition border-l-4 border-moss-green cursor-pointer"
                       >
                         <span className="text-xl">🎖️</span>
-                        <div>
-                          <div className="font-bold text-moss-green text-sm">Đăng nhập Hội Viên</div>
-                          <div className="text-xs text-stone-500">Bằng số CCCD 12 số</div>
-                        </div>
+                        <span className="font-bold text-moss-green text-sm">Đăng nhập Hội Viên</span>
                       </button>
 
                       {/* 2. Đăng nhập Chi Hội */}
@@ -210,10 +207,7 @@ export default function Header({
                         className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-stone-50 transition border-l-4 border-transparent hover:border-bronze-gold"
                       >
                         <span className="text-lg">📱</span>
-                        <div>
-                          <div className="font-semibold text-deep-text text-sm">Đăng nhập Chi Hội</div>
-                          <div className="text-[11px] text-deep-muted">20 Chi hội trưởng thôn buôn</div>
-                        </div>
+                        <span className="font-semibold text-deep-text text-sm">Đăng nhập Chi Hội</span>
                       </Link>
 
                       {/* 3. Đăng nhập Cán bộ xã */}
@@ -223,10 +217,7 @@ export default function Header({
                         className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-cream-surface transition border-l-4 border-transparent hover:border-flag-red"
                       >
                         <span className="text-lg">🏛️</span>
-                        <div>
-                          <div className="text-stone-700 font-semibold text-sm">Đăng nhập Cán bộ xã</div>
-                          <div className="text-xs text-deep-muted">Bảng điều hành thường trực xã</div>
-                        </div>
+                        <span className="text-stone-700 font-semibold text-sm">Đăng nhập Cán bộ xã</span>
                       </Link>
                     </div>
                   )}

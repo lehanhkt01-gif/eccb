@@ -301,22 +301,19 @@ export default function LoginPage() {
           </div>
         )}
 
-        {/* Form chuẩn Semantic HTML hỗ trợ Bitwarden Password Manager */}
+        {/* Form đăng nhập */}
         <form onSubmit={handleSubmit} method="POST" className="space-y-4">
           {/* Trường Tên đăng nhập */}
           <div className="space-y-1.5">
             <label
               htmlFor="username"
-              className="text-xs font-bold uppercase tracking-wider text-deep-text flex items-center justify-between"
+              className="text-xs font-bold uppercase tracking-wider text-deep-text block"
             >
-              <span>
-                {activeTab === "admin"
-                  ? "Email Cán bộ Thường trực:"
-                  : activeTab === "branch"
-                  ? "Tài khoản Chi Hội (chihoi_...):"
-                  : "Số Căn cước công dân (CCCD 12 số):"}
-              </span>
-              <span className="text-[10px] text-stone-500 font-normal">Bitwarden Autofill</span>
+              {activeTab === "admin"
+                ? "Email Cán bộ Thường trực:"
+                : activeTab === "branch"
+                ? "Tài khoản Chi Hội:"
+                : "Số Căn cước công dân (CCCD 12 số):"}
             </label>
             <div className="relative">
               <input
@@ -327,50 +324,34 @@ export default function LoginPage() {
                 required
                 placeholder={
                   activeTab === "admin"
-                    ? "VD: lehanhkt01@gmail.com hoặc trunghieuktkt@gmail.com"
+                    ? "Nhập email cán bộ quản trị..."
                     : activeTab === "branch"
-                    ? "VD: chihoi_thon_01"
-                    : "VD: 066050100001 (12 số CCCD)"
+                    ? "Nhập tên tài khoản chi hội..."
+                    : "Nhập số CCCD (12 chữ số)..."
                 }
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 className="w-full p-3 bg-stone-50 border-2 border-stone-300 rounded-lg text-base font-semibold text-deep-text placeholder-stone-400 focus:border-moss-green focus:bg-white focus:outline-none"
               />
             </div>
-            {activeTab === "admin" && (
-              <p className="text-[11px] text-stone-500">
-                * Dành cho Ban Thường trực: <code>lehanhkt01@gmail.com</code> / <code>trunghieuktkt@gmail.com</code>
-              </p>
-            )}
-            {activeTab === "branch" && (
-              <p className="text-[11px] text-stone-500">
-                * Dành cho 20 Chi hội trưởng (Định dạng: <code>chihoi_thon_01</code> đến <code>chihoi_buon_c</code>)
-              </p>
-            )}
-            {activeTab === "member" && (
-              <p className="text-[11px] text-stone-500">
-                * Hội viên nhập đúng <strong>Số CCCD 12 số</strong> được in trên thẻ Căn cước.
-              </p>
-            )}
           </div>
 
           {/* Trường Mật khẩu */}
           <div className="space-y-1.5">
             <label
               htmlFor="password"
-              className="text-xs font-bold uppercase tracking-wider text-deep-text flex items-center justify-between"
+              className="text-xs font-bold uppercase tracking-wider text-deep-text block"
             >
-              <span>Mật khẩu:</span>
-              <span className="text-[10px] text-stone-500 font-normal">Quy chuẩn .env</span>
+              Mật khẩu:
             </label>
             <div className="relative">
               <input
                 id="password"
                 name="password"
                 type="password"
-                autoComplete="off"
+                autoComplete="current-password"
                 required
-                placeholder="Nhập mật khẩu an toàn..."
+                placeholder="Nhập mật khẩu..."
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full p-3 bg-stone-50 border-2 border-stone-300 rounded-lg text-base font-semibold text-deep-text placeholder-stone-400 focus:border-moss-green focus:bg-white focus:outline-none"
@@ -390,7 +371,6 @@ export default function LoginPage() {
               />
               <span>Ghi nhớ phiên đăng nhập</span>
             </label>
-            <span className="text-stone-500 italic">Bảo mật Bitwarden</span>
           </div>
 
           {/* Nút Đăng Nhập */}
@@ -399,17 +379,9 @@ export default function LoginPage() {
             disabled={isLoading}
             className="w-full py-3.5 bg-moss-green hover:bg-emerald-900 active:scale-98 text-white font-bold text-base uppercase tracking-wider rounded-lg shadow-md transition flex items-center justify-center gap-2 cursor-pointer"
           >
-            <span>{isLoading ? "Đang xác thực bảo mật..." : "🛡️ ĐĂNG NHẬP HỆ THỐNG"}</span>
+            <span>{isLoading ? "Đang xác thực..." : "🛡️ ĐĂNG NHẬP HỆ THỐNG"}</span>
           </button>
         </form>
-
-        {/* Chú thích bảo mật */}
-        <div className="bg-amber-50/80 border border-amber-200 rounded-lg p-2.5 text-[11px] text-stone-600 flex items-center gap-2">
-          <span className="text-base shrink-0">🔐</span>
-          <span>
-            Hệ thống tuân thủ quy chuẩn bảo mật tuyệt đối. Mật khẩu không bao giờ được hardcode trong mã nguồn.
-          </span>
-        </div>
       </div>
 
       {/* Footer */}

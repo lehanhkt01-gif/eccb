@@ -716,15 +716,12 @@ export default function HomePage() {
                     type="text"
                     required
                     maxLength={12}
-                    placeholder="VD: 066050100001"
+                    placeholder="Nhập 12 số CCCD..."
                     value={memberCccd}
                     onChange={(e) => setMemberCccd(e.target.value.replace(/\D/g, ""))}
                     className="w-full p-3 bg-stone-50 border-2 border-stone-300 rounded-lg text-base font-semibold text-deep-text focus:border-moss-green focus:bg-white focus:outline-none"
                     autoFocus
                   />
-                  <p className="text-[11px] text-stone-500">
-                    * Nhập chính xác 12 chữ số ghi trên thẻ Căn cước của đồng chí.
-                  </p>
                 </div>
 
                 <div className="space-y-1">
@@ -734,7 +731,7 @@ export default function HomePage() {
                   <input
                     type="password"
                     required
-                    placeholder="Nhập mật khẩu an toàn..."
+                    placeholder="Nhập mật khẩu..."
                     value={memberPassword}
                     onChange={(e) => setMemberPassword(e.target.value)}
                     className="w-full p-3 bg-stone-50 border-2 border-stone-300 rounded-lg text-base font-semibold text-deep-text focus:border-moss-green focus:bg-white focus:outline-none"
