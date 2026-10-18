@@ -1483,10 +1483,10 @@ export function rejectMember(id: string, reason: string): boolean {
  * CHỈ ĐỊNH / CẤP QUYỀN HỘI VIÊN LÀM CHI HỘI TRƯỞNG
  * Quy tắc:
  * 1. Hội viên ở chi hội nào thì được cấp quyền Chi hội trưởng của chi hội đó.
- * 2. Một chi hội có thể có nhiều đồng chí cùng đảm nhiệm Chi hội trưởng (không hạ bệ CHT cũ).
+ * 2. Một chi hội có thể có nhiều đồng chí cùng đảm nhiệm Chi hội trưởng / Chi hội phó (không hạ bệ CHT cũ).
  * 3. Bổ sung tài khoản Chi hội trưởng vào danh sách permissions nếu chưa có.
  */
-export function assignBranchLeader(memberId: string): {
+export function assignBranchLeader(memberId: string, roleTitle: string = "Chi hội trưởng"): {
   success: boolean;
   message: string;
   targetMember?: MemberRecord;
@@ -1505,12 +1505,12 @@ export function assignBranchLeader(memberId: string): {
     return { success: false, message: "Hội viên chưa có thông tin chi hội thôn/buôn sinh hoạt." };
   }
 
-  // Cập nhật vai trò của hội viên mục tiêu thành "Chi hội trưởng" (BẢO TOÀN CÁC CHI HỘI TRƯỞNG KHÁC CÙNG THÔN)
+  // Cập nhật vai trò của hội viên mục tiêu thành "Chi hội trưởng" hoặc "Phó Chi hội trưởng" (BẢO TOÀN CÁC CHI HỘI TRƯỞNG KHÁC CÙNG THÔN)
   const updatedList = currentList.map((m) => {
     if (m.id === target.id || m.cccd === target.cccd) {
       return {
         ...m,
-        associationRole: "Chi hội trưởng",
+        associationRole: roleTitle,
       };
     }
     return m;
@@ -1545,6 +1545,7 @@ export function assignBranchLeader(memberId: string): {
             phone: target.phone,
             username: target.phone || target.cccd,
             role: "BRANCH_LEADER",
+            title: roleTitle,
             isActive: true,
           };
         } else {
@@ -1556,6 +1557,7 @@ export function assignBranchLeader(memberId: string): {
             username: target.phone || target.cccd,
             phone: target.phone,
             role: "BRANCH_LEADER",
+            title: roleTitle,
             isActive: true,
             passwordStatus: "MẶC_ĐỊNH",
           });

@@ -190,6 +190,8 @@ export async function POST(req: Request) {
         if (
           dbUser.role === "BRANCH_LEADER" ||
           dbUser.member?.associationRole === "Chi hội trưởng" ||
+          dbUser.member?.associationRole === "Phó Chi hội trưởng" ||
+          dbUser.member?.associationRole === "Chi hội phó" ||
           matchedCht !== undefined
         ) {
           role = "BRANCH_LEADER";
@@ -313,10 +315,12 @@ export async function POST(req: Request) {
         (targetMember && (password === targetMember.phone || password === targetMember.cccd));
 
       if (isMemberPassValid) {
-        // Kiểm tra xem hội viên này có chức danh Chi hội trưởng không
+        // Kiểm tra xem hội viên này có chức danh Chi hội trưởng / Chi hội phó không
         const isChtRole =
           matchedCht !== undefined ||
           targetMember?.associationRole === "Chi hội trưởng" ||
+          targetMember?.associationRole === "Phó Chi hội trưởng" ||
+          targetMember?.associationRole === "Chi hội phó" ||
           targetMember?.id?.startsWith("CHT_") ||
           (targetMember?.hamlet?.branchLeaderPhone === cleanInput || targetMember?.hamlet?.branchLeaderId === targetMember?.id);
 

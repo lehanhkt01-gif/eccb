@@ -9,7 +9,7 @@ if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { cccd, memberId, hamletName, fullName, phone } = body;
+    const { cccd, memberId, hamletName, fullName, phone, roleTitle = "Chi hội trưởng" } = body;
 
     if (!cccd && !memberId) {
       return NextResponse.json(
@@ -58,18 +58,18 @@ export async function POST(req: Request) {
     const finalHamletId = hamlet?.id || targetMember.hamletId;
     const finalHamletName = hamlet?.name || targetMember.hamlet?.name || hamletName || "Thôn";
 
-    // 3. Cập nhật hội viên mục tiêu thành 'Chi hội trưởng' (Giữ nguyên các Chi hội trưởng khác cùng thôn)
+    // 3. Cập nhật hội viên mục tiêu với chức danh (Chi hội trưởng / Phó Chi hội trưởng, bảo toàn các CHT khác)
     const updatedMember = await prisma.member.update({
       where: { id: targetMember.id },
       data: {
-        associationRole: "Chi hội trưởng",
+        associationRole: roleTitle,
         ...(finalHamletId ? { hamletId: finalHamletId } : {}),
       },
       include: { hamlet: true },
     });
 
-    // 4. Cập nhật thông tin đại diện tại bảng Hamlet (nếu có thôn)
-    if (finalHamletId) {
+    // 4. Cập nhật thông tin đại diện tại bảng Hamlet (nếu là Chi hội trưởng hoặc chưa có đại diện)
+    if (finalHamletId && (roleTitle === "Chi hội trưởng" || !hamlet?.branchLeaderName)) {
       try {
         await prisma.hamlet.update({
           where: { id: finalHamletId },

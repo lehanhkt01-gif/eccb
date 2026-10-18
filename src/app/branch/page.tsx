@@ -117,7 +117,16 @@ function resolveBranchHamlet(user: AuthUser | null) {
     if (byCode) return byCode;
   }
   if (user.hamletName) {
-    const byName = HAMLETS.find((h) => h.name.toLowerCase() === user.hamletName?.toLowerCase());
+    const cleanUserHamlet = user.hamletName.replace(/^Chi hội\s+/i, "").trim().toLowerCase();
+    const byName = HAMLETS.find((h) => {
+      const hClean = h.name.replace(/^Chi hội\s+/i, "").trim().toLowerCase();
+      return (
+        hClean === cleanUserHamlet ||
+        h.name.toLowerCase() === user.hamletName?.toLowerCase() ||
+        cleanUserHamlet.includes(hClean) ||
+        hClean.includes(cleanUserHamlet)
+      );
+    });
     if (byName) return byName;
   }
   const u = user.username?.toLowerCase() || "";

@@ -99,6 +99,7 @@ export async function GET(req: NextRequest) {
         phone: u.phone || u.member?.phone || undefined,
         role: u.role,
         isActive: u.isActive,
+        title: u.member?.associationRole || (u.role === Role.BRANCH_LEADER ? "Chi hội trưởng" : undefined),
         lastLogin: "Vừa xong",
         passwordStatus: "MẶC_ĐỊNH" as const,
       };
@@ -150,6 +151,7 @@ export async function POST(req: NextRequest) {
       unit,
       birthYear,
       password,
+      roleTitle = "Chi hội trưởng",
     } = body;
 
     if (!fullName || !username) {
@@ -337,7 +339,7 @@ export async function POST(req: NextRequest) {
         member = await prisma.member.update({
           where: { id: member.id },
           data: {
-            associationRole: "Chi hội trưởng",
+            associationRole: roleTitle || "Chi hội trưởng",
             fullName: cleanFullName,
             phone: cleanPhone || member.phone,
             ...(hamletId ? { hamletId } : {}),
@@ -355,21 +357,28 @@ export async function POST(req: NextRequest) {
             status: MemberStatus.CHINH_THUC,
             adminApproved: true,
             branchApproved: true,
-            associationRole: "Chi hội trưởng",
+            associationRole: roleTitle || "Chi hội trưởng",
           } as any,
         });
       }
 
-      // Cập nhật Hamlet nếu có
-      if (hamletId) {
-        await prisma.hamlet.update({
-          where: { id: hamletId },
-          data: {
-            branchLeaderId: member.id,
-            branchLeaderName: cleanFullName,
-            branchLeaderPhone: cleanPhone,
-          },
-        });
+      // Cập nhật Hamlet nếu là Chi hội trưởng chính hoặc chưa có đại diện
+      if (hamletId && (roleTitle === "Chi hội trưởng" || roleTitle === "Phó Chi hội trưởng")) {
+        try {
+          const curHamlet = await prisma.hamlet.findUnique({ where: { id: hamletId } });
+          if (!curHamlet?.branchLeaderName || roleTitle === "Chi hội trưởng") {
+            await prisma.hamlet.update({
+              where: { id: hamletId },
+              data: {
+                branchLeaderId: member.id,
+                branchLeaderName: cleanFullName,
+                branchLeaderPhone: cleanPhone,
+              },
+            });
+          }
+        } catch (hErr) {
+          console.warn("Lưu ý cập nhật hamlet:", hErr);
+        }
       }
 
       // Tạo hoặc cập nhật User BRANCH_LEADER

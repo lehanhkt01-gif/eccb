@@ -13,6 +13,7 @@ export interface AccountItem {
   username: string; // Email, username hoặc CCCD
   phone?: string;
   role: RoleType;
+  title?: string;
   isActive: boolean;
   lastLogin?: string;
   passwordStatus: "MẶC_ĐỊNH" | "ĐÃ_ĐỔI" | "ĐÃ_RESET";
@@ -130,6 +131,7 @@ export default function PermissionsManagementPage() {
 
   // Phân quyền Chi hội trưởng: Chọn Chi hội (Thôn Buôn) & Sổ danh sách hội viên chính thức
   const [selectedBranchHamlet, setSelectedBranchHamlet] = useState("Thôn Đoàn Kết");
+  const [selectedBranchRoleTitle, setSelectedBranchRoleTitle] = useState<"Chi hội trưởng" | "Phó Chi hội trưởng">("Chi hội trưởng");
   const [selectedMemberIdForLeader, setSelectedMemberIdForLeader] = useState("");
   const [leaderInputMode, setLeaderInputMode] = useState<"SELECT" | "MANUAL">("SELECT");
   const [manualFullName, setManualFullName] = useState("");
@@ -167,24 +169,29 @@ export default function PermissionsManagementPage() {
     });
   }, [selectedBranchHamlet, isCreateModalOpen, memberAccounts]);
 
-  // Hội viên đang được chọn làm Chi hội trưởng
-  const selectedMemberForLeader = useMemo(() => {
-    return hamletOfficialMembers.find((m) => m.id === selectedMemberIdForLeader) || null;
-  }, [hamletOfficialMembers, selectedMemberIdForLeader]);
-
-  // Tự động pre-select CHT hiện tại hoặc hội viên đầu tiên khi đổi thôn buôn
-  useEffect(() => {
-    if (newRole === "BRANCH_LEADER" && hamletOfficialMembers.length > 0) {
-      const currentLeader = hamletOfficialMembers.find((m) => m.associationRole === "Chi hội trưởng");
-      if (currentLeader) {
-        setSelectedMemberIdForLeader(currentLeader.id);
+  // Phân loại thành 2 nhóm: Chưa giữ chức vụ lãnh đạo chi hội VS Đang giữ chức vụ
+  const { unassignedMembers, assignedMembers } = useMemo(() => {
+    const unassigned: typeof hamletOfficialMembers = [];
+    const assigned: typeof hamletOfficialMembers = [];
+    for (const m of hamletOfficialMembers) {
+      if (
+        m.associationRole === "Chi hội trưởng" ||
+        m.associationRole === "Phó Chi hội trưởng" ||
+        m.associationRole === "Chi hội phó"
+      ) {
+        assigned.push(m);
       } else {
-        setSelectedMemberIdForLeader(hamletOfficialMembers[0].id);
+        unassigned.push(m);
       }
-    } else {
-      setSelectedMemberIdForLeader("");
     }
-  }, [selectedBranchHamlet, newRole, hamletOfficialMembers]);
+    return { unassignedMembers: unassigned, assignedMembers: assigned };
+  }, [hamletOfficialMembers]);
+
+  // Hội viên đang được chọn làm Chi hội trưởng / Chi hội phó
+  const selectedMemberForLeader = useMemo(() => {
+    if (!selectedMemberIdForLeader) return null;
+    return hamletOfficialMembers.find((m) => m.id === selectedMemberIdForLeader || m.cccd === selectedMemberIdForLeader) || null;
+  }, [hamletOfficialMembers, selectedMemberIdForLeader]);
 
   // Nạp danh sách hội viên chính thức từ memberStore và CSDL
   const syncPermissionsData = (
@@ -255,16 +262,25 @@ export default function PermissionsManagementPage() {
           loadedBranches[existingIdx] = {
             ...loadedBranches[existingIdx],
             ...sb,
+            title: sb.title || loadedBranches[existingIdx].title || "Chi hội trưởng",
             isActive: sb.isActive !== undefined ? sb.isActive : loadedBranches[existingIdx].isActive,
           };
         } else {
-          loadedBranches.push(sb);
+          loadedBranches.push({
+            ...sb,
+            title: sb.title || "Chi hội trưởng",
+          });
         }
       }
     }
 
-    // Cập nhật và bổ sung tất cả Chi hội trưởng từ danh sách hội viên thực tế
-    const leadersInStore = officialMembers.filter((m) => m.associationRole === "Chi hội trưởng");
+    // Cập nhật và bổ sung tất cả Chi hội trưởng & Phó Chi hội trưởng từ danh sách hội viên thực tế
+    const leadersInStore = officialMembers.filter(
+      (m) =>
+        m.associationRole === "Chi hội trưởng" ||
+        m.associationRole === "Phó Chi hội trưởng" ||
+        m.associationRole === "Chi hội phó"
+    );
     for (const leader of leadersInStore) {
       if (isLeaderDeleted({ username: leader.cccd, phone: leader.phone, fullName: leader.fullName, unit: leader.hamletName })) {
         continue;
@@ -286,6 +302,8 @@ export default function PermissionsManagementPage() {
         (leaderPhone ? statusMap[leaderPhone] : undefined) ??
         true;
 
+      const leaderRoleTitle = leader.associationRole || "Chi hội trưởng";
+
       if (existingIdx !== -1) {
         const cur = loadedBranches[existingIdx];
         const resolvedActive =
@@ -301,6 +319,7 @@ export default function PermissionsManagementPage() {
           username: leaderPhone || leader.cccd || cur.username,
           unit: `Chi hội ${leader.hamletName.replace(/^Chi hội\s+/i, "")}`,
           role: "BRANCH_LEADER",
+          title: leaderRoleTitle,
           isActive: resolvedActive,
         };
       } else {
@@ -311,6 +330,7 @@ export default function PermissionsManagementPage() {
           username: leaderUsername,
           phone: leader.phone,
           role: "BRANCH_LEADER",
+          title: leaderRoleTitle,
           isActive: initialActive,
           passwordStatus: "MẶC_ĐỊNH",
         });
@@ -626,6 +646,7 @@ export default function PermissionsManagementPage() {
                 hamletName: cleanHamlet,
                 fullName: selectedMemberForLeader.fullName,
                 phone: selectedMemberForLeader.phone,
+                roleTitle: selectedBranchRoleTitle,
               }),
             });
             const apiData = await apiRes.json();
@@ -637,7 +658,7 @@ export default function PermissionsManagementPage() {
           }
 
           // 2. Cập nhật trong Local Store memberStore
-          assignBranchLeader(selectedMemberForLeader.id);
+          assignBranchLeader(selectedMemberForLeader.id, selectedBranchRoleTitle);
 
           // 3. Cập nhật và bổ sung tài khoản vào branchAccounts
           let updatedBranches = [...branchAccounts];
@@ -656,6 +677,7 @@ export default function PermissionsManagementPage() {
             username: selectedMemberForLeader.phone || selectedMemberForLeader.cccd,
             phone: selectedMemberForLeader.phone,
             role: "BRANCH_LEADER",
+            title: selectedBranchRoleTitle,
             isActive: true,
             passwordStatus: "MẶC_ĐỊNH",
           };
@@ -674,7 +696,8 @@ export default function PermissionsManagementPage() {
           await loadServerData();
 
           setIsCreateModalOpen(false);
-          showToast(`✓ Đã cấp quyền Chi hội trưởng [${cleanHamlet}] cho đồng chí [${selectedMemberForLeader.fullName}] thành công!`);
+          setSelectedMemberIdForLeader("");
+          showToast(`✓ Đã cấp quyền ${selectedBranchRoleTitle} [${cleanHamlet}] cho đồng chí [${selectedMemberForLeader.fullName}] thành công!`);
           return;
         }
 
@@ -705,7 +728,7 @@ export default function PermissionsManagementPage() {
               phone: manualPhone.trim() || undefined,
               birthYear: parseInt(manualBirthYear) || 1965,
               hamletName: cleanHamlet,
-              associationRole: "Chi hội trưởng",
+              associationRole: selectedBranchRoleTitle,
               status: "CHINH_THUC",
               adminApproved: true,
               branchApproved: true,
@@ -729,6 +752,7 @@ export default function PermissionsManagementPage() {
               hamletName: cleanHamlet,
               fullName: manualFullName.trim(),
               phone: manualPhone.trim(),
+              roleTitle: selectedBranchRoleTitle,
             }),
           });
         } catch (asErr) {
@@ -743,6 +767,7 @@ export default function PermissionsManagementPage() {
           username: manualPhone.trim() || manualCccd.trim(),
           phone: manualPhone.trim() || undefined,
           role: "BRANCH_LEADER",
+          title: selectedBranchRoleTitle,
           isActive: true,
           passwordStatus: "MẶC_ĐỊNH",
         };
@@ -759,7 +784,8 @@ export default function PermissionsManagementPage() {
         setManualFullName("");
         setManualCccd("");
         setManualPhone("");
-        showToast(`✓ Đã thêm và cấp quyền Chi hội trưởng [${cleanHamlet}] cho đ/c [${manualFullName.trim()}] thành công!`);
+        setSelectedMemberIdForLeader("");
+        showToast(`✓ Đã thêm và cấp quyền ${selectedBranchRoleTitle} [${cleanHamlet}] cho đ/c [${manualFullName.trim()}] thành công!`);
         return;
       }
 
@@ -878,7 +904,7 @@ export default function PermissionsManagementPage() {
             <span>QUẢN LÝ TÀI KHOẢN VÀ CẤP QUYỀN ĐĂNG NHẬP</span>
           </h2>
           <p className="text-xs sm:text-sm text-deep-muted mt-0.5">
-            Quản trị phân quyền 3 cấp độ: Cán bộ Thường trực Xã • 20 Chi hội trưởng • 612 Hội viên Cựu Chiến Binh
+            Quản trị phân quyền 3 cấp độ: Cán bộ Thường trực Xã • Chi hội trưởng & Chi hội phó (20 thôn buôn) • Hội viên Cựu Chiến Binh
           </p>
         </div>
 
@@ -891,6 +917,8 @@ export default function PermissionsManagementPage() {
               if (selectedHamletFilter !== "all") {
                 setSelectedBranchHamlet(selectedHamletFilter);
               }
+              setSelectedMemberIdForLeader("");
+              setSelectedBranchRoleTitle("Chi hội trưởng");
               setCreateError("");
               setIsCreateModalOpen(true);
             }}
@@ -936,7 +964,7 @@ export default function PermissionsManagementPage() {
           }`}
         >
           <span>📱</span>
-          <span>2. Chi hội trưởng (20 Thôn Buôn)</span>
+          <span>2. Chi hội trưởng & Chi hội phó (20 Thôn Buôn)</span>
           <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-bronze-gold font-bold">
             {branchAccounts.length}
           </span>
@@ -1070,7 +1098,7 @@ export default function PermissionsManagementPage() {
                         </span>
                       ) : acc.role === "BRANCH_LEADER" ? (
                         <span className="px-2.5 py-1 bg-amber-100 text-amber-900 rounded-full font-bold text-[11px] border border-amber-300">
-                          Chi Hội Trưởng
+                          {acc.title || "Chi Hội Trưởng"}
                         </span>
                       ) : (
                         <span className="px-2.5 py-1 bg-stone-100 text-stone-700 rounded-full font-semibold text-[11px] border border-stone-300">
@@ -1219,7 +1247,7 @@ export default function PermissionsManagementPage() {
                   onChange={(e) => setNewRole(e.target.value as RoleType)}
                   className="w-full p-2.5 bg-stone-50 border border-stone-300 rounded-lg text-sm text-deep-text focus:border-moss-green focus:bg-white focus:outline-none font-semibold"
                 >
-                  <option value="BRANCH_LEADER">Chi hội trưởng (20 thôn buôn)</option>
+                  <option value="BRANCH_LEADER">Chi hội trưởng & Chi hội phó (20 thôn buôn)</option>
                   <option value="MEMBER">Hội viên CCB (Đăng nhập CCCD)</option>
                   <option value="SUPER_ADMIN">Cán bộ xã (SuperAdmin)</option>
                 </select>
@@ -1227,7 +1255,7 @@ export default function PermissionsManagementPage() {
 
               {/* NỘI DUNG FORM THEO VAI TRÒ */}
               {newRole === "BRANCH_LEADER" ? (
-                /* PHÂN HỆ CẤP QUYỀN CHI HỘI TRƯỞNG: HỖ TRỢ 2 CHẾ ĐỘ (CHỌN TỪ THÔN HOẶC NHẬP TRỰC TIẾP) */
+                /* PHÂN HỆ CẤP QUYỀN CHI HỘI TRƯỞNG & PHÓ CHI HỘI TRƯỞNG */
                 <div className="space-y-4">
                   {/* 1. Chọn Chi hội (Thôn / Buôn) */}
                   <div>
@@ -1236,7 +1264,10 @@ export default function PermissionsManagementPage() {
                     </label>
                     <select
                       value={selectedBranchHamlet}
-                      onChange={(e) => setSelectedBranchHamlet(e.target.value)}
+                      onChange={(e) => {
+                        setSelectedBranchHamlet(e.target.value);
+                        setSelectedMemberIdForLeader("");
+                      }}
                       className="w-full p-2.5 bg-stone-50 border border-stone-300 rounded-lg text-sm text-deep-text focus:border-moss-green focus:bg-white focus:outline-none font-bold"
                     >
                       {EA_SUP_HAMLETS.map((h) => (
@@ -1246,7 +1277,43 @@ export default function PermissionsManagementPage() {
                       ))}
                     </select>
                     <p className="text-[11px] text-stone-500 mt-1">
-                      Chi hội thôn/buôn được phân quyền Chi hội trưởng (Một chi hội có thể có nhiều đồng chí Chi hội trưởng).
+                      Chi hội thôn/buôn được phân quyền điều hành (Một chi hội có thể phân quyền cho nhiều đồng chí Chi hội trưởng hoặc Chi hội phó).
+                    </p>
+                  </div>
+
+                  {/* Chọn chức danh phân quyền */}
+                  <div>
+                    <label className="text-xs font-bold text-stone-700 block mb-1 uppercase">
+                      Chức danh cấp quyền điều hành:
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedBranchRoleTitle("Chi hội trưởng")}
+                        className={`py-2 px-3 rounded-lg border text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                          selectedBranchRoleTitle === "Chi hội trưởng"
+                            ? "bg-amber-100 border-amber-500 text-amber-950 shadow-xs ring-1 ring-amber-400"
+                            : "bg-white border-stone-300 text-stone-600 hover:bg-stone-50"
+                        }`}
+                      >
+                        <span>⭐</span>
+                        <span>Chi hội trưởng</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedBranchRoleTitle("Phó Chi hội trưởng")}
+                        className={`py-2 px-3 rounded-lg border text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                          selectedBranchRoleTitle === "Phó Chi hội trưởng"
+                            ? "bg-amber-100 border-amber-500 text-amber-950 shadow-xs ring-1 ring-amber-400"
+                            : "bg-white border-stone-300 text-stone-600 hover:bg-stone-50"
+                        }`}
+                      >
+                        <span>🎖️</span>
+                        <span>Phó Chi hội trưởng (Chi hội phó)</span>
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-stone-500 mt-1">
+                      Đồng chí được cấp quyền sẽ có quyền quản trị, điều hành chi hội trên ứng dụng di động (quyền tương tự Chi hội trưởng).
                     </p>
                   </div>
 
@@ -1272,7 +1339,7 @@ export default function PermissionsManagementPage() {
                           : "text-stone-600 hover:text-stone-900"
                       }`}
                     >
-                      ✏️ Nhập trực tiếp CHT mới
+                      ✏️ Nhập trực tiếp {selectedBranchRoleTitle === "Phó Chi hội trưởng" ? "Phó CHT" : "CHT"} mới
                     </button>
                   </div>
 
@@ -1280,7 +1347,7 @@ export default function PermissionsManagementPage() {
                   {leaderInputMode === "SELECT" ? (
                     <div>
                       <label className="text-xs font-bold text-stone-700 block mb-1 uppercase flex items-center justify-between">
-                        <span>2. Chọn Hội viên cấp quyền Chi hội trưởng:</span>
+                        <span>2. Chọn Hội viên cấp quyền {selectedBranchRoleTitle}:</span>
                         <span className="text-[11px] text-moss-green font-semibold">
                           {hamletOfficialMembers.length} hội viên
                         </span>
@@ -1292,12 +1359,25 @@ export default function PermissionsManagementPage() {
                           onChange={(e) => setSelectedMemberIdForLeader(e.target.value)}
                           className="w-full p-2.5 bg-stone-50 border-2 border-stone-300 focus:border-moss-green rounded-lg text-sm text-deep-text focus:bg-white focus:outline-none font-semibold"
                         >
-                          <option value="">-- Bấm chọn 1 hội viên trong danh sách --</option>
-                          {hamletOfficialMembers.map((m) => (
-                            <option key={m.id} value={m.id}>
-                              {m.fullName} — Sinh năm {m.birthYear} (CCCD: {m.cccd}) {m.associationRole === "Chi hội trưởng" ? "⭐ [Đang là CHT]" : ""}
-                            </option>
-                          ))}
+                          <option value="">-- Bấm chọn 1 hội viên để cấp quyền ({hamletOfficialMembers.length} người) --</option>
+                          {unassignedMembers.length > 0 && (
+                            <optgroup label={`⚡ Hội viên chưa giữ chức vụ lãnh đạo (${unassignedMembers.length} đồng chí)`}>
+                              {unassignedMembers.map((m) => (
+                                <option key={m.id} value={m.id}>
+                                  {m.fullName} — Sinh năm {m.birthYear} (CCCD: {m.cccd})
+                                </option>
+                              ))}
+                            </optgroup>
+                          )}
+                          {assignedMembers.length > 0 && (
+                            <optgroup label={`⭐ Đang giữ chức vụ lãnh đạo (${assignedMembers.length} đồng chí)`}>
+                              {assignedMembers.map((m) => (
+                                <option key={m.id} value={m.id}>
+                                  {m.fullName} — Sinh năm {m.birthYear} (CCCD: {m.cccd}) [{m.associationRole}]
+                                </option>
+                              ))}
+                            </optgroup>
+                          )}
                         </select>
                       ) : (
                         <div className="p-3 bg-amber-50 border border-amber-300 rounded-lg text-amber-900 text-xs space-y-2">
@@ -1309,7 +1389,7 @@ export default function PermissionsManagementPage() {
                             onClick={() => setLeaderInputMode("MANUAL")}
                             className="px-3 py-1 bg-moss-green text-white rounded font-bold hover:bg-moss-green-dark cursor-pointer text-xs"
                           >
-                            + Bấm vào đây để nhập thông tin CHT mới trực tiếp
+                            + Bấm vào đây để nhập thông tin {selectedBranchRoleTitle} mới trực tiếp
                           </button>
                         </div>
                       )}
@@ -1319,14 +1399,19 @@ export default function PermissionsManagementPage() {
                         <div className="bg-emerald-50/70 border-2 border-emerald-300 rounded-xl p-3.5 space-y-2 text-xs shadow-2xs mt-3">
                           <div className="flex items-center justify-between pb-1.5 border-b border-emerald-200">
                             <div className="flex items-center gap-1.5">
-                              <span className="text-base">⭐</span>
+                              <span className="text-base">{selectedBranchRoleTitle === "Chi hội trưởng" ? "⭐" : "🎖️"}</span>
                               <span className="font-bold text-moss-green text-sm sm:text-base">
                                 {selectedMemberForLeader.fullName}
                               </span>
                             </div>
-                            <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px] border border-emerald-300">
-                              {selectedMemberForLeader.associationRole === "Chi hội trưởng" ? "Đang là CHT" : "Hội viên chính thức"}
-                            </span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 font-bold text-[10px] border border-amber-300">
+                                Cấp quyền: {selectedBranchRoleTitle}
+                              </span>
+                              <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px] border border-emerald-300">
+                                {selectedMemberForLeader.associationRole || "Hội viên"}
+                              </span>
+                            </div>
                           </div>
 
                           <div className="grid grid-cols-2 gap-2 text-stone-700">
@@ -1351,18 +1436,18 @@ export default function PermissionsManagementPage() {
                           <div className="text-[11px] text-emerald-800 pt-1.5 border-t border-emerald-200 flex items-center gap-1 font-medium">
                             <span>✓</span>
                             <span>
-                              Hệ thống tự động cấp quyền Chi hội trưởng và tài khoản đăng nhập (SĐT/CCCD), lưu đồng bộ vào CSDL PostgreSQL.
+                              Hệ thống tự động cấp quyền {selectedBranchRoleTitle} và tài khoản đăng nhập (SĐT/CCCD), lưu đồng bộ vào CSDL PostgreSQL.
                             </span>
                           </div>
                         </div>
                       )}
                     </div>
                   ) : (
-                    /* PHƯƠNG THỨC 2: NHẬP TRỰC TIẾP THÔNG TIN CHI HỘI TRƯỞNG MỚI */
+                    /* PHƯƠNG THỨC 2: NHẬP TRỰC TIẾP THÔNG TIN CHI HỘI TRƯỞNG / PHÓ CHT MỚI */
                     <div className="space-y-3 bg-stone-50 p-3.5 rounded-xl border border-stone-300">
                       <div>
                         <label className="text-xs font-bold text-stone-700 block mb-1 uppercase">
-                          Họ và tên Chi hội trưởng: *
+                          Họ và tên {selectedBranchRoleTitle}: *
                         </label>
                         <input
                           type="text"
@@ -1418,7 +1503,7 @@ export default function PermissionsManagementPage() {
                       </div>
 
                       <p className="text-[11px] text-moss-green font-medium">
-                        ✓ Khi bấm Lưu, hệ thống sẽ tự động tạo hồ sơ hội viên và cấp quyền Chi hội trưởng cho {selectedBranchHamlet}.
+                        ✓ Khi bấm Lưu, hệ thống sẽ tự động tạo hồ sơ hội viên và cấp quyền {selectedBranchRoleTitle} cho {selectedBranchHamlet}.
                       </p>
                     </div>
                   )}
@@ -1523,7 +1608,7 @@ export default function PermissionsManagementPage() {
                   {isSubmitting
                     ? "Đang lưu & đồng bộ..."
                     : newRole === "BRANCH_LEADER"
-                    ? "Cấp quyền CHT & Lưu"
+                    ? `Cấp quyền ${selectedBranchRoleTitle === "Chi hội trưởng" ? "CHT" : "Phó CHT"} & Lưu`
                     : "Cấp tài khoản & Lưu"}
                 </button>
               </div>
