@@ -82,6 +82,9 @@ export default async function NewsDetailPage({ params }: PageProps) {
   const currentUrl = `${siteUrl}/tin-tuc/${article.id}`;
   const imageSrc = article.imageUrl || "/images/hero-military-bg.webp";
   const previewDesc = getPreviewDescription(article);
+  const displayAuthor = article.author
+    ? article.author.replace(/Thường trực Hội CCB(\s+(xã|Xã))?(\s+(Ea Súp|ea súp))?/gi, "Thường trực Hội").trim()
+    : "Thường trực Hội";
 
   // Tìm bài viết liền kề tiếp theo để trình phát âm thanh tự động đọc liên tục
   const currentIdx = allArticles.findIndex((item) => item.id === article.id || item.slug === article.id);
@@ -146,11 +149,11 @@ export default async function NewsDetailPage({ params }: PageProps) {
                 {article.category}
               </span>
               <span className="text-xs font-semibold text-stone-500 bg-stone-100 px-2.5 py-1 rounded-md">
-                📅 Ngày đăng: {article.date}
+                📅 {article.date}
               </span>
             </div>
             <div className="flex items-center gap-4 text-xs font-medium text-stone-500">
-              <span>✍️ Tác giả: <strong className="text-deep-text">{article.author}</strong></span>
+              <span>✍️ Tác giả: <strong className="text-deep-text">{displayAuthor}</strong></span>
               <span>•</span>
               <ArticleViewCounter articleId={article.id} initialViews={article.views ?? 0} />
             </div>

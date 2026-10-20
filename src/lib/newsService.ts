@@ -53,7 +53,9 @@ function mapPrismaArticleToArticle(raw: any): Article {
     slug: raw.slug,
     category: raw.category,
     date: dateStr,
-    author: raw.author || "Thường trực Hội CCB Xã Ea Súp",
+    author: raw.author
+      ? raw.author.replace(/Thường trực Hội CCB(\s+(xã|Xã))?(\s+(Ea Súp|ea súp))?/gi, "Thường trực Hội").trim()
+      : "Thường trực Hội",
     authorId: raw.authorId || undefined,
     authorRole: raw.authorRole || undefined,
     authorPhone: raw.authorPhone || undefined,

@@ -34,7 +34,9 @@ function mapPrismaToArticle(raw: any): Article {
     slug: raw.slug,
     category: raw.category,
     date: formatDate(new Date(raw.createdAt)),
-    author: raw.author || "Thường trực Hội CCB Xã Ea Súp",
+    author: raw.author
+      ? raw.author.replace(/Thường trực Hội CCB(\s+(xã|Xã))?(\s+(Ea Súp|ea súp))?/gi, "Thường trực Hội").trim()
+      : "Thường trực Hội",
     authorId: raw.authorId || undefined,
     authorRole: raw.authorRole || undefined,
     authorPhone: raw.authorPhone || undefined,
@@ -210,7 +212,7 @@ export async function POST(req: NextRequest) {
         thumbnail: primaryImage,
         imageGallery: gallery,
         status: articleStatus,
-        author: author?.trim() || (isCadre ? "Thường trực Hội CCB Xã Ea Súp" : "Hội viên CCB Ea Súp"),
+        author: author?.trim() || (isCadre ? "Thường trực Hội" : "Hội viên CCB Ea Súp"),
         authorRole: effectiveRole,
         authorPhone: authorPhone || "",
         // Chỉ lưu authorId nếu ID đó tồn tại trong User, tránh lỗi Foreign Key

@@ -470,7 +470,7 @@ export default function HomePage() {
                       <div className="p-4 space-y-2">
                         <div className="flex items-center justify-between text-xs text-deep-muted">
                           <span>📅 {item.date}</span>
-                          <span>👁️ {item.views ?? 0} lượt xem</span>
+                          <span>👁️ {item.views ?? 0}</span>
                         </div>
                         <Link href={`/tin-tuc/${item.id}`} className="block">
                           <h3 className="text-base font-bold text-deep-text leading-snug line-clamp-2 group-hover:text-moss-green group-hover:underline transition cursor-pointer">
@@ -583,7 +583,7 @@ export default function HomePage() {
                 <span className="px-2 py-0.5 rounded bg-bronze-gold text-[11px] font-bold uppercase text-white">
                   {selectedArticle.category}
                 </span>
-                <span className="text-xs text-emerald-200">Ngày đăng: {selectedArticle.date}</span>
+                <span className="text-xs text-emerald-200">📅 {selectedArticle.date}</span>
               </div>
               <button
                 type="button"
@@ -618,9 +618,9 @@ export default function HomePage() {
               </h2>
 
               <div className="flex items-center gap-4 text-xs text-deep-muted pb-3 border-b border-stone-200">
-                <span>Tác giả: <strong>{selectedArticle.author}</strong></span>
+                <span>Tác giả: <strong>{selectedArticle.author ? selectedArticle.author.replace(/Thường trực Hội CCB(\s+(xã|Xã))?(\s+(Ea Súp|ea súp))?/gi, "Thường trực Hội").trim() : "Thường trực Hội"}</strong></span>
                 <span>•</span>
-                <span>Lượt xem: <strong>{selectedArticle.views ?? 0}</strong></span>
+                <span>👁️ <strong>{selectedArticle.views ?? 0}</strong></span>
               </div>
 
               {selectedArticle.imageUrl && (

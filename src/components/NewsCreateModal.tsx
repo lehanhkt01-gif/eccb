@@ -112,7 +112,7 @@ export default function NewsCreateModal({
 
       // Tự động gán tác giả theo Session
       if (isCadre) {
-        setAuthor("Thường trực Hội CCB xã Ea Súp");
+        setAuthor("Thường trực Hội");
       } else if (isBranchLeader) {
         const hamlet = currentUser?.hamletName || "Chi hội";
         setAuthor(`${currentUser?.fullName || "Chi hội trưởng"} - Chi hội trưởng ${hamlet}`);

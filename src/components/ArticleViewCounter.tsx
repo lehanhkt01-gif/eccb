@@ -41,7 +41,7 @@ export default function ArticleViewCounter({
 
   return (
     <span>
-      👁️ <strong className="font-bold text-deep-text">{views}</strong> lượt xem
+      👁️ <strong className="font-bold text-deep-text">{views}</strong>
     </span>
   );
 }
