@@ -9,6 +9,10 @@ import FormattedContent from "@/components/FormattedContent";
 import SafeImage from "@/components/SafeImage";
 import { getAllNews, getNewsById, Article } from "@/lib/newsService";
 import { getFirstImageUrl, getPreviewDescription } from "@/lib/news-utils";
+import ArticleViewCounter from "@/components/ArticleViewCounter";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -148,7 +152,7 @@ export default async function NewsDetailPage({ params }: PageProps) {
             <div className="flex items-center gap-4 text-xs font-medium text-stone-500">
               <span>✍️ Tác giả: <strong className="text-deep-text">{article.author}</strong></span>
               <span>•</span>
-              <span>👁️ <strong>{article.views || 250}</strong> lượt xem</span>
+              <ArticleViewCounter articleId={article.id} initialViews={article.views ?? 0} />
             </div>
           </div>
 

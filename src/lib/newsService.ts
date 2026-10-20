@@ -135,12 +135,21 @@ export async function getNewsById(idOrSlug: string): Promise<Article | null> {
 }
 
 /**
- * Tăng lượt xem cho bản tin trong PostgreSQL
+ * Tăng lượt xem cho bản tin trong PostgreSQL (Hỗ trợ cả ID và Slug)
  */
-export async function incrementArticleViews(id: string): Promise<number | null> {
+export async function incrementArticleViews(idOrSlug: string): Promise<number | null> {
   try {
+    const article = await prisma.article.findFirst({
+      where: {
+        OR: [{ id: idOrSlug }, { slug: idOrSlug }],
+      },
+      select: { id: true, views: true },
+    });
+
+    if (!article) return null;
+
     const updated = await prisma.article.update({
-      where: { id },
+      where: { id: article.id },
       data: {
         views: {
           increment: 1,
@@ -151,7 +160,8 @@ export async function incrementArticleViews(id: string): Promise<number | null> 
       },
     });
     return updated.views;
-  } catch {
+  } catch (err) {
+    console.error("Lỗi khi tăng lượt xem bài viết:", err);
     return null;
   }
 }

@@ -470,7 +470,7 @@ export default function HomePage() {
                       <div className="p-4 space-y-2">
                         <div className="flex items-center justify-between text-xs text-deep-muted">
                           <span>📅 {item.date}</span>
-                          <span>👁️ {item.views || 100} lượt xem</span>
+                          <span>👁️ {item.views ?? 0} lượt xem</span>
                         </div>
                         <Link href={`/tin-tuc/${item.id}`} className="block">
                           <h3 className="text-base font-bold text-deep-text leading-snug line-clamp-2 group-hover:text-moss-green group-hover:underline transition cursor-pointer">
@@ -620,7 +620,7 @@ export default function HomePage() {
               <div className="flex items-center gap-4 text-xs text-deep-muted pb-3 border-b border-stone-200">
                 <span>Tác giả: <strong>{selectedArticle.author}</strong></span>
                 <span>•</span>
-                <span>Lượt xem: <strong>{selectedArticle.views || 150}</strong></span>
+                <span>Lượt xem: <strong>{selectedArticle.views ?? 0}</strong></span>
               </div>
 
               {selectedArticle.imageUrl && (
