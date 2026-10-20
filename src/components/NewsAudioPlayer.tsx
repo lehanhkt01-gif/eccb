@@ -383,14 +383,11 @@ export function NewsAudioPlayer({
       }
     }
 
-    // 2. Nếu chưa nạp xong, duy trì luồng audio bằng silent loop để hệ điều hành không ngắt
+    // 2. Mở khóa hoặc chuẩn bị luồng audio bằng Data URI WAV im lặng tuyệt đối (không loop, không gọi mạng)
     try {
-      audio.loop = true;
-      audio.src = "/audio/silence.mp3";
-      await audio.play().catch(async () => {
-        audio.src = SILENT_BASE64_WAV;
-        await audio.play();
-      });
+      audio.loop = false;
+      audio.src = SILENT_BASE64_WAV;
+      await audio.play().catch(() => {});
     } catch {}
 
     setStatus("loading");
@@ -512,14 +509,11 @@ export function NewsAudioPlayer({
     const audio = getMasterAudio();
     if (!audio) return;
 
-    // Mở khóa Media Pipeline tức thời trên iOS / Android ngay trong User Gesture
+    // Mở khóa Media Pipeline tức thời trên iOS / Android ngay trong User Gesture bằng Data URI WAV im lặng tuyệt đối (không loop, không gọi mạng)
     try {
-      audio.loop = true;
-      audio.src = "/audio/silence.mp3";
-      await audio.play().catch(async () => {
-        audio.src = SILENT_BASE64_WAV;
-        await audio.play();
-      });
+      audio.loop = false;
+      audio.src = SILENT_BASE64_WAV;
+      await audio.play().catch(() => {});
     } catch (e) {
       console.warn("[PRIMING_AUDIO_WARN]", e);
     }
@@ -825,16 +819,15 @@ export function NewsAudioPlayer({
     );
   }
 
-  // 2. TRẠNG THÁI ĐANG TẢI (LOADING)
+  // 2. TRẠNG THÁI ĐANG TẢI (LOADING) - Loại bỏ hoàn toàn role=status và aria-live để trình duyệt và hệ điều hành không đọc to "chấm, chấm, chấm...."
   if (status === "loading") {
     return (
       <div
-        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-stone-100 text-moss-green font-semibold text-xs border border-moss-green/40 shrink-0 ${className}`}
-        role="status"
-        aria-live="polite"
+        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-stone-100 text-moss-green font-semibold text-xs border border-moss-green/40 shrink-0 select-none ${className}`}
+        aria-hidden="true"
       >
         <Loader2 className="w-3.5 h-3.5 animate-spin text-moss-green" />
-        <span className="text-[11px] sm:text-xs">Đang chuẩn bị giọng đọc...</span>
+        <span className="text-[11px] sm:text-xs">Đang tải bản tin</span>
       </div>
     );
   }

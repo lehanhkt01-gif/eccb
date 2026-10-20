@@ -99,7 +99,7 @@ export function extractCleanSpeechText(title: string, summary?: string | null, c
       .replace(/&#39;|&apos;/gi, "'")
       .replace(/&lt;/gi, "<")
       .replace(/&gt;/gi, ">")
-      .replace(/&hellip;/gi, "...")
+      .replace(/&hellip;/gi, ", ")
       .replace(/&bull;/gi, ", ")
       .replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(parseInt(dec, 10)));
 
@@ -158,9 +158,11 @@ export function extractCleanSpeechText(title: string, summary?: string | null, c
 
   script = script.replace(/ngày\s+ngày\s+/gi, "ngày ");
 
-  // Dọn dẹp khoảng trắng, dấu câu lặp lại
+  // Dọn dẹp khoảng trắng, dấu câu lặp lại, triệt tiêu 100% dấu ba chấm Unicode và chuỗi chấm liên tiếp
   script = script
     .replace(/[•·▪▫●○]/g, ", ")
+    .replace(/[…\u2026]/g, ", ")
+    .replace(/\.{2,}/g, ".")
     .replace(/\s*([,.:;?!])\s*/g, "$1 ")
     .replace(/\.+/g, ".")
     .replace(/(\. ){2,}/g, ". ")
