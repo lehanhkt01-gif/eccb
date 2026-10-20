@@ -22,7 +22,6 @@ export default function NewsShareBar({
   contentHtml,
   nextArticle,
 }: NewsShareBarProps) {
-  const [copied, setCopied] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Lấy URL tuyệt đối an toàn
@@ -40,7 +39,7 @@ export default function NewsShareBar({
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  // 1. Sao chép link vào bộ nhớ tạm
+  // 1. Sao chép link vào bộ nhớ tạm (dùng làm fallback khi trình duyệt không hỗ trợ Web Share API)
   const handleCopy = async () => {
     const fullUrl = getFullUrl();
     try {
@@ -54,13 +53,9 @@ export default function NewsShareBar({
         document.execCommand("copy");
         document.body.removeChild(textArea);
       }
-      setCopied(true);
       showToast("✓ Đã sao chép liên kết bản tin thành công!");
-      setTimeout(() => setCopied(false), 2500);
     } catch {
-      setCopied(true);
       showToast("✓ Đã sao chép liên kết bản tin!");
-      setTimeout(() => setCopied(false), 2500);
     }
   };
 
@@ -86,7 +81,7 @@ export default function NewsShareBar({
   };
 
   return (
-    <div className="relative bg-stone-50 border border-stone-200 rounded-xl p-3 sm:p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 not-print shadow-2xs">
+    <div className="relative bg-stone-50 border border-stone-200 rounded-xl p-2.5 sm:p-3 flex items-center gap-2 flex-wrap not-print shadow-2xs">
       {/* Toast thông báo nhanh */}
       {toastMessage && (
         <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-moss-green text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-lg border border-bronze-gold animate-in fade-in slide-in-from-bottom-2 duration-150 z-20 whitespace-nowrap">
@@ -94,71 +89,37 @@ export default function NewsShareBar({
         </div>
       )}
 
-      {/* Cụm Nút Chia Sẻ & Nghe Đọc Tinh Gọn */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-sm sm:text-base select-none shrink-0" title="Chia sẻ bản tin">
-          📢
-        </span>
+      {/* 1. Nút Nghe đọc bản tin tự động (Đưa lên vị trí đầu tiên) */}
+      {newsId && (
+        <NewsAudioPlayer
+          newsId={newsId}
+          title={shareTitle}
+          summary={shareSummary}
+          content={content}
+          contentHtml={contentHtml}
+          nextArticle={nextArticle}
+        />
+      )}
 
-        {/* Nút 1: Chia Sẻ (Đa nền tảng: mở Zalo, Messenger, SMS, Telegram, Viber, Gmail...) */}
-        <button
-          type="button"
-          onClick={handleNativeShare}
-          className="px-3.5 py-1.5 text-xs font-bold rounded-lg shadow-2xs flex items-center gap-1.5 transition cursor-pointer bg-moss-green hover:bg-[#1a301a] active:scale-95 text-white border border-moss-green/40 shrink-0"
-          title="Chia sẻ bản tin đến các ứng dụng trên thiết bị (Zalo, Messenger, Tin nhắn SMS, Gmail, Telegram...)"
-        >
-          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="18" cy="5" r="3" />
-            <circle cx="6" cy="12" r="3" />
-            <circle cx="18" cy="19" r="3" />
-            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
-            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
-          </svg>
-          <span>Chia Sẻ</span>
-        </button>
+      {/* Vạch phân cách nhẹ giữa Nghe đọc và Chia sẻ */}
+      {newsId && <span className="w-px h-5 bg-stone-300 mx-0.5 inline-block shrink-0" />}
 
-        {/* Nút 2: Sao chép link */}
-        <button
-          type="button"
-          onClick={handleCopy}
-          className={`px-3 py-1.5 text-xs font-bold rounded-lg shadow-2xs flex items-center gap-1.5 transition cursor-pointer border active:scale-95 shrink-0 ${
-            copied
-              ? "bg-emerald-600 text-white border-emerald-700"
-              : "bg-white hover:bg-stone-100 text-deep-text border-stone-300"
-          }`}
-          title="Sao chép liên kết bản tin để gửi nhanh"
-        >
-          {copied ? (
-            <span>✓</span>
-          ) : (
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-            </svg>
-          )}
-          <span>{copied ? "Đã chép link!" : "Sao chép link"}</span>
-        </button>
-
-        {/* Nút 3: Trình phát Audio Nghe đọc bản tin (nếu có newsId) */}
-        {newsId && (
-          <>
-            <span className="w-px h-5 bg-stone-300 mx-1 hidden sm:inline-block" />
-            <NewsAudioPlayer
-              newsId={newsId}
-              title={shareTitle}
-              summary={shareSummary}
-              content={content}
-              contentHtml={contentHtml}
-              nextArticle={nextArticle}
-            />
-          </>
-        )}
-      </div>
-
-      {/* Hiển thị URL rút gọn trên màn hình lớn */}
-      <div className="text-[11px] text-stone-400 font-mono hidden md:block truncate max-w-xs select-all" title={getFullUrl()}>
-        {getFullUrl()}
-      </div>
+      {/* 2. Nút Chia Sẻ (Đa nền tảng: Zalo, Messenger, SMS, Telegram, Viber, Gmail...) */}
+      <button
+        type="button"
+        onClick={handleNativeShare}
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg shadow-2xs transition cursor-pointer bg-white hover:bg-stone-100 text-deep-text border border-stone-300 active:scale-95 shrink-0"
+        title="Chia sẻ bản tin đến các ứng dụng trên thiết bị (Zalo, Messenger, Tin nhắn SMS, Gmail, Telegram...)"
+      >
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="18" cy="5" r="3" />
+          <circle cx="6" cy="12" r="3" />
+          <circle cx="18" cy="19" r="3" />
+          <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+          <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+        </svg>
+        <span>Chia Sẻ</span>
+      </button>
     </div>
   );
 }
