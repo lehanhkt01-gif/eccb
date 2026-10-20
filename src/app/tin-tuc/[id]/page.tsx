@@ -152,12 +152,7 @@ export default async function NewsDetailPage({ params }: PageProps) {
             </div>
           </div>
 
-          {/* Tiêu đề bài viết: Kiên quyết không in nghiêng theo chuẩn quân đội */}
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-deep-text leading-tight tracking-tight not-italic">
-            {article.title}
-          </h1>
-
-          {/* Thanh tương tác chia sẻ mạng xã hội & Trình phát âm thanh đọc bản tin */}
+          {/* Thanh tương tác chia sẻ mạng xã hội & Trình phát âm thanh đọc bản tin (Đặt ngay dưới hàng phân loại) */}
           <NewsShareBar
             title={article.title}
             url={currentUrl}
@@ -166,6 +161,11 @@ export default async function NewsDetailPage({ params }: PageProps) {
             content={article.content}
             nextArticle={nextArticle}
           />
+
+          {/* Tiêu đề bài viết: Kiên quyết không in nghiêng theo chuẩn quân đội */}
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-deep-text leading-tight tracking-tight not-italic">
+            {article.title}
+          </h1>
 
           {/* Khung Sapo tóm tắt nội dung */}
           <div className="p-4 sm:p-5 bg-stone-50 rounded-xl border-l-4 border-moss-green border-stone-200 text-stone-800 text-base sm:text-lg font-medium leading-relaxed shadow-xs">

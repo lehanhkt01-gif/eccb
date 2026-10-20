@@ -596,17 +596,7 @@ export default function HomePage() {
 
             {/* Nội dung bản tin */}
             <div className="p-6 overflow-y-auto space-y-4">
-              <h2 className="text-xl sm:text-2xl font-bold text-deep-text leading-snug">
-                {selectedArticle.title}
-              </h2>
-
-              <div className="flex items-center gap-4 text-xs text-deep-muted pb-3 border-b border-stone-200">
-                <span>Tác giả: <strong>{selectedArticle.author}</strong></span>
-                <span>•</span>
-                <span>Lượt xem: <strong>{selectedArticle.views || 150}</strong></span>
-              </div>
-
-              {/* Thanh chia sẻ đa kênh chuẩn đường dẫn bài viết & Nghe đọc tự động */}
+              {/* Thanh chia sẻ & Nghe đọc tự động (Đặt trên tiêu đề bản tin) */}
               <NewsShareBar
                 title={selectedArticle.title}
                 url={`https://ccb.easupso.com/tin-tuc/${selectedArticle.id}`}
@@ -622,6 +612,16 @@ export default function HomePage() {
                   return null;
                 })()}
               />
+
+              <h2 className="text-xl sm:text-2xl font-bold text-deep-text leading-snug">
+                {selectedArticle.title}
+              </h2>
+
+              <div className="flex items-center gap-4 text-xs text-deep-muted pb-3 border-b border-stone-200">
+                <span>Tác giả: <strong>{selectedArticle.author}</strong></span>
+                <span>•</span>
+                <span>Lượt xem: <strong>{selectedArticle.views || 150}</strong></span>
+              </div>
 
               {selectedArticle.imageUrl && (
                 <div className="rounded-lg overflow-hidden border border-stone-300 max-h-80">
