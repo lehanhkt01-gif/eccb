@@ -154,7 +154,7 @@ export default async function NewsDetailPage({ params }: PageProps) {
             </div>
             <div className="flex items-center gap-4 text-xs font-medium text-stone-500">
               <span>✍️ Tác giả: <strong className="text-deep-text">{displayAuthor}</strong></span>
-              <span>•</span>
+              <span aria-hidden="true" className="select-none text-stone-300">•</span>
               <ArticleViewCounter articleId={article.id} initialViews={article.views ?? 0} />
             </div>
           </div>

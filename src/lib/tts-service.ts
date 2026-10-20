@@ -38,25 +38,42 @@ export function sanitizeAudioId(id: string): string {
   return sanitized || `news-${Date.now()}`;
 }
 
+// Biểu thức chính quy quét và loại bỏ toàn bộ Emoji và biểu tượng đồ họa Unicode
+const EMOJI_REGEX = /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1F018}-\u{1F270}\u{2388}\u{200B}-\u{200D}\u{FE0E}\u{FE0F}]/gu;
+
 /**
  * Làm sạch văn bản HTML thành kịch bản đọc báo tiếng Việt tự nhiên
  * - Loại bỏ hoàn toàn mã script, style, comments, thẻ ảnh, caption rác
+ * - Loại bỏ 100% Emoji, bullet points, ký tự đặc biệt gây lỗi phát âm từ "chấm" ở đầu câu
  * - Chuyển thẻ xuống dòng và đoạn văn thành dấu ngắt câu tự nhiên để giọng đọc ngắt nghỉ đúng nhịp
  * - Mở rộng các từ viết tắt chuyên ngành quân sự, Hội CCB, chính quyền địa phương
  */
 export function extractCleanSpeechText(title: string, summary?: string | null, contentHtml?: string | null): string {
   let script = "";
 
-  const cleanTitle = (title || "").trim();
+  // 1. Chuẩn hóa tiêu đề: Gỡ bỏ emoji, gỡ bỏ bullet/dấu chấm/khoảng trắng đầu & cuối dòng
+  let cleanTitle = (title || "")
+    .replace(EMOJI_REGEX, "")
+    .replace(/^[•·▪▫●○*#\-\–\—\.\,\;\:\?\!…\s]+/g, "")
+    .replace(/[\.\,\;\:\?\!…\s]+$/g, "")
+    .trim();
+
   if (cleanTitle) {
     script += `${cleanTitle}. `;
   }
 
-  const cleanSummary = (summary || "").trim();
-  if (cleanSummary && !cleanTitle.includes(cleanSummary)) {
+  // 2. Chuẩn hóa tóm tắt (Sapo): Gỡ bỏ emoji, gỡ bỏ bullet/dấu chấm/khoảng trắng đầu & cuối dòng
+  let cleanSummary = (summary || "")
+    .replace(EMOJI_REGEX, "")
+    .replace(/^[•·▪▫●○*#\-\–\—\.\,\;\:\?\!…\s]+/g, "")
+    .replace(/[\.\,\;\:\?\!…\s]+$/g, "")
+    .trim();
+
+  if (cleanSummary && !cleanTitle.toLowerCase().includes(cleanSummary.toLowerCase())) {
     script += `${cleanSummary}. `;
   }
 
+  // 3. Chuẩn hóa nội dung chi tiết bài viết
   if (contentHtml) {
     let clean = contentHtml;
 
@@ -86,12 +103,14 @@ export function extractCleanSpeechText(title: string, summary?: string | null, c
       .replace(/&bull;/gi, ", ")
       .replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(parseInt(dec, 10)));
 
+    // Chuyển toàn bộ ký tự bullet point thành dấu phẩy để ngắt nhịp tự nhiên, tránh bị đọc thành từ "chấm"
+    clean = clean.replace(/[•·▪▫●○]/g, ", ");
+
+    // Gỡ bỏ toàn bộ Emoji và biểu tượng
+    clean = clean.replace(EMOJI_REGEX, " ");
+
     // Loại bỏ URL dạng http/https để tránh đọc url dài dòng
     clean = clean.replace(/https?:\/\/\S+/gi, "");
-
-    // Chuẩn hóa dấu câu lặp lại
-    clean = clean.replace(/\.+/g, ".");
-    clean = clean.replace(/\s+/g, " ");
 
     script += ` ${clean}`;
   }
@@ -108,6 +127,8 @@ export function extractCleanSpeechText(title: string, summary?: string | null, c
     [/\bMTTQ\b/g, "Mặt trận Tổ quốc"],
     [/\bBCH\b/g, "Ban Chấp hành"],
     [/\bBTV\b/g, "Ban Thường vụ"],
+    [/\bTBT\b/g, "Tổng Bí thư"],
+    [/\bTTg\b/g, "Thủ tướng"],
     [/\bTW\b/g, "Trung ương"],
     [/\bT\.Ư\b/gi, "Trung ương"],
     [/\bđ\/c\b/gi, "đồng chí"],
@@ -137,10 +158,21 @@ export function extractCleanSpeechText(title: string, summary?: string | null, c
 
   script = script.replace(/ngày\s+ngày\s+/gi, "ngày ");
 
+  // Dọn dẹp khoảng trắng, dấu câu lặp lại
   script = script
+    .replace(/[•·▪▫●○]/g, ", ")
     .replace(/\s*([,.:;?!])\s*/g, "$1 ")
+    .replace(/\.+/g, ".")
     .replace(/(\. ){2,}/g, ". ")
+    .replace(/(\, ){2,}/g, ", ")
+    .replace(/\s*,\s*\./g, ".")
+    .replace(/\s*\.\s*,/g, ".")
+    .replace(/\s+/g, " ")
     .trim();
+
+  // BƯỚC BẢO VỆ TUYỆT ĐỐI: Loại bỏ triệt để mọi ký tự đặc biệt, dấu chấm, bullet, emoji ở đầu kịch bản.
+  // Kịch bản phát thanh BẮT BUỘC phải mở đầu bằng chữ cái hoặc chữ số, triệt tiêu 100% lỗi đọc "chấm" trước bản tin.
+  script = script.replace(/^[^\p{L}\p{N}]+/gu, "").trim();
 
   return script;
 }
@@ -270,10 +302,11 @@ async function synthesizeWithGoogleTTS(text: string): Promise<Buffer> {
 export async function getOrGenerateNewsAudio(options: TTSOptions): Promise<TTSResult> {
   const baseId = sanitizeAudioId(options.newsId);
   const voiceKey = options.voice === "vi-VN-NamMinhNeural" ? "nam" : "nu";
-  const safeId = `${baseId}-${voiceKey}`;
+  // Nâng cache key lên version v2 để tự động tái sinh toàn bộ âm thanh bản tin mới siêu sạch, loại bỏ file cũ chứa tiếng "chấm"
+  const safeId = `${baseId}-${voiceKey}-v2`;
 
-  // 1. KIỂM TRA BỘ NHỚ ĐỆM TĨNH TRÊN ĐĨA (STATIC CACHE)
-  const cachedUrl = getCachedAudioPath(safeId) || (voiceKey === "nu" ? getCachedAudioPath(baseId) : null);
+  // 1. KIỂM TRA BỘ NHỚ ĐỆM TĨNH TRÊN ĐĨA (STATIC CACHE V2)
+  const cachedUrl = getCachedAudioPath(safeId);
   if (cachedUrl) {
     return {
       success: true,

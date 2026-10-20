@@ -81,8 +81,11 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // 2. Kiểm tra trạng thái cache nhanh
-    const cachedUrl = getCachedAudioPath(safeId);
+    // 2. Kiểm tra trạng thái cache nhanh (Hỗ trợ chuẩn cache version v2 siêu sạch)
+    const cachedUrl =
+      getCachedAudioPath(safeId) ||
+      getCachedAudioPath(`${safeId}-nu-v2`) ||
+      getCachedAudioPath(`${safeId}-nam-v2`);
     if (cachedUrl) {
       return NextResponse.json({
         success: true,

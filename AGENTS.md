@@ -148,6 +148,8 @@ Dự án phục vụ Hội Cựu Chiến Binh xã Ea Súp, mang tính trang tr�
 | **50** | **Tích Hợp Trình Phát Audio Đọc Bản Tin Chuẩn Easupso.com** | Tạo component `NewsAudioPlayer` và API `/api/news/tts`; Tích hợp Microsoft Edge Neural TTS giọng Nữ Hoài My truyền cảm & Nam Minh; Duy trì đọc khi tắt màn hình; Tự động đọc lần lượt | ✅ **Đã hoàn thành** |
 | **51** | **Khắc Phục Triệt Để Lỗi Đếm Lượt Xem Bị Kẹt Ở Số 1** | Nâng cấp `incrementArticleViews` hỗ trợ cả ID & Slug; Tạo API POST `/api/news/view`; Xây dựng component `ArticleViewCounter.tsx` cập nhật thời gian thực; Xóa bỏ toàn bộ số liệu fallback ảo | ✅ **Đã hoàn thành** |
 | **52** | **Tinh Gọn Thông Tin Đầu Bài Viết (Ngày Đăng, Tác Giả & Lượt Xem)** | Rút gọn dòng ngày đăng chỉ còn ngày `📅 18/10/2026` (bỏ chữ "Ngày đăng"); Rút gọn tên tác giả mặc định thành "Thường trực Hội" (thay cho "Thường trực Hội CCB xã Ea Súp"); Rút gọn số lượt xem chỉ gồm biểu tượng ánh mắt và con số `👁️ 1` (bỏ chữ "lượt xem") trên toàn bộ hệ thống | ✅ **Đã hoàn thành** |
+| **53** | **Loại Bỏ Triệt Để Lỗi Đọc Từ "Chấm" & Ký Tự Đầu Mỗi Bản Tin** | Xóa sạch 100% Emoji, bullet points (`•`, `·`, `▪`, `●`), dấu gạch ngang, dấu chấm câu ở đầu kịch bản giọng đọc TTS; Khóa chặt quy tắc kịch bản luôn bắt đầu bằng chữ cái/số tiếng Việt; Nâng cache key âm thanh lên `-v2` để tự động tái sinh toàn bộ file MP3 mới không còn tiếng "chấm"; Gắn `aria-hidden="true"` vào tất cả thẻ `<span>•</span>` phân cách trên giao diện ngăn trình đọc màn hình điện thoại đọc từ "chấm" | ✅ **Đã hoàn thành** |
+
 
 
 

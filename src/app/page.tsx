@@ -619,7 +619,7 @@ export default function HomePage() {
 
               <div className="flex items-center gap-4 text-xs text-deep-muted pb-3 border-b border-stone-200">
                 <span>Tác giả: <strong>{selectedArticle.author ? selectedArticle.author.replace(/Thường trực Hội CCB(\s+(xã|Xã))?(\s+(Ea Súp|ea súp))?/gi, "Thường trực Hội").trim() : "Thường trực Hội"}</strong></span>
-                <span>•</span>
+                <span aria-hidden="true" className="select-none text-stone-300">•</span>
                 <span>👁️ <strong>{selectedArticle.views ?? 0}</strong></span>
               </div>
 

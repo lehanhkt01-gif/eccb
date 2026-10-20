@@ -86,7 +86,7 @@ export default function FormattedContent({ content, className = "" }: FormattedC
                 const bulletContent = line.trim().replace(/^([•\-]\s*|\*\s+)/, "");
                 return (
                   <li key={lIdx} className="flex items-start gap-2.5">
-                    <span className="text-moss-green font-bold text-base leading-snug shrink-0">●</span>
+                    <span aria-hidden="true" className="text-moss-green font-bold text-base leading-snug shrink-0 select-none">●</span>
                     <span className="flex-1">{parseInlineStyles(bulletContent)}</span>
                   </li>
                 );
@@ -137,7 +137,7 @@ export default function FormattedContent({ content, className = "" }: FormattedC
                 const bulletContent = trimmedLine.replace(/^([•\-]\s*|\*\s+)/, "");
                 return (
                   <span key={lIdx} className="flex items-start gap-2.5 my-1.5 pl-3 sm:pl-5">
-                    <span className="text-moss-green font-bold text-sm shrink-0">●</span>
+                    <span aria-hidden="true" className="text-moss-green font-bold text-sm shrink-0 select-none">●</span>
                     <span className="flex-1">{parseInlineStyles(bulletContent)}</span>
                   </span>
                 );
