@@ -606,11 +606,21 @@ export default function HomePage() {
                 <span>Lượt xem: <strong>{selectedArticle.views || 150}</strong></span>
               </div>
 
-              {/* Thanh chia sẻ đa kênh chuẩn đường dẫn bài viết */}
+              {/* Thanh chia sẻ đa kênh chuẩn đường dẫn bài viết & Nghe đọc tự động */}
               <NewsShareBar
                 title={selectedArticle.title}
                 url={`https://ccb.easupso.com/tin-tuc/${selectedArticle.id}`}
                 summary={selectedArticle.summary}
+                newsId={selectedArticle.id}
+                content={selectedArticle.content}
+                nextArticle={(() => {
+                  const idx = articles.findIndex((a) => a.id === selectedArticle.id);
+                  if (idx !== -1 && idx + 1 < articles.length) {
+                    const n = articles[idx + 1];
+                    return { id: n.id, title: n.title, slug: n.slug || n.id, summary: n.summary, content: n.content };
+                  }
+                  return null;
+                })()}
               />
 
               {selectedArticle.imageUrl && (

@@ -79,6 +79,29 @@ export default async function NewsDetailPage({ params }: PageProps) {
   const imageSrc = article.imageUrl || "/images/hero-military-bg.webp";
   const previewDesc = getPreviewDescription(article);
 
+  // Tìm bài viết liền kề tiếp theo để trình phát âm thanh tự động đọc liên tục
+  const currentIdx = allArticles.findIndex((item) => item.id === article.id || item.slug === article.id);
+  let nextArticle = null;
+  if (currentIdx !== -1 && currentIdx + 1 < allArticles.length) {
+    const nextItem = allArticles[currentIdx + 1];
+    nextArticle = {
+      id: nextItem.id,
+      title: nextItem.title,
+      slug: nextItem.slug || nextItem.id,
+      summary: nextItem.summary,
+      content: nextItem.content,
+    };
+  } else if (allArticles.length > 1 && currentIdx === allArticles.length - 1) {
+    const firstItem = allArticles[0];
+    nextArticle = {
+      id: firstItem.id,
+      title: firstItem.title,
+      slug: firstItem.slug || firstItem.id,
+      summary: firstItem.summary,
+      content: firstItem.content,
+    };
+  }
+
   return (
     <div className="min-h-screen bg-cream-bg text-deep-text flex flex-col overflow-x-clip">
       {/* Header điều hướng chung của E-CCB */}
@@ -134,11 +157,14 @@ export default async function NewsDetailPage({ params }: PageProps) {
             {article.title}
           </h1>
 
-          {/* Thanh tương tác chia sẻ mạng xã hội (Zalo, Facebook, Copy link, In ấn) */}
+          {/* Thanh tương tác chia sẻ mạng xã hội & Trình phát âm thanh đọc bản tin */}
           <NewsShareBar
             title={article.title}
             url={currentUrl}
             summary={previewDesc}
+            newsId={article.id}
+            content={article.content}
+            nextArticle={nextArticle}
           />
 
           {/* Khung Sapo tóm tắt nội dung */}
@@ -222,6 +248,9 @@ export default async function NewsDetailPage({ params }: PageProps) {
               title={article.title}
               url={currentUrl}
               summary={previewDesc}
+              newsId={article.id}
+              content={article.content}
+              nextArticle={nextArticle}
             />
           </div>
         </article>

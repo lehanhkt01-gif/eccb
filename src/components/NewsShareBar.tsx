@@ -1,14 +1,27 @@
 "use client";
 
 import React, { useState } from "react";
+import { NewsAudioPlayer, ArticleMeta } from "./NewsAudioPlayer";
 
 interface NewsShareBarProps {
   title?: string;
   url: string;
   summary?: string;
+  newsId?: string;
+  content?: string;
+  contentHtml?: string;
+  nextArticle?: ArticleMeta | null;
 }
 
-export default function NewsShareBar({ title, url, summary }: NewsShareBarProps) {
+export default function NewsShareBar({
+  title,
+  url,
+  summary,
+  newsId,
+  content,
+  contentHtml,
+  nextArticle,
+}: NewsShareBarProps) {
   const [copied, setCopied] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -81,7 +94,7 @@ export default function NewsShareBar({ title, url, summary }: NewsShareBarProps)
         </div>
       )}
 
-      {/* Cụm Nút Chia Sẻ Tinh Gọn */}
+      {/* Cụm Nút Chia Sẻ & Nghe Đọc Tinh Gọn */}
       <div className="flex items-center gap-2 flex-wrap">
         <span className="text-sm sm:text-base select-none shrink-0" title="Chia sẻ bản tin">
           📢
@@ -91,7 +104,7 @@ export default function NewsShareBar({ title, url, summary }: NewsShareBarProps)
         <button
           type="button"
           onClick={handleNativeShare}
-          className="px-3.5 py-1.5 text-xs font-bold rounded-lg shadow-2xs flex items-center gap-1.5 transition cursor-pointer bg-moss-green hover:bg-moss-green-dark active:scale-95 text-white border border-moss-green-light"
+          className="px-3.5 py-1.5 text-xs font-bold rounded-lg shadow-2xs flex items-center gap-1.5 transition cursor-pointer bg-moss-green hover:bg-[#1a301a] active:scale-95 text-white border border-moss-green/40 shrink-0"
           title="Chia sẻ bản tin đến các ứng dụng trên thiết bị (Zalo, Messenger, Tin nhắn SMS, Gmail, Telegram...)"
         >
           <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -108,7 +121,7 @@ export default function NewsShareBar({ title, url, summary }: NewsShareBarProps)
         <button
           type="button"
           onClick={handleCopy}
-          className={`px-3 py-1.5 text-xs font-bold rounded-lg shadow-2xs flex items-center gap-1.5 transition cursor-pointer border active:scale-95 ${
+          className={`px-3 py-1.5 text-xs font-bold rounded-lg shadow-2xs flex items-center gap-1.5 transition cursor-pointer border active:scale-95 shrink-0 ${
             copied
               ? "bg-emerald-600 text-white border-emerald-700"
               : "bg-white hover:bg-stone-100 text-deep-text border-stone-300"
@@ -125,6 +138,21 @@ export default function NewsShareBar({ title, url, summary }: NewsShareBarProps)
           )}
           <span>{copied ? "Đã chép link!" : "Sao chép link"}</span>
         </button>
+
+        {/* Nút 3: Trình phát Audio Nghe đọc bản tin (nếu có newsId) */}
+        {newsId && (
+          <>
+            <span className="w-px h-5 bg-stone-300 mx-1 hidden sm:inline-block" />
+            <NewsAudioPlayer
+              newsId={newsId}
+              title={shareTitle}
+              summary={shareSummary}
+              content={content}
+              contentHtml={contentHtml}
+              nextArticle={nextArticle}
+            />
+          </>
+        )}
       </div>
 
       {/* Hiển thị URL rút gọn trên màn hình lớn */}

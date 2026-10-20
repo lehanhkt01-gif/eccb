@@ -66,3 +66,7 @@ docker_data/
 
 # TypeScript cache
 *.tsbuildinfo
+
+# Uploaded audio & media
+/public/uploads/audio/
+/public/uploads/lectures/
