@@ -20,10 +20,17 @@ export async function POST(req: NextRequest) {
       if (!id && !cccd) {
         return NextResponse.json({ success: false, message: "Thiếu id hoặc cccd" }, { status: 400 });
       }
-      const where = id ? { id } : { cccd };
-      const member = await prisma.member.findUnique({ where });
+      
+      let member = null;
+      if (id) {
+        member = await prisma.member.findUnique({ where: { id } });
+      }
+      if (!member && cccd) {
+        member = await prisma.member.findUnique({ where: { cccd: String(cccd).trim() } });
+      }
+
       if (!member) {
-        return NextResponse.json({ success: false, message: "Hồ sơ không tồn tại" }, { status: 404 });
+        return NextResponse.json({ success: false, message: "Hồ sơ không tồn tại trong CSDL" }, { status: 404 });
       }
 
       await prisma.member.update({
@@ -90,10 +97,17 @@ export async function POST(req: NextRequest) {
       if (!id && !cccd) {
         return NextResponse.json({ success: false, message: "Thiếu id hoặc cccd" }, { status: 400 });
       }
-      const where = id ? { id } : { cccd };
-      const member = await prisma.member.findUnique({ where });
+      
+      let member = null;
+      if (id) {
+        member = await prisma.member.findUnique({ where: { id } });
+      }
+      if (!member && cccd) {
+        member = await prisma.member.findUnique({ where: { cccd: String(cccd).trim() } });
+      }
+
       if (!member) {
-        return NextResponse.json({ success: true, message: "Hồ sơ không tồn tại hoặc đã xóa" });
+        return NextResponse.json({ success: true, notFoundInDb: true, message: "Hồ sơ không tồn tại hoặc đã được xóa khỏi CSDL" });
       }
 
       // Cascade delete

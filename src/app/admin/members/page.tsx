@@ -238,13 +238,16 @@ export default function AdminMembersPage() {
     if (!editingMember) return;
     setIsSavingEdit(true);
     try {
+      const targetId = originalMember?.id || editingMember.id;
+      const originalCccd = originalMember?.cccd || editingMember.cccd;
+
       // 1. Gửi cập nhật trực tiếp đến API máy chủ CSDL PostgreSQL
       const apiRes = await fetch("/api/admin/members", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          id: originalMember?.id || editingMember.id,
-          originalCccd: originalMember?.cccd || editingMember.cccd,
+          id: targetId,
+          originalCccd: originalCccd,
           cccd: editingMember.cccd,
           updates: editingMember,
         }),
@@ -259,16 +262,18 @@ export default function AdminMembersPage() {
 
       // 2. Cập nhật vào kho dữ liệu trình duyệt (localStorage)
       updateStoredMember(
-        originalMember?.id || editingMember.id,
+        targetId,
         savedMember,
-        originalMember?.cccd
+        originalCccd
       );
 
       // 3. Cập nhật ngay lập tức state members trên giao diện
       setMembers((prev) =>
         prev.map((m) =>
-          m.id === (originalMember?.id || editingMember.id) ||
-          m.cccd === (originalMember?.cccd || editingMember.cccd)
+          (targetId && m.id === targetId) ||
+          (originalCccd && m.cccd === originalCccd) ||
+          (editingMember.id && m.id === editingMember.id) ||
+          (editingMember.cccd && m.cccd === editingMember.cccd)
             ? savedMember
             : m
         )
@@ -318,9 +323,18 @@ export default function AdminMembersPage() {
 
     setIsDeletingMember(true);
     try {
+      const targetId = editingMember.id;
+      const targetCccd = editingMember.cccd;
+
       // 1. Gửi request DELETE tới API máy chủ để chuyển vào thùng rác (soft delete)
-      const queryParam = editingMember.id ? `id=${encodeURIComponent(editingMember.id)}` : `cccd=${encodeURIComponent(editingMember.cccd)}`;
-      const res = await fetch(`/api/admin/members?${queryParam}&reason=${encodeURIComponent("Cán bộ xã chuyển vào Thùng rác")}`, {
+      const params = new URLSearchParams();
+      if (targetId) params.set("id", targetId);
+      if (targetCccd) params.set("cccd", targetCccd);
+      if (editingMember.fullName) params.set("fullName", editingMember.fullName);
+      if (editingMember.hamletName) params.set("hamletName", editingMember.hamletName);
+      params.set("reason", "Cán bộ xã chuyển vào Thùng rác");
+
+      const res = await fetch(`/api/admin/members?${params.toString()}`, {
         method: "DELETE",
       });
       const data = await res.json();
@@ -329,13 +343,13 @@ export default function AdminMembersPage() {
       }
 
       // 2. Cập nhật trong bộ nhớ local store
-      moveToTrashStoredMember(editingMember.id);
+      moveToTrashStoredMember(targetId, targetCccd, "Cán bộ xã chuyển vào Thùng rác");
 
       // 3. Cập nhật state danh sách members
       const nowIso = new Date().toISOString();
       setMembers((prev) =>
         prev.map((m) =>
-          m.id === editingMember.id || m.cccd === editingMember.cccd
+          (targetId && m.id === targetId) || (targetCccd && m.cccd === targetCccd)
             ? { ...m, isDeleted: true, deletedAt: nowIso, deletedReason: "Cán bộ xã chuyển vào Thùng rác" }
             : m
         )
@@ -368,12 +382,12 @@ export default function AdminMembersPage() {
       });
 
       // 2. Cập nhật local store
-      restoreStoredMember(member.id);
+      restoreStoredMember(member.id, member.cccd);
 
       // 3. Cập nhật state
       setMembers((prev) =>
         prev.map((m) =>
-          m.id === member.id || m.cccd === member.cccd
+          (member.id && m.id === member.id) || (member.cccd && m.cccd === member.cccd)
             ? { ...m, isDeleted: false, deletedAt: undefined, deletedReason: undefined }
             : m
         )
@@ -426,8 +440,8 @@ export default function AdminMembersPage() {
         body: JSON.stringify({ action: "permanent_delete", id: member.id, cccd: member.cccd }),
       });
 
-      deleteStoredMember(member.id);
-      setMembers((prev) => prev.filter((m) => m.id !== member.id && m.cccd !== member.cccd));
+      deleteStoredMember(member.id, member.cccd);
+      setMembers((prev) => prev.filter((m) => (!member.id || m.id !== member.id) && (!member.cccd || m.cccd !== member.cccd)));
       window.dispatchEvent(new Event("eccb-members-updated"));
       showToast(`🗑️ Đã xóa vĩnh viễn hồ sơ [${member.fullName}] khỏi CSDL!`);
     } catch (err) {

@@ -770,26 +770,54 @@ export async function DELETE(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
     const cccd = searchParams.get("cccd");
+    const fullName = searchParams.get("fullName");
+    const hamletName = searchParams.get("hamletName");
 
-    if (!id && !cccd) {
+    if (!id && !cccd && (!fullName || !hamletName)) {
       return NextResponse.json(
-        { success: false, message: "ID hoặc CCCD là bắt buộc để xóa." },
+        { success: false, message: "Cần ID, số CCCD hoặc Họ tên + Thôn buôn để xóa hồ sơ." },
         { status: 400 }
       );
     }
 
-    const where = id ? { id } : { cccd: cccd! };
+    // Smart Fallback Lookup: Tìm hồ sơ theo nhiều tiêu chí an toàn
+    let member = null;
+    if (id) {
+      member = await prisma.member.findUnique({
+        where: { id },
+        include: { hamlet: true },
+      });
+    }
 
-    // Tìm member trước khi xóa để gỡ liên kết
-    const member = await prisma.member.findUnique({ where });
-    if (!member) {
-      return NextResponse.json({ success: true, message: "Hồ sơ không tồn tại hoặc đã được xóa." });
+    if (!member && cccd) {
+      member = await prisma.member.findUnique({
+        where: { cccd: String(cccd).trim() },
+        include: { hamlet: true },
+      });
+    }
+
+    if (!member && fullName && hamletName) {
+      member = await prisma.member.findFirst({
+        where: {
+          fullName: { equals: fullName.trim(), mode: "insensitive" },
+          hamlet: { name: { equals: hamletName.trim(), mode: "insensitive" } },
+        },
+        include: { hamlet: true },
+      });
     }
 
     const permanent = searchParams.get("permanent") === "true";
 
+    if (!member) {
+      return NextResponse.json({
+        success: true,
+        notFoundInDb: true,
+        message: "Hồ sơ không tồn tại trong CSDL PostgreSQL hoặc đã được xóa trước đó.",
+      });
+    }
+
     if (permanent) {
-      // 1. XÓA VĨNH VIỄN KHỎI CƠ SỞ DỮ LIỆU
+      // 1. XÓA VĨNH VIỄN KHỎI CƠ SỞ DỮ LIỆU (CASCADE DELETE)
       await prisma.user.deleteMany({
         where: {
           OR: [
@@ -813,7 +841,7 @@ export async function DELETE(req: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        message: "Đã xóa vĩnh viễn hồ sơ khỏi CSDL PostgreSQL!",
+        message: `Đã xóa vĩnh viễn hồ sơ đ/c ${member.fullName} khỏi CSDL PostgreSQL!`,
       });
     } else {
       // 2. CHUYỂN VÀO THÙNG RÁC (SOFT DELETE - CÓ THỂ KHÔI PHỤC)
@@ -848,7 +876,7 @@ export async function DELETE(req: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        message: "Đã chuyển hồ sơ vào Thùng rác thành công!",
+        message: `Đã chuyển hồ sơ đ/c ${trashed.fullName} vào Thùng rác thành công!`,
         member: mapPrismaToMemberRecord(trashed),
       });
     }

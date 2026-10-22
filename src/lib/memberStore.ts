@@ -1066,19 +1066,39 @@ export function getStoredMembers(): MemberRecord[] {
       return { ...m, status: st };
     });
 
-    // 3. GÁN CỨNG 20 CHI HỘI TRƯỞNG THỰC TẾ NẾU CHƯA CÓ TRONG HỆ THỐNG (DEDUPLICATE BẰNG MAP)
+    // 3. GÁN CỨNG 20 CHI HỘI TRƯỞNG THỰC TẾ NẾU CHƯA CÓ TRONG HỆ THỐNG (DEDUPLICATE BẰNG MAP & CHỐNG HỒI SINH)
     const map = new Map<string, MemberRecord>();
+    const deletedLeaders = getDeletedLeaderCccds();
 
     // Đưa các hội viên đã có trong CSDL vào Map trước tiên để bảo toàn cập nhật vai trò / thông tin
     for (const m of currentList) {
-      map.set(m.cccd, m);
+      if (m.cccd) {
+        map.set(m.cccd, m);
+      }
     }
 
     // Bổ sung các Chi hội trưởng mặc định nếu chưa có trong danh sách
     for (const leader of OFFICIAL_BRANCH_LEADERS) {
-      if (!map.has(leader.cccd)) {
-        map.set(leader.cccd, { ...leader, status: "CHINH_THUC" });
-      }
+      // 1. Nếu đã bị người dùng xóa vĩnh viễn (nằm trong blacklist), TUYỆT ĐỐI BỎ QUA
+      if (deletedLeaders.includes(leader.cccd)) continue;
+
+      // 2. Nếu đã có trong danh sách theo CCCD, bỏ qua
+      if (map.has(leader.cccd)) continue;
+
+      // 3. Nếu đã có trong danh sách theo ID gốc (ví dụ CHT_BUON_B), bỏ qua
+      const existsById = currentList.some((m) => m.id === leader.id);
+      if (existsById) continue;
+
+      // 4. Nếu trong thôn/buôn đó đã có hồ sơ có cùng họ tên hoặc đã có CHT được gán, bỏ qua
+      const existsInHamlet = currentList.some(
+        (m) =>
+          m.hamletName === leader.hamletName &&
+          (m.fullName.trim().toLowerCase() === leader.fullName.trim().toLowerCase() ||
+           m.associationRole === "Chi hội trưởng")
+      );
+      if (existsInHamlet) continue;
+
+      map.set(leader.cccd, { ...leader, status: "CHINH_THUC" });
     }
 
     const dedupedList = Array.from(map.values());
@@ -1091,11 +1111,45 @@ export function getStoredMembers(): MemberRecord[] {
   }
 }
 
+const DELETED_LEADERS_KEY = "eccb_deleted_leader_cccds";
+
+export function getDeletedLeaderCccds(): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(DELETED_LEADERS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function addDeletedLeaderCccd(cccd: string) {
+  if (typeof window === "undefined" || !cccd) return;
+  try {
+    const list = getDeletedLeaderCccds();
+    if (!list.includes(cccd)) {
+      list.push(cccd);
+      localStorage.setItem(DELETED_LEADERS_KEY, JSON.stringify(list));
+    }
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+export function removeDeletedLeaderCccd(cccd: string) {
+  if (typeof window === "undefined" || !cccd) return;
+  try {
+    const list = getDeletedLeaderCccds().filter((c) => c !== cccd);
+    localStorage.setItem(DELETED_LEADERS_KEY, JSON.stringify(list));
+  } catch (e) {
+    console.error(e);
+  }
+}
+
 export function saveStoredMembers(members: MemberRecord[]) {
   if (typeof window === "undefined") return;
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(members));
-    window.dispatchEvent(new Event("eccb-members-updated"));
   } catch (err) {
     console.error("Lỗi khi lưu memberStore vào localStorage:", err);
   }
@@ -1123,6 +1177,11 @@ export function updateStoredMember(
         m.fullName.trim().toLowerCase() === updatedData.fullName!.trim().toLowerCase() &&
         m.hamletName.trim().toLowerCase() === updatedData.hamletName!.trim().toLowerCase()
     );
+  }
+
+  // Nếu người dùng thay đổi số CCCD, đưa CCCD cũ vào blacklist để không bị chèn lại leader mặc định
+  if (originalCccd && updatedData.cccd && originalCccd !== updatedData.cccd) {
+    addDeletedLeaderCccd(originalCccd);
   }
 
   if (index === -1) {
@@ -1158,9 +1217,6 @@ export function updateStoredMember(
     };
     currentList.push(newRecord);
     saveStoredMembers(currentList);
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent("eccb-members-updated"));
-    }
     return newRecord;
   }
 
@@ -1173,20 +1229,19 @@ export function updateStoredMember(
 
   currentList[index] = updated;
   saveStoredMembers(currentList);
-  if (typeof window !== "undefined") {
-    window.dispatchEvent(new CustomEvent("eccb-members-updated"));
-  }
   return updated;
 }
 
 /**
  * Chuyển hồ sơ hội viên vào Thùng rác (Soft delete)
  */
-export function moveToTrashStoredMember(id: string, reason?: string): boolean {
+export function moveToTrashStoredMember(id?: string, cccd?: string, reason?: string): boolean {
   if (typeof window === "undefined") return false;
   try {
     const currentList = getStoredMembers();
-    const index = currentList.findIndex((m) => m.id === id || m.cccd === id);
+    const index = currentList.findIndex(
+      (m) => (id && m.id === id) || (cccd && m.cccd === cccd)
+    );
     if (index === -1) return false;
     currentList[index] = {
       ...currentList[index],
@@ -1195,7 +1250,6 @@ export function moveToTrashStoredMember(id: string, reason?: string): boolean {
       deletedReason: reason || "Cán bộ xã chuyển vào Thùng rác",
     };
     saveStoredMembers(currentList);
-    window.dispatchEvent(new CustomEvent("eccb-members-updated"));
     return true;
   } catch (err) {
     console.error("Lỗi khi chuyển hội viên vào thùng rác trong localStorage:", err);
@@ -1206,11 +1260,13 @@ export function moveToTrashStoredMember(id: string, reason?: string): boolean {
 /**
  * Khôi phục hồ sơ hội viên từ Thùng rác
  */
-export function restoreStoredMember(id: string): boolean {
+export function restoreStoredMember(id?: string, cccd?: string): boolean {
   if (typeof window === "undefined") return false;
   try {
     const currentList = getStoredMembers();
-    const index = currentList.findIndex((m) => m.id === id || m.cccd === id);
+    const index = currentList.findIndex(
+      (m) => (id && m.id === id) || (cccd && m.cccd === cccd)
+    );
     if (index === -1) return false;
     currentList[index] = {
       ...currentList[index],
@@ -1218,8 +1274,9 @@ export function restoreStoredMember(id: string): boolean {
       deletedAt: undefined,
       deletedReason: undefined,
     };
+    if (cccd) removeDeletedLeaderCccd(cccd);
+    if (currentList[index].cccd) removeDeletedLeaderCccd(currentList[index].cccd);
     saveStoredMembers(currentList);
-    window.dispatchEvent(new CustomEvent("eccb-members-updated"));
     return true;
   } catch (err) {
     console.error("Lỗi khi khôi phục hội viên trong localStorage:", err);
@@ -1244,8 +1301,10 @@ export function restoreAllStoredMembers(): boolean {
           }
         : m
     );
+    for (const m of currentList) {
+      if (m.isDeleted && m.cccd) removeDeletedLeaderCccd(m.cccd);
+    }
     saveStoredMembers(updated);
-    window.dispatchEvent(new CustomEvent("eccb-members-updated"));
     return true;
   } catch (err) {
     console.error("Lỗi khi khôi phục tất cả hội viên trong localStorage:", err);
@@ -1260,9 +1319,12 @@ export function emptyTrashStoredMembers(): boolean {
   if (typeof window === "undefined") return false;
   try {
     const currentList = getStoredMembers();
+    const trashedCccds = currentList.filter((m) => m.isDeleted).map((m) => m.cccd);
+    for (const c of trashedCccds) {
+      if (c) addDeletedLeaderCccd(c);
+    }
     const updated = currentList.filter((m) => !m.isDeleted);
     saveStoredMembers(updated);
-    window.dispatchEvent(new CustomEvent("eccb-members-updated"));
     return true;
   } catch (err) {
     console.error("Lỗi khi dọn sạch thùng rác trong localStorage:", err);
@@ -1273,13 +1335,15 @@ export function emptyTrashStoredMembers(): boolean {
 /**
  * Xóa vĩnh viễn hồ sơ hội viên khỏi bộ nhớ local store
  */
-export function deleteStoredMember(id: string): boolean {
+export function deleteStoredMember(id?: string, cccd?: string): boolean {
   if (typeof window === "undefined") return false;
   try {
     const currentList = getStoredMembers();
-    const updatedList = currentList.filter((m) => m.id !== id && m.cccd !== id);
+    const updatedList = currentList.filter(
+      (m) => (!id || m.id !== id) && (!cccd || m.cccd !== cccd)
+    );
+    if (cccd) addDeletedLeaderCccd(cccd);
     saveStoredMembers(updatedList);
-    window.dispatchEvent(new CustomEvent("eccb-members-updated"));
     return true;
   } catch (err) {
     console.error("Lỗi khi xóa vĩnh viễn hội viên trong localStorage:", err);
