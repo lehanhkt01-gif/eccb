@@ -47,6 +47,7 @@ export default function AdminMembersPage() {
 
   const [activeModalMember, setActiveModalMember] = useState<MemberRecord | null>(null);
   const [editingMember, setEditingMember] = useState<MemberRecord | null>(null);
+  const [originalMember, setOriginalMember] = useState<MemberRecord | null>(null);
   const [editTab, setEditTab] = useState<"personal" | "military" | "party" | "policy">("personal");
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [memberToApprove, setMemberToApprove] = useState<MemberRecord | null>(null);
@@ -231,55 +232,75 @@ export default function AdminMembersPage() {
     }
   };
 
-  // Xử lý lưu chỉnh sửa 35 trường thông tin
+  // Xử lý lưu chỉnh sửa 35 trường thông tin hội viên trực tiếp vào CSDL PostgreSQL
   const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingMember) return;
     setIsSavingEdit(true);
     try {
-      const res = updateStoredMember(editingMember.id, editingMember);
-      if (res) {
-        showToast(`✅ Đã cập nhật thành công hồ sơ đ/c ${editingMember.fullName}!`);
+      // 1. Gửi cập nhật trực tiếp đến API máy chủ CSDL PostgreSQL
+      const apiRes = await fetch("/api/admin/members", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: originalMember?.id || editingMember.id,
+          originalCccd: originalMember?.cccd || editingMember.cccd,
+          cccd: editingMember.cccd,
+          updates: editingMember,
+        }),
+      });
+
+      const apiData = await apiRes.json();
+      if (!apiRes.ok || !apiData.success) {
+        throw new Error(apiData.message || apiData.error || "Lỗi máy chủ khi cập nhật CSDL");
+      }
+
+      const savedMember: MemberRecord = apiData.member || editingMember;
+
+      // 2. Cập nhật vào kho dữ liệu trình duyệt (localStorage)
+      updateStoredMember(
+        originalMember?.id || editingMember.id,
+        savedMember,
+        originalMember?.cccd
+      );
+
+      // 3. Cập nhật ngay lập tức state members trên giao diện
+      setMembers((prev) =>
+        prev.map((m) =>
+          m.id === (originalMember?.id || editingMember.id) ||
+          m.cccd === (originalMember?.cccd || editingMember.cccd)
+            ? savedMember
+            : m
+        )
+      );
+
+      // 4. Nếu là Chi hội trưởng, kích hoạt đồng bộ CHT
+      if (savedMember.associationRole === "Chi hội trưởng") {
         try {
-          await fetch("/api/admin/members", {
-            method: "PUT",
+          await fetch("/api/admin/assign-branch-leader", {
+            method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              id: editingMember.id,
-              cccd: editingMember.cccd,
-              updates: editingMember,
+              memberId: savedMember.id,
+              cccd: savedMember.cccd,
+              hamletName: savedMember.hamletName,
+              fullName: savedMember.fullName,
+              phone: savedMember.phone,
             }),
           });
-        } catch (dbErr) {
-          console.error("Lỗi đồng bộ hồ sơ vào CSDL PostgreSQL:", dbErr);
+          assignBranchLeader(savedMember.id);
+        } catch (e) {
+          console.error("Lỗi đồng bộ CHT:", e);
         }
-
-        if (editingMember.associationRole === "Chi hội trưởng") {
-          try {
-            await fetch("/api/admin/assign-branch-leader", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                memberId: editingMember.id,
-                cccd: editingMember.cccd,
-                hamletName: editingMember.hamletName,
-                fullName: editingMember.fullName,
-                phone: editingMember.phone,
-              }),
-            });
-            assignBranchLeader(editingMember.id);
-          } catch (e) {
-            console.error("Lỗi đồng bộ CHT:", e);
-          }
-        }
-        window.dispatchEvent(new Event("eccb-members-updated"));
-        setEditingMember(null);
-      } else {
-        alert("Không tìm thấy hồ sơ để cập nhật.");
       }
-    } catch (err) {
+
+      showToast(`✅ Đã cập nhật và lưu thành công hồ sơ đ/c ${savedMember.fullName}!`);
+      window.dispatchEvent(new Event("eccb-members-updated"));
+      setEditingMember(null);
+      setOriginalMember(null);
+    } catch (err: any) {
       console.error("Lỗi cập nhật hồ sơ:", err);
-      alert("Đã xảy ra lỗi khi lưu hồ sơ.");
+      alert(`⚠️ Không thể lưu hồ sơ: ${err.message || "Vui lòng kiểm tra lại kết nối mạng hoặc CSDL."}`);
     } finally {
       setIsSavingEdit(false);
     }
@@ -325,6 +346,7 @@ export default function AdminMembersPage() {
 
       showToast(`🗑️ Đã chuyển hồ sơ đ/c [${editingMember.fullName}] vào Thùng Rác! Đồng chí có thể khôi phục lại khi cần.`);
       setEditingMember(null);
+      setOriginalMember(null);
     } catch (err: any) {
       console.error("Lỗi khi chuyển hồ sơ vào thùng rác:", err);
       alert("Đã xảy ra lỗi: " + (err.message || "Không thể kết nối máy chủ"));
@@ -1986,6 +2008,7 @@ export default function AdminMembersPage() {
 
                             <button
                               onClick={() => {
+                                setOriginalMember(m);
                                 setEditingMember({ ...m });
                                 setEditTab("personal");
                               }}
@@ -2530,9 +2553,23 @@ export default function AdminMembersPage() {
                 </button>
 
                 <button
+                  onClick={() => {
+                    const mem = activeModalMember;
+                    setActiveModalMember(null);
+                    setOriginalMember(mem);
+                    setEditingMember({ ...mem });
+                    setEditTab("personal");
+                  }}
+                  className="px-3.5 py-2 bg-moss-green hover:bg-moss-green-light text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-sm cursor-pointer"
+                  title="Chỉnh sửa 35 trường thông tin hồ sơ"
+                >
+                  <span>✏️ Chỉnh Sửa Hồ Sơ</span>
+                </button>
+
+                <button
                   onClick={() => exportDocx(activeModalMember)}
                   disabled={isExporting}
-                  className="px-4 py-2 bg-moss-green hover:bg-moss-green-light text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-sm cursor-pointer"
+                  className="px-4 py-2 bg-stone-700 hover:bg-stone-800 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-sm cursor-pointer"
                 >
                   <span>📄 Xuất Phiếu Word (.docx)</span>
                 </button>
@@ -2568,7 +2605,10 @@ export default function AdminMembersPage() {
               </div>
               <button
                 type="button"
-                onClick={() => setEditingMember(null)}
+                onClick={() => {
+                  setEditingMember(null);
+                  setOriginalMember(null);
+                }}
                 className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 text-white font-bold flex items-center justify-center shrink-0 transition"
               >
                 ✕
@@ -3110,7 +3150,10 @@ export default function AdminMembersPage() {
               <div className="pt-3 border-t border-stone-300 flex items-center justify-between gap-3">
                 <button
                   type="button"
-                  onClick={() => setEditingMember(null)}
+                  onClick={() => {
+                    setEditingMember(null);
+                    setOriginalMember(null);
+                  }}
                   className="px-4 py-2.5 bg-stone-200 hover:bg-stone-300 font-bold rounded-xl text-deep-text text-xs transition cursor-pointer"
                 >
                   Hủy Bỏ

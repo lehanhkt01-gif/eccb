@@ -49,6 +49,44 @@ function parsePolicyEnum(raw?: string): PolicyStatus {
   return PolicyStatus.KHONG;
 }
 
+function parseFlexibleDate(raw?: string | Date | null): Date | null {
+  if (!raw) return null;
+  if (raw instanceof Date) return isNaN(raw.getTime()) ? null : raw;
+  const str = String(raw).trim();
+  if (!str || str.toLowerCase().includes("dd/mm/yyyy") || str === "—") return null;
+
+  // Định dạng ISO hoặc YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
+    const d = new Date(str);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  // Định dạng DD/MM/YYYY hoặc DD-MM-YYYY
+  const parts = str.split(/[\/\-.]/);
+  if (parts.length === 3) {
+    const [d, m, y] = parts.map(Number);
+    if (d && m && y) {
+      const fullYear = y < 100 ? (y < 50 ? 2000 + y : 1900 + y) : y;
+      const parsed = new Date(fullYear, m - 1, d);
+      return isNaN(parsed.getTime()) ? null : parsed;
+    }
+  }
+  // Định dạng MM/YYYY
+  if (parts.length === 2) {
+    const [m, y] = parts.map(Number);
+    if (m && y) {
+      const fullYear = y < 100 ? (y < 50 ? 2000 + y : 1900 + y) : y;
+      const parsed = new Date(fullYear, m - 1, 1);
+      return isNaN(parsed.getTime()) ? null : parsed;
+    }
+  }
+  // Định dạng năm YYYY
+  if (/^\d{4}$/.test(str)) {
+    return new Date(Number(str), 0, 1);
+  }
+  const d = new Date(str);
+  return isNaN(d.getTime()) ? null : d;
+}
+
 function formatDateStr(d?: Date | null): string {
   if (!d) return "";
   try {
@@ -230,12 +268,12 @@ export async function POST(req: NextRequest) {
       hamletId = defaultH?.id || "h-01";
     }
 
-    const birthDate = member.birthDate ? new Date(member.birthDate) : member.birthYear ? new Date(member.birthYear, 0, 1) : null;
-    const enlistmentDate = member.enlistmentDate ? new Date(member.enlistmentDate) : null;
-    const dischargeDate = member.dischargeDate ? new Date(member.dischargeDate) : null;
-    const associationJoinDate = member.associationJoinDate ? new Date(member.associationJoinDate) : null;
-    const partyJoinDate = member.partyJoinDate ? new Date(member.partyJoinDate) : null;
-    const partyOfficialDate = member.partyOfficialDate ? new Date(member.partyOfficialDate) : null;
+    const birthDate = parseFlexibleDate(member.birthDate) || (member.birthYear ? new Date(member.birthYear, 0, 1) : null);
+    const enlistmentDate = parseFlexibleDate(member.enlistmentDate);
+    const dischargeDate = parseFlexibleDate(member.dischargeDate);
+    const associationJoinDate = parseFlexibleDate(member.associationJoinDate);
+    const partyJoinDate = parseFlexibleDate(member.partyJoinDate);
+    const partyOfficialDate = parseFlexibleDate(member.partyOfficialDate);
 
     const saved = await prisma.member.upsert({
       where: { cccd: cleanCccd },
@@ -359,89 +397,360 @@ export async function POST(req: NextRequest) {
 
 /**
  * PUT /api/admin/members
- * Cập nhật hồ sơ hoặc phê duyệt hội viên trong PostgreSQL
+ * Cập nhật toàn diện 35 trường thông tin hồ sơ hoặc phê duyệt hội viên trong PostgreSQL
  */
 export async function PUT(req: NextRequest) {
   try {
     const body = await req.json();
-    const { id, cccd, updates } = body;
+    const { id, originalCccd, cccd, updates } = body;
 
-    if (!id && !cccd) {
+    if (!id && !cccd && !originalCccd && (!updates || (!updates.id && !updates.cccd))) {
       return NextResponse.json(
-        { success: false, message: "ID hoặc CCCD là bắt buộc để cập nhật." },
+        { success: false, message: "Cần ID hoặc số CCCD để cập nhật hồ sơ." },
         { status: 400 }
       );
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const dataToUpdate: any = {};
+    const payload = updates || {};
+    const targetId = id || payload.id;
+    const targetCccd = originalCccd || cccd || payload.cccd;
 
-    if (updates.fullName) dataToUpdate.fullName = updates.fullName.trim();
-    if (updates.phone !== undefined) dataToUpdate.phone = updates.phone;
-    if (updates.gender) dataToUpdate.gender = updates.gender;
-    if (updates.militaryRank) dataToUpdate.militaryRank = updates.militaryRank;
-    if (updates.militaryPosition) dataToUpdate.militaryPosition = updates.militaryPosition;
-    if (updates.associationRole) dataToUpdate.associationRole = updates.associationRole;
-    if (updates.currentAddress) dataToUpdate.currentAddress = updates.currentAddress;
-    if (updates.hometown) dataToUpdate.hometown = updates.hometown;
-    if (updates.status) dataToUpdate.status = updates.status as MemberStatus;
-    if (updates.adminApproved !== undefined) {
-      dataToUpdate.adminApproved = Boolean(updates.adminApproved);
-      if (updates.adminApproved) {
-        dataToUpdate.adminApprovedAt = new Date();
-        dataToUpdate.status = MemberStatus.CHINH_THUC;
+    // 1. TÌM HỒ SƠ HIỆN CÓ TRONG CSDL POSTGRESQL THEO NHIỀU TIÊU CHÍ AN TOÀN
+    let existingMember = null;
+    if (targetId) {
+      existingMember = await prisma.member.findUnique({
+        where: { id: targetId },
+        include: { hamlet: true },
+      });
+    }
+
+    if (!existingMember && originalCccd) {
+      existingMember = await prisma.member.findUnique({
+        where: { cccd: String(originalCccd).trim() },
+        include: { hamlet: true },
+      });
+    }
+
+    if (!existingMember && (cccd || payload.cccd)) {
+      const cleanCccd = String(cccd || payload.cccd).trim();
+      existingMember = await prisma.member.findUnique({
+        where: { cccd: cleanCccd },
+        include: { hamlet: true },
+      });
+    }
+
+    if (!existingMember && payload.fullName && payload.hamletName) {
+      existingMember = await prisma.member.findFirst({
+        where: {
+          fullName: { equals: payload.fullName.trim(), mode: "insensitive" },
+          hamlet: { name: { equals: payload.hamletName.trim(), mode: "insensitive" } },
+        },
+        include: { hamlet: true },
+      });
+    }
+
+    // 2. XỬ LÝ DỮ LIỆU ĐẦU VÀO CHO TOÀN BỘ 35 TRƯỜNG THÔNG TIN
+    let hamletId: string | undefined = undefined;
+    if (payload.hamletName) {
+      const h = await prisma.hamlet.findFirst({
+        where: { name: { equals: payload.hamletName.trim(), mode: "insensitive" } },
+      });
+      if (h) hamletId = h.id;
+    }
+
+    // Ngày tháng an toàn, không bao giờ gây lỗi Invalid Date
+    const birthDate = payload.birthDate
+      ? parseFlexibleDate(payload.birthDate)
+      : payload.birthYear
+      ? parseFlexibleDate(String(payload.birthYear))
+      : undefined;
+
+    const enlistmentDate = payload.enlistmentDate !== undefined ? parseFlexibleDate(payload.enlistmentDate) : undefined;
+    const dischargeDate = payload.dischargeDate !== undefined ? parseFlexibleDate(payload.dischargeDate) : undefined;
+    const associationJoinDate = payload.associationJoinDate !== undefined ? parseFlexibleDate(payload.associationJoinDate) : undefined;
+    const partyJoinDate = payload.partyJoinDate !== undefined ? parseFlexibleDate(payload.partyJoinDate) : undefined;
+    const partyOfficialDate = payload.partyOfficialDate !== undefined ? parseFlexibleDate(payload.partyOfficialDate) : undefined;
+
+    let policyWoundRate: number | null | undefined = undefined;
+    if (payload.policyWoundRate !== undefined) {
+      const rateNum = parseInt(String(payload.policyWoundRate).replace(/\D/g, ""), 10);
+      policyWoundRate = isNaN(rateNum) ? null : rateNum;
+    }
+
+    let economicRevenue: number | null | undefined = undefined;
+    if (payload.economicRevenue !== undefined) {
+      const revNum = parseFloat(String(payload.economicRevenue).replace(/[^\d.-]/g, ""));
+      economicRevenue = isNaN(revNum) ? null : revNum;
+    }
+
+    let totalDebt: number | undefined = undefined;
+    if (payload.totalDebt !== undefined) {
+      const debtNum = parseFloat(String(payload.totalDebt).replace(/[^\d.-]/g, ""));
+      totalDebt = isNaN(debtNum) ? 0 : debtNum;
+    }
+
+    const newCccd = payload.cccd ? String(payload.cccd).trim() : undefined;
+
+    // TRƯỜNG HỢP 1: HỒ SƠ ĐÃ TỒN TẠI TRONG CSDL -> CẬP NHẬT 100% CÁC TRƯỜNG
+    if (existingMember) {
+      // Kiểm tra nếu đổi CCCD có bị trùng lặp với hội viên khác không
+      if (newCccd && newCccd !== existingMember.cccd) {
+        const duplicate = await prisma.member.findFirst({
+          where: {
+            cccd: newCccd,
+            id: { not: existingMember.id },
+          },
+        });
+        if (duplicate) {
+          return NextResponse.json(
+            {
+              success: false,
+              message: `Số CCCD [${newCccd}] đã tồn tại trên hệ thống thuộc về hội viên "${duplicate.fullName}". Vui lòng kiểm tra lại!`,
+            },
+            { status: 400 }
+          );
+        }
       }
-    }
-    if (updates.branchApproved !== undefined) {
-      dataToUpdate.branchApproved = Boolean(updates.branchApproved);
-      if (updates.branchApproved) dataToUpdate.branchApprovedAt = new Date();
-    }
-    if (updates.rejectionReason !== undefined) dataToUpdate.rejectionReason = updates.rejectionReason;
 
-    if (updates.isDeleted !== undefined) {
-      dataToUpdate.isDeleted = Boolean(updates.isDeleted);
-      dataToUpdate.deletedAt = updates.isDeleted ? new Date() : null;
-      dataToUpdate.deletedReason = updates.deletedReason || (updates.isDeleted ? "Chuyển vào Thùng rác" : null);
-    }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const dataToUpdate: any = {};
 
-    // Tìm và cập nhật theo id hoặc cccd
-    let updated;
-    if (id) {
-      updated = await prisma.member.update({
-        where: { id },
+      // 1. Cá nhân & Cư trú
+      if (payload.fullName) dataToUpdate.fullName = payload.fullName.trim();
+      if (newCccd && newCccd !== existingMember.cccd) {
+        dataToUpdate.cccd = newCccd;
+        dataToUpdate.idCardNumber = newCccd;
+      }
+      if (payload.phone !== undefined) dataToUpdate.phone = payload.phone;
+      if (payload.gender) dataToUpdate.gender = payload.gender;
+      if (birthDate !== undefined) dataToUpdate.birthDate = birthDate;
+      if (payload.ethnicity) dataToUpdate.ethnicity = payload.ethnicity;
+      if (payload.religion) dataToUpdate.religion = payload.religion;
+      if (payload.hometown !== undefined) dataToUpdate.hometown = payload.hometown;
+      if (payload.currentAddress !== undefined) dataToUpdate.currentAddress = payload.currentAddress;
+      if (hamletId) dataToUpdate.hamletId = hamletId;
+
+      // 2. Quân ngũ
+      if (enlistmentDate !== undefined) dataToUpdate.enlistmentDate = enlistmentDate;
+      if (dischargeDate !== undefined) dataToUpdate.dischargeDate = dischargeDate;
+      if (payload.militaryRank !== undefined) dataToUpdate.militaryRank = payload.militaryRank;
+      if (payload.militaryPosition !== undefined) dataToUpdate.militaryPosition = payload.militaryPosition;
+      if (payload.militaryUnit !== undefined) dataToUpdate.militaryUnit = payload.militaryUnit;
+      if (payload.militaryTraining !== undefined) dataToUpdate.militaryTraining = payload.militaryTraining;
+      if (payload.period) dataToUpdate.period = parsePeriodEnum(payload.period);
+      if (payload.isCQN !== undefined) dataToUpdate.isCQN = Boolean(payload.isCQN);
+      if (payload.isHouseholdHead !== undefined) dataToUpdate.isHouseholdHead = Boolean(payload.isHouseholdHead);
+
+      // 3. Hội CCB & Đảng
+      if (payload.associationRole !== undefined) dataToUpdate.associationRole = payload.associationRole;
+      if (associationJoinDate !== undefined) dataToUpdate.associationJoinDate = associationJoinDate;
+      if (partyJoinDate !== undefined) dataToUpdate.partyJoinDate = partyJoinDate;
+      if (partyOfficialDate !== undefined) dataToUpdate.partyOfficialDate = partyOfficialDate;
+      if (payload.partyCell !== undefined) dataToUpdate.partyCell = payload.partyCell;
+      if (payload.partyBadge !== undefined) dataToUpdate.partyBadge = payload.partyBadge;
+      if (payload.educationLevel !== undefined) dataToUpdate.educationLevel = payload.educationLevel;
+      if (payload.politicalTheory !== undefined) dataToUpdate.politicalTheory = payload.politicalTheory;
+      if (payload.professionalSkill !== undefined) dataToUpdate.professionalSkill = payload.professionalSkill;
+
+      // 4. Chính sách & Kinh tế
+      if (payload.policyStatus) dataToUpdate.policyStatus = parsePolicyEnum(payload.policyStatus);
+      if (policyWoundRate !== undefined) dataToUpdate.policyWoundRate = policyWoundRate;
+      if (payload.hasHealthInsurance100 !== undefined) dataToUpdate.hasHealthInsurance100 = Boolean(payload.hasHealthInsurance100);
+      if (payload.healthInsuranceCode !== undefined) dataToUpdate.healthInsuranceCode = payload.healthInsuranceCode;
+      if (payload.awards !== undefined || payload.titles !== undefined) dataToUpdate.titles = payload.awards || payload.titles;
+
+      if (payload.isPoorHousehold !== undefined) dataToUpdate.isPoorHousehold = Boolean(payload.isPoorHousehold);
+      if (payload.isNearPoorHousehold !== undefined) dataToUpdate.isNearPoorHousehold = Boolean(payload.isNearPoorHousehold);
+      if (payload.hasDilapidatedHouse !== undefined) dataToUpdate.hasDilapidatedHouse = Boolean(payload.hasDilapidatedHouse);
+      if (payload.hasEconomicModel !== undefined) dataToUpdate.hasEconomicModel = Boolean(payload.hasEconomicModel);
+      if (payload.economicModelName !== undefined) dataToUpdate.economicModelName = payload.economicModelName;
+      if (economicRevenue !== undefined) dataToUpdate.economicRevenue = economicRevenue;
+      if (totalDebt !== undefined) dataToUpdate.totalDebt = totalDebt;
+
+      // Trạng thái phê duyệt
+      if (payload.status) dataToUpdate.status = payload.status as MemberStatus;
+      if (payload.adminApproved !== undefined) {
+        dataToUpdate.adminApproved = Boolean(payload.adminApproved);
+        if (payload.adminApproved) {
+          dataToUpdate.adminApprovedAt = new Date();
+          dataToUpdate.status = MemberStatus.CHINH_THUC;
+        }
+      }
+      if (payload.branchApproved !== undefined) {
+        dataToUpdate.branchApproved = Boolean(payload.branchApproved);
+        if (payload.branchApproved) dataToUpdate.branchApprovedAt = new Date();
+      }
+      if (payload.rejectionReason !== undefined) dataToUpdate.rejectionReason = payload.rejectionReason;
+
+      if (payload.isDeleted !== undefined) {
+        dataToUpdate.isDeleted = Boolean(payload.isDeleted);
+        dataToUpdate.deletedAt = payload.isDeleted ? new Date() : null;
+        dataToUpdate.deletedReason = payload.deletedReason || (payload.isDeleted ? "Chuyển vào Thùng rác" : null);
+      }
+
+      const updated = await prisma.member.update({
+        where: { id: existingMember.id },
         data: dataToUpdate,
         include: { hamlet: true },
       });
-    } else {
-      updated = await prisma.member.update({
-        where: { cccd },
-        data: dataToUpdate,
-        include: { hamlet: true },
-      });
-    }
 
-    // Nếu chức vụ là Chi hội trưởng, tự động cấp quyền User BRANCH_LEADER
-    if (updates.associationRole === "Chi hội trưởng") {
+      // Đồng bộ thông tin sang tài khoản User đăng nhập
+      const oldCccd = existingMember.cccd;
+      const finalCccd = updated.cccd;
       try {
         await prisma.user.updateMany({
           where: {
             OR: [
-              { memberId: updated.id },
-              { username: updated.cccd },
-              ...(updated.phone ? [{ username: updated.phone }, { phone: updated.phone }] : []),
+              { memberId: existingMember.id },
+              { username: oldCccd },
             ],
           },
-          data: { role: Role.BRANCH_LEADER, isActive: true },
+          data: {
+            username: finalCccd,
+            fullName: updated.fullName,
+            phone: updated.phone || undefined,
+            hamletId: updated.hamletId,
+          },
         });
       } catch (uErr) {
-        console.warn("Lưu ý cập nhật role:", uErr);
+        console.warn("Lưu ý đồng bộ User:", uErr);
       }
+
+      // Xử lý quyền Chi hội trưởng
+      if (payload.associationRole === "Chi hội trưởng") {
+        try {
+          await prisma.user.updateMany({
+            where: {
+              OR: [
+                { memberId: updated.id },
+                { username: updated.cccd },
+                ...(updated.phone ? [{ username: updated.phone }, { phone: updated.phone }] : []),
+              ],
+            },
+            data: { role: Role.BRANCH_LEADER, isActive: true },
+          });
+
+          await prisma.hamlet.update({
+            where: { id: updated.hamletId },
+            data: {
+              branchLeaderName: updated.fullName,
+              branchLeaderPhone: updated.phone || undefined,
+              branchLeaderId: updated.id,
+            },
+          });
+        } catch (cErr) {
+          console.warn("Lưu ý cấp quyền CHT:", cErr);
+        }
+      } else if (existingMember.associationRole === "Chi hội trưởng" && payload.associationRole && payload.associationRole !== "Chi hội trưởng") {
+        try {
+          await prisma.hamlet.updateMany({
+            where: { branchLeaderId: updated.id },
+            data: { branchLeaderId: null },
+          });
+          await prisma.user.updateMany({
+            where: {
+              OR: [{ memberId: updated.id }, { username: updated.cccd }],
+            },
+            data: { role: Role.MEMBER },
+          });
+        } catch (gErr) {
+          console.warn("Lưu ý gỡ quyền CHT:", gErr);
+        }
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: `Đã cập nhật thành công hồ sơ đ/c ${updated.fullName} vào CSDL PostgreSQL!`,
+        member: mapPrismaToMemberRecord(updated),
+      });
     }
+
+    // TRƯỜNG HỢP 2: HỒ SƠ CHƯA CÓ TRONG CSDL (DO TẠO CỤC BỘ HOẶC MẤT MAPPING) -> TẠO MỚI (UPSERT AN TOÀN)
+    const cleanCccd = String(newCccd || targetCccd || "000000000000").trim();
+    if (!hamletId) {
+      const defaultH = await prisma.hamlet.findFirst();
+      hamletId = defaultH?.id || "h-01";
+    }
+
+    const created = await prisma.member.create({
+      data: {
+        cccd: cleanCccd,
+        idCardNumber: cleanCccd,
+        fullName: (payload.fullName || "Hội viên mới").trim(),
+        phone: payload.phone || undefined,
+        gender: payload.gender || "Nam",
+        birthDate: birthDate || null,
+        hometown: payload.hometown || "Ea Súp, Đắk Lắk",
+        ethnicity: payload.ethnicity || "Kinh",
+        religion: payload.religion || "Không",
+        hamletId,
+        currentAddress: payload.currentAddress || `${payload.hamletName || "Xã Ea Súp"}, Xã Ea Súp, Tỉnh Đắk Lắk`,
+        enlistmentDate: enlistmentDate || null,
+        dischargeDate: dischargeDate || null,
+        militaryRank: payload.militaryRank || "Hội viên",
+        militaryPosition: payload.militaryPosition || "Chiến sĩ",
+        militaryUnit: payload.militaryUnit || undefined,
+        militaryTraining: payload.militaryTraining || undefined,
+        period: parsePeriodEnum(payload.period),
+        isCQN: Boolean(payload.isCQN),
+        isHouseholdHead: Boolean(payload.isHouseholdHead),
+        associationRole: payload.associationRole || "Hội viên",
+        associationJoinDate: associationJoinDate || null,
+        partyJoinDate: partyJoinDate || null,
+        partyOfficialDate: partyOfficialDate || null,
+        partyCell: payload.partyCell || undefined,
+        partyBadge: payload.partyBadge || undefined,
+        educationLevel: payload.educationLevel || undefined,
+        politicalTheory: payload.politicalTheory || undefined,
+        professionalSkill: payload.professionalSkill || undefined,
+        policyStatus: parsePolicyEnum(payload.policyStatus),
+        policyWoundRate: policyWoundRate || null,
+        hasHealthInsurance100: Boolean(payload.hasHealthInsurance100),
+        healthInsuranceCode: payload.healthInsuranceCode || undefined,
+        titles: payload.awards || payload.titles || undefined,
+        isPoorHousehold: Boolean(payload.isPoorHousehold),
+        isNearPoorHousehold: Boolean(payload.isNearPoorHousehold),
+        hasDilapidatedHouse: Boolean(payload.hasDilapidatedHouse),
+        hasEconomicModel: Boolean(payload.hasEconomicModel),
+        economicModelName: payload.economicModelName || undefined,
+        economicRevenue: economicRevenue || null,
+        totalDebt: totalDebt || 0,
+        status: (payload.status as MemberStatus) || MemberStatus.CHINH_THUC,
+        adminApproved: payload.adminApproved ?? true,
+        branchApproved: payload.branchApproved ?? true,
+      },
+      include: { hamlet: true },
+    });
+
+    // Tạo tài khoản User nếu cần
+    try {
+      const defaultPassword = process.env.DEFAULT_MEMBER_PASSWORD || "12345678@";
+      const passwordHash = await bcrypt.hash(defaultPassword, 10);
+      await prisma.user.upsert({
+        where: { username: cleanCccd },
+        update: {
+          fullName: created.fullName,
+          phone: created.phone || undefined,
+          hamletId,
+          memberId: created.id,
+        },
+        create: {
+          username: cleanCccd,
+          passwordHash,
+          fullName: created.fullName,
+          phone: created.phone || undefined,
+          role: created.associationRole === "Chi hội trưởng" ? Role.BRANCH_LEADER : Role.MEMBER,
+          hamletId,
+          memberId: created.id,
+          isActive: true,
+        },
+      });
+    } catch (_) {}
 
     return NextResponse.json({
       success: true,
-      message: "Đã cập nhật hồ sơ hội viên thành công trong PostgreSQL!",
-      member: mapPrismaToMemberRecord(updated),
+      message: `Đã lưu hồ sơ mới của đ/c ${created.fullName} vào CSDL PostgreSQL!`,
+      member: mapPrismaToMemberRecord(created),
     });
   } catch (error: any) {
     console.error("Lỗi khi cập nhật hội viên:", error);

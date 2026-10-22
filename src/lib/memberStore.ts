@@ -1104,20 +1104,78 @@ export function saveStoredMembers(members: MemberRecord[]) {
 /**
  * Cập nhật thông tin hồ sơ hội viên (Cán bộ xã chỉnh sửa 35 trường thông tin)
  */
-export function updateStoredMember(id: string, updatedData: Partial<MemberRecord>): MemberRecord | null {
+export function updateStoredMember(
+  id: string,
+  updatedData: Partial<MemberRecord>,
+  originalCccd?: string
+): MemberRecord {
   const currentList = getStoredMembers();
-  const index = currentList.findIndex((m) => m.id === id);
-  if (index === -1) return null;
+  let index = currentList.findIndex((m) => m.id === id);
+  if (index === -1 && originalCccd) {
+    index = currentList.findIndex((m) => m.cccd === originalCccd);
+  }
+  if (index === -1 && updatedData.cccd) {
+    index = currentList.findIndex((m) => m.cccd === updatedData.cccd);
+  }
+  if (index === -1 && updatedData.fullName && updatedData.hamletName) {
+    index = currentList.findIndex(
+      (m) =>
+        m.fullName.trim().toLowerCase() === updatedData.fullName!.trim().toLowerCase() &&
+        m.hamletName.trim().toLowerCase() === updatedData.hamletName!.trim().toLowerCase()
+    );
+  }
+
+  if (index === -1) {
+    const newRecord: MemberRecord = {
+      birthYear: 1970,
+      gender: "Nam",
+      phone: "",
+      hometown: "Ea Súp, Đắk Lắk",
+      ethnicity: "Kinh",
+      religion: "Không",
+      hamletName: "Thôn 1",
+      currentAddress: "Xã Ea Súp, Tỉnh Đắk Lắk",
+      militaryRank: "Hội viên",
+      period: "Cựu quân nhân",
+      isCQN: false,
+      isHouseholdHead: false,
+      associationRole: "Hội viên",
+      policyStatus: "Không",
+      hasHealthInsurance100: false,
+      livingStandard: "KHONG_NGHEO",
+      isPoorHousehold: false,
+      isNearPoorHousehold: false,
+      hasDilapidatedHouse: false,
+      hasEconomicModel: false,
+      totalDebt: 0,
+      isDeceased: false,
+      isTransferred: false,
+      status: "CHINH_THUC",
+      ...updatedData,
+      id: updatedData.id || id || `mem-${Date.now()}`,
+      cccd: updatedData.cccd || "000000000000",
+      fullName: updatedData.fullName || "Hội viên",
+    };
+    currentList.push(newRecord);
+    saveStoredMembers(currentList);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("eccb-members-updated"));
+    }
+    return newRecord;
+  }
 
   const current = currentList[index];
   const updated: MemberRecord = {
     ...current,
     ...updatedData,
-    id: current.id, // Bảo toàn ID gốc
+    id: updatedData.id || current.id,
   };
 
   currentList[index] = updated;
   saveStoredMembers(currentList);
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("eccb-members-updated"));
+  }
   return updated;
 }
 
