@@ -32,6 +32,7 @@ import {
 } from "@/lib/memberStore";
 import MemberImportModal from "@/components/MemberImportModal";
 import ExportReportModal from "@/components/ExportReportModal";
+import BatchUpdateDatesModal from "@/components/BatchUpdateDatesModal";
 import * as XLSX from "xlsx";
 
 export default function AdminMembersPage() {
@@ -57,6 +58,7 @@ export default function AdminMembersPage() {
   const [isExporting, setIsExporting] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isExportReportModalOpen, setIsExportReportModalOpen] = useState(false);
+  const [isBatchDatesModalOpen, setIsBatchDatesModalOpen] = useState(false);
   const [dbSyncStatus, setDbSyncStatus] = useState<"syncing" | "synced" | "offline">("syncing");
 
   const loadData = async () => {
@@ -1147,95 +1149,106 @@ export default function AdminMembersPage() {
         </div>
       )}
 
-      {/* Tiêu đề trang & Thanh công cụ tác nghiệp chuẩn mực trải dài */}
-      <div className="space-y-3 pb-3 border-b border-stone-300">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5">
-          <div className="min-w-0">
+      {/* Tiêu đề trang & Thanh công cụ tác nghiệp 2 tầng chuẩn mực */}
+      <div className="space-y-2.5 pb-3 border-b border-stone-300">
+        {/* TẦNG 1: TIÊU ĐỀ NẰM TRÊN, RỘNG RÃI TRANG TRỌNG, KHÔNG BỊ BÓP CHỮ DỌC */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+          <div>
             <h2 className="text-xl sm:text-2xl font-bold uppercase tracking-tight text-deep-text">
               Quản Lý Hồ Sơ Hội Viên CCB
             </h2>
-            <p className="text-xs sm:text-sm text-stone-600 mt-0.5 truncate tracking-normal">
+            <p className="text-xs sm:text-sm text-stone-600 mt-0.5 tracking-normal">
               Cơ sở dữ liệu 35 trường thông tin • Xuất Excel Mẫu 02 • Xuất Word NĐ 30/2020/NĐ-CP
             </p>
           </div>
+        </div>
 
-          {/* Thanh công cụ tác nghiệp ngang: trải dài từ trái sang phải, không tạo nhiều dòng */}
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 shrink-0">
-            {/* 1. Nút Làm mới / Tải lại CSDL */}
-            <button
-              onClick={() => {
-                setDbSyncStatus("syncing");
-                loadData();
-                showToast("🔄 Đang tải dữ liệu mới nhất từ CSDL máy chủ PostgreSQL...");
-              }}
-              className="px-3 py-1.5 sm:py-2 bg-stone-100 hover:bg-stone-200 active:scale-95 text-deep-text text-xs sm:text-sm font-bold rounded-lg shadow-2xs border border-stone-300 transition flex items-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap"
-              title="Đồng bộ danh sách hội viên trực tiếp từ CSDL PostgreSQL của máy chủ VPS"
-            >
-              <span>🔄</span>
-              <span>Tải Lại CSDL</span>
-            </button>
+        {/* TẦNG 2: THANH CÔNG CỤ TÁC NGHIỆP TRẢI DÀI 1 HÀNG TỪ TRÁI SANG PHẢI */}
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 w-full">
+          {/* 1. Nút Làm mới / Tải lại CSDL */}
+          <button
+            onClick={() => {
+              setDbSyncStatus("syncing");
+              loadData();
+              showToast("🔄 Đang tải dữ liệu mới nhất từ CSDL máy chủ PostgreSQL...");
+            }}
+            className="px-3 py-1.5 sm:py-2 bg-stone-100 hover:bg-stone-200 active:scale-95 text-deep-text text-xs sm:text-sm font-bold rounded-lg shadow-2xs border border-stone-300 transition flex items-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap"
+            title="Đồng bộ danh sách hội viên trực tiếp từ CSDL PostgreSQL của máy chủ VPS"
+          >
+            <span>🔄</span>
+            <span>Tải Lại CSDL</span>
+          </button>
 
-            {/* 2. Badge trạng thái kết nối CSDL */}
-            <span
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 sm:py-2 rounded-lg text-xs font-bold border shrink-0 whitespace-nowrap ${
-                dbSyncStatus === "synced"
-                  ? "bg-emerald-50 text-emerald-800 border-emerald-300"
-                  : dbSyncStatus === "syncing"
-                  ? "bg-amber-50 text-amber-800 border-amber-300 animate-pulse"
-                  : "bg-stone-100 text-stone-700 border-stone-300"
-              }`}
-              title="Trạng thái kết nối CSDL máy chủ PostgreSQL"
-            >
-              <span className={`w-2 h-2 rounded-full ${dbSyncStatus === "synced" ? "bg-emerald-600" : dbSyncStatus === "syncing" ? "bg-amber-600" : "bg-stone-500"}`}></span>
-              <span>{dbSyncStatus === "synced" ? "CSDL Trực Tuyến" : dbSyncStatus === "syncing" ? "Đang Đồng Bộ..." : "Bộ Nhớ Đệm"}</span>
-            </span>
+          {/* 2. Badge trạng thái kết nối CSDL */}
+          <span
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 sm:py-2 rounded-lg text-xs font-bold border shrink-0 whitespace-nowrap ${
+              dbSyncStatus === "synced"
+                ? "bg-emerald-50 text-emerald-800 border-emerald-300"
+                : dbSyncStatus === "syncing"
+                ? "bg-amber-50 text-amber-800 border-amber-300 animate-pulse"
+                : "bg-stone-100 text-stone-700 border-stone-300"
+            }`}
+            title="Trạng thái kết nối CSDL máy chủ PostgreSQL"
+          >
+            <span className={`w-2 h-2 rounded-full ${dbSyncStatus === "synced" ? "bg-emerald-600" : dbSyncStatus === "syncing" ? "bg-amber-600" : "bg-stone-500"}`}></span>
+            <span>{dbSyncStatus === "synced" ? "CSDL Trực Tuyến" : dbSyncStatus === "syncing" ? "Đang Đồng Bộ..." : "Bộ Nhớ Đệm"}</span>
+          </span>
 
-            {/* 3. Nút Nhập File Hội Viên */}
-            <button
-              onClick={() => setIsImportModalOpen(true)}
-              className="px-3 py-1.5 sm:py-2 bg-amber-700 hover:bg-amber-800 active:scale-95 text-white text-xs sm:text-sm font-bold rounded-lg shadow-xs transition flex items-center gap-1.5 cursor-pointer border border-amber-600 shrink-0 whitespace-nowrap"
-              title="Nhập hồ sơ hội viên đồng loạt từ file Excel/CSV theo từng chi hội thôn, buôn"
-            >
-              <span>📥</span>
-              <span>Nhập File Hội Viên</span>
-            </button>
+          {/* 3. Nút Nhập File Hội Viên */}
+          <button
+            onClick={() => setIsImportModalOpen(true)}
+            className="px-3 py-1.5 sm:py-2 bg-amber-700 hover:bg-amber-800 active:scale-95 text-white text-xs sm:text-sm font-bold rounded-lg shadow-xs transition flex items-center gap-1.5 cursor-pointer border border-amber-600 shrink-0 whitespace-nowrap"
+            title="Nhập hồ sơ hội viên đồng loạt từ file Excel/CSV theo từng chi hội thôn, buôn"
+          >
+            <span>📥</span>
+            <span>Nhập File Hội Viên</span>
+          </button>
 
-            {/* 4. Nút Xuất Báo Cáo Tùy Chọn Trường & Nút Xuất File Excel Mẫu 02 */}
-            {activeTab === "active" && (
-              <>
-                <button
-                  onClick={() => setIsExportReportModalOpen(true)}
-                  className="px-3 py-1.5 sm:py-2 bg-moss-green hover:bg-moss-green-light active:scale-95 text-white text-xs sm:text-sm font-bold rounded-lg shadow-xs transition flex items-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap"
-                  title="Tùy chọn kết xuất báo cáo thống kê các trường thông tin có dấu tích ra Excel (.xlsx)"
-                >
-                  <span>📋</span>
-                  <span>Báo Cáo Tùy Chọn Trường</span>
-                </button>
+          {/* 4. Nút MỚI: Cập nhật đồng loạt Ngày sinh & Ngày vào hội */}
+          <button
+            onClick={() => setIsBatchDatesModalOpen(true)}
+            className="px-3 py-1.5 sm:py-2 bg-moss-green hover:bg-moss-green-light active:scale-95 text-white text-xs sm:text-sm font-bold rounded-lg shadow-xs transition flex items-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap border border-emerald-900"
+            title="Cập nhật nhanh đồng loạt Ngày tháng năm sinh và Ngày vào hội theo từng Thôn / Buôn"
+          >
+            <span>📅</span>
+            <span>Cập Nhật Ngày Sinh & Vào Hội</span>
+          </button>
 
-                <button
-                  onClick={() => exportExcel(filteredActiveMembers)}
-                  className="px-3 py-1.5 sm:py-2 bg-emerald-700 hover:bg-emerald-800 active:scale-95 text-white text-xs sm:text-sm font-bold rounded-lg shadow-xs transition flex items-center gap-1.5 cursor-pointer border border-emerald-600 shrink-0 whitespace-nowrap"
-                  title="Xuất toàn bộ danh sách hội viên đang lọc ra file Excel (.xlsx) chuẩn Mẫu 02 (27 cột)"
-                >
-                  <span>📊</span>
-                  <span>Xuất File Excel</span>
-                </button>
+          {/* 5. Nút Xuất Báo Cáo Tùy Chọn Trường & Nút Xuất File Excel Mẫu 02 */}
+          {activeTab === "active" && (
+            <>
+              <button
+                onClick={() => setIsExportReportModalOpen(true)}
+                className="px-3 py-1.5 sm:py-2 bg-moss-green hover:bg-moss-green-light active:scale-95 text-white text-xs sm:text-sm font-bold rounded-lg shadow-xs transition flex items-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap"
+                title="Tùy chọn kết xuất báo cáo thống kê các trường thông tin có dấu tích ra Excel (.xlsx)"
+              >
+                <span>📋</span>
+                <span>Báo Cáo Tùy Chọn Trường</span>
+              </button>
 
-                {/* 5. Nút Xuất Phiếu Word Mẫu 02 */}
-                <button
-                  onClick={() => {
-                    if (filteredActiveMembers.length > 0) exportDocx(filteredActiveMembers[0]);
-                  }}
-                  disabled={isExporting}
-                  className="px-3 py-1.5 sm:py-2 bg-moss-green hover:bg-moss-green-light active:scale-95 text-white text-xs sm:text-sm font-bold rounded-lg shadow-xs transition flex items-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap"
-                  title="Xuất phiếu Mẫu 02 cá nhân dạng văn bản Word (.docx)"
-                >
-                  <span>📄</span>
-                  <span>Xuất Mẫu 02 Word</span>
-                </button>
-              </>
-            )}
-          </div>
+              <button
+                onClick={() => exportExcel(filteredActiveMembers)}
+                className="px-3 py-1.5 sm:py-2 bg-emerald-700 hover:bg-emerald-800 active:scale-95 text-white text-xs sm:text-sm font-bold rounded-lg shadow-xs transition flex items-center gap-1.5 cursor-pointer border border-emerald-600 shrink-0 whitespace-nowrap"
+                title="Xuất toàn bộ danh sách hội viên đang lọc ra file Excel (.xlsx) chuẩn Mẫu 02 (27 cột)"
+              >
+                <span>📊</span>
+                <span>Xuất File Excel</span>
+              </button>
+
+              {/* 6. Nút Xuất Phiếu Word Mẫu 02 */}
+              <button
+                onClick={() => {
+                  if (filteredActiveMembers.length > 0) exportDocx(filteredActiveMembers[0]);
+                }}
+                disabled={isExporting}
+                className="px-3 py-1.5 sm:py-2 bg-moss-green hover:bg-moss-green-light active:scale-95 text-white text-xs sm:text-sm font-bold rounded-lg shadow-xs transition flex items-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap"
+                title="Xuất phiếu Mẫu 02 cá nhân dạng văn bản Word (.docx)"
+              >
+                <span>📄</span>
+                <span>Xuất Mẫu 02 Word</span>
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -3219,6 +3232,17 @@ export default function AdminMembersPage() {
         members={members}
         initialHamlet={selectedHamlet}
         initialPeriod={selectedPeriod}
+      />
+
+      {/* MODAL CẬP NHẬT ĐỒNG LOẠT NGÀY SINH & NGÀY VÀO HỘI THEO THÔN/BUÔN */}
+      <BatchUpdateDatesModal
+        isOpen={isBatchDatesModalOpen}
+        onClose={() => setIsBatchDatesModalOpen(false)}
+        initialHamlet={selectedHamlet !== "all" ? selectedHamlet : undefined}
+        onSuccess={(count, hamletLabel) => {
+          setToastMessage(`✓ Đã cập nhật thành công ngày sinh và ngày vào hội cho ${count} đồng chí tại ${hamletLabel}!`);
+          loadData();
+        }}
       />
     </div>
   );

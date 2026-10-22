@@ -26,6 +26,44 @@ function mapToPrismaPolicy(raw?: string): PolicyStatus {
   return PolicyStatus.KHONG;
 }
 
+function parseFlexibleDate(raw?: string | Date | null): Date | null {
+  if (!raw) return null;
+  if (raw instanceof Date) return isNaN(raw.getTime()) ? null : raw;
+  const str = String(raw).trim();
+  if (!str || str.toLowerCase().includes("dd/mm/yyyy") || str === "—" || str.toLowerCase() === "không") return null;
+
+  // Định dạng ISO hoặc YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
+    const d = new Date(str);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  // Định dạng DD/MM/YYYY hoặc DD-MM-YYYY
+  const parts = str.split(/[\/\-.]/);
+  if (parts.length === 3) {
+    const [d, m, y] = parts.map(Number);
+    if (d && m && y) {
+      const fullYear = y < 100 ? (y < 50 ? 2000 + y : 1900 + y) : y;
+      const parsed = new Date(fullYear, m - 1, d);
+      return isNaN(parsed.getTime()) ? null : parsed;
+    }
+  }
+  // Định dạng MM/YYYY
+  if (parts.length === 2) {
+    const [m, y] = parts.map(Number);
+    if (m && y) {
+      const fullYear = y < 100 ? (y < 50 ? 2000 + y : 1900 + y) : y;
+      const parsed = new Date(fullYear, m - 1, 1);
+      return isNaN(parsed.getTime()) ? null : parsed;
+    }
+  }
+  // Định dạng năm YYYY
+  if (/^\d{4}$/.test(str)) {
+    return new Date(Number(str), 0, 1);
+  }
+  const d = new Date(str);
+  return isNaN(d.getTime()) ? null : d;
+}
+
 /**
  * POST /api/admin/members/import
  * API Nhập đồng loạt hồ sơ hội viên theo chi hội thôn, buôn từ file Excel/CSV vào PostgreSQL
@@ -78,6 +116,11 @@ export async function POST(req: NextRequest) {
 
       const prismaPeriod = mapToPrismaPeriod(item.period);
       const prismaPolicy = mapToPrismaPolicy(item.policyStatus);
+      const birthDate = parseFlexibleDate(item.birthDate || (item.birthYear ? `01/01/${item.birthYear}` : null));
+      const associationJoinDate = parseFlexibleDate(item.associationJoinDate);
+      const enlistmentDate = parseFlexibleDate(item.enlistmentDate);
+      const dischargeDate = parseFlexibleDate(item.dischargeDate);
+      const partyJoinDate = parseFlexibleDate(item.partyJoinDate);
 
       // 1. Upsert Member trong PostgreSQL
       const member = await prisma.member.upsert({
@@ -85,14 +128,25 @@ export async function POST(req: NextRequest) {
         update: {
           fullName: item.fullName,
           phone: item.phone || undefined,
+          birthDate: birthDate || undefined,
+          gender: item.gender || "Nam",
           militaryRank: item.militaryRank || "Hội viên",
+          militaryPosition: item.militaryPosition || "Chiến sĩ",
           period: prismaPeriod,
+          enlistmentDate: enlistmentDate || undefined,
+          dischargeDate: dischargeDate || undefined,
           associationRole: item.associationRole || "Hội viên",
+          associationJoinDate: associationJoinDate || undefined,
+          partyJoinDate: partyJoinDate || undefined,
           hamletId: matchedHamlet.id,
           currentAddress: item.currentAddress || `${matchedHamlet.name}, Xã Ea Súp, Tỉnh Đắk Lắk`,
           hometown: item.hometown || undefined,
           status: MemberStatus.CHINH_THUC,
           policyStatus: prismaPolicy,
+          hasHealthInsurance100: Boolean(item.hasHealthInsurance100),
+          isPoorHousehold: Boolean(item.isPoorHousehold),
+          hasEconomicModel: Boolean(item.hasEconomicModel),
+          totalDebt: Number(item.totalDebt || 0),
           adminApproved: true,
           branchApproved: true,
         },
@@ -102,6 +156,7 @@ export async function POST(req: NextRequest) {
           fullName: item.fullName,
           gender: item.gender || "Nam",
           phone: item.phone || undefined,
+          birthDate: birthDate || null,
           hometown: item.hometown || "Ea Súp, Đắk Lắk",
           ethnicity: item.ethnicity || "Kinh",
           religion: item.religion || "Không",
@@ -109,14 +164,19 @@ export async function POST(req: NextRequest) {
           currentAddress: item.currentAddress || `${matchedHamlet.name}, Xã Ea Súp, Tỉnh Đắk Lắk`,
           militaryRank: item.militaryRank || "Hội viên",
           militaryPosition: item.militaryPosition || "Chiến sĩ",
+          enlistmentDate: enlistmentDate || null,
+          dischargeDate: dischargeDate || null,
           period: prismaPeriod,
           isCQN: item.isCQN || false,
           isHouseholdHead: true,
           associationRole: item.associationRole || "Hội viên",
+          associationJoinDate: associationJoinDate || null,
+          partyJoinDate: partyJoinDate || null,
           policyStatus: prismaPolicy,
           hasHealthInsurance100: item.hasHealthInsurance100 || false,
           isPoorHousehold: item.isPoorHousehold || false,
           hasEconomicModel: item.hasEconomicModel || false,
+          totalDebt: Number(item.totalDebt || 0),
           status: MemberStatus.CHINH_THUC,
           adminApproved: true,
           branchApproved: true,

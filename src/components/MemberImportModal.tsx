@@ -305,7 +305,35 @@ export default function MemberImportModal({ isOpen, onClose, onSuccess }: Member
 
       const parsed: ParsedMemberRow[] = [];
 
-      // Helper tìm giá trị theo danh sách tên cột
+      // Helper chuẩn hóa ngày tháng từ ô Excel (hỗ trợ Date, Serial Number, String)
+      const formatExcelDateVal = (val: any): string => {
+        if (val === undefined || val === null || val === "") return "";
+        if (val instanceof Date) {
+          if (isNaN(val.getTime())) return "";
+          const d = String(val.getDate()).padStart(2, "0");
+          const m = String(val.getMonth() + 1).padStart(2, "0");
+          const y = val.getFullYear();
+          return `${d}/${m}/${y}`;
+        }
+        if (typeof val === "number" && val > 1000 && val < 60000) {
+          const jsDate = new Date(Math.round((val - 25569) * 86400 * 1000));
+          if (!isNaN(jsDate.getTime())) {
+            const d = String(jsDate.getUTCDate()).padStart(2, "0");
+            const m = String(jsDate.getUTCMonth() + 1).padStart(2, "0");
+            const y = jsDate.getUTCFullYear();
+            return `${d}/${m}/${y}`;
+          }
+        }
+        const str = String(val).trim();
+        if (!str || str.toLowerCase() === "không" || str.toLowerCase() === "chưa" || str === "—") return "";
+        const isoMatch = str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+        if (isoMatch) {
+          return `${isoMatch[3].padStart(2, "0")}/${isoMatch[2].padStart(2, "0")}/${isoMatch[1]}`;
+        }
+        return str;
+      };
+
+      // Helper tìm giá trị text theo danh sách tên cột
       const findVal = (rowObj: Record<string, any>, keys: string[]) => {
         for (const k of keys) {
           if (rowObj[k] !== undefined && rowObj[k] !== "") return String(rowObj[k]).trim();
@@ -329,6 +357,38 @@ export default function MemberImportModal({ isOpen, onClose, onSuccess }: Member
             .replace(/[^a-z0-9]/g, "");
           if (lowerKeys[cleanK] !== undefined && lowerKeys[cleanK] !== "") {
             return String(lowerKeys[cleanK]).trim();
+          }
+        }
+        return "";
+      };
+
+      // Helper tìm ngày tháng theo danh sách tên cột
+      const findDateVal = (rowObj: Record<string, any>, keys: string[]) => {
+        for (const k of keys) {
+          if (rowObj[k] !== undefined && rowObj[k] !== "") {
+            const res = formatExcelDateVal(rowObj[k]);
+            if (res) return res;
+          }
+        }
+        const lowerKeys = Object.keys(rowObj).reduce((acc, currentKey) => {
+          const clean = currentKey
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-z0-9]/g, "");
+          acc[clean] = rowObj[currentKey];
+          return acc;
+        }, {} as Record<string, any>);
+
+        for (const k of keys) {
+          const cleanK = k
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-z0-9]/g, "");
+          if (lowerKeys[cleanK] !== undefined && lowerKeys[cleanK] !== "") {
+            const res = formatExcelDateVal(lowerKeys[cleanK]);
+            if (res) return res;
           }
         }
         return "";
@@ -359,8 +419,16 @@ export default function MemberImportModal({ isOpen, onClose, onSuccess }: Member
           cccd = cccd.padStart(12, "0");
         }
 
-        // Ngày sinh / Năm sinh
-        const birthDateRaw = findVal(rowObj, ["Ngày sinh", "Ngay sinh", "BirthDate"]);
+        // Ngày sinh / Năm sinh chuẩn hóa
+        const birthDateRaw = findDateVal(rowObj, [
+          "Ngày sinh",
+          "Ngày, tháng, năm sinh",
+          "Ngày tháng năm sinh",
+          "Ngày sinh (*)",
+          "Ngay sinh",
+          "DOB",
+          "BirthDate",
+        ]);
         const birthYearRaw = findVal(rowObj, ["Năm sinh (*)", "Năm sinh", "Nam sinh", "BirthYear"]);
 
         let birthYear = parseInt(birthYearRaw, 10);
@@ -390,13 +458,27 @@ export default function MemberImportModal({ isOpen, onClose, onSuccess }: Member
         }
 
         // Ngày nhập ngũ & Ngày xuất ngũ
-        const enlistmentDate = findVal(rowObj, ["Nhập ngũ", "Ngày nhập ngũ", "Ngay nhap ngu"]);
-        const dischargeDate = findVal(rowObj, [
+        const enlistmentDate = findDateVal(rowObj, ["Nhập ngũ", "Ngày nhập ngũ", "Ngay nhap ngu"]);
+        const dischargeDate = findDateVal(rowObj, [
           "Ngày xuất ngũ / Nghỉ hưu",
           "Ngày xuất ngũ",
           "Xuất ngũ",
           "Nghỉ hưu",
           "Ngay xuat ngu",
+        ]);
+
+        // Ngày vào Hội CCB
+        const associationJoinDate = findDateVal(rowObj, [
+          "Ngày vào Hội CCB",
+          "Ngày vào Hội",
+          "Ngày vào hội",
+          "Ngày kết nạp Hội",
+          "Ngày kết nạp",
+          "Vào Hội",
+          "Ngay vao hoi",
+          "Ngay ket nap",
+          "Năm vào hội",
+          "Vao hoi",
         ]);
 
         // Thời kỳ quân ngũ (tự động suy luận nếu trống)
@@ -428,7 +510,7 @@ export default function MemberImportModal({ isOpen, onClose, onSuccess }: Member
           findVal(rowObj, ["Nơi ở hiện nay", "Địa chỉ hiện nay", "Địa chỉ", "Dia chi"]) ||
           `${hamletName}, Xã Ea Súp, Tỉnh Đắk Lắk`;
 
-        const partyDateRaw = findVal(rowObj, ["Ngày vào Đảng", "Vào Đảng"]);
+        const partyDateRaw = findDateVal(rowObj, ["Ngày vào Đảng", "Vào Đảng", "Ngay vao Dang"]);
         const partyVal = findVal(rowObj, ["Đảng viên (Có/Không)", "Đảng viên", "Dang vien"]).toLowerCase();
         const isPartyMember =
           (partyDateRaw && partyDateRaw.toLowerCase() !== "không") ||
@@ -476,7 +558,7 @@ export default function MemberImportModal({ isOpen, onClose, onSuccess }: Member
           fullName,
           cccd,
           birthYear,
-          birthDate: birthDateRaw,
+          birthDate: birthDateRaw || (birthYear ? `01/01/${birthYear}` : undefined),
           gender,
           phone,
           hamletName,
@@ -491,7 +573,7 @@ export default function MemberImportModal({ isOpen, onClose, onSuccess }: Member
           dischargeDate,
           associationRole:
             findVal(rowObj, ["Chức vụ Hội hiện tại", "Chức vụ Hội CCB", "Chức vụ Hội"]) || "Hội viên",
-          associationJoinDate: findVal(rowObj, ["Ngày vào Hội CCB", "Ngày vào Hội", "Vào Hội"]),
+          associationJoinDate: associationJoinDate || "19/05/2015",
           isPartyMember,
           partyJoinDate: partyDateRaw && partyDateRaw.toLowerCase() !== "không" ? partyDateRaw : undefined,
           policyStatus,
@@ -548,7 +630,7 @@ export default function MemberImportModal({ isOpen, onClose, onSuccess }: Member
           cccd: row.cccd,
           fullName: row.fullName,
           birthYear: row.birthYear,
-          birthDate: row.birthDate || `01/01/${row.birthYear}`,
+          birthDate: row.birthDate || (row.birthYear ? `01/01/${row.birthYear}` : ""),
           gender: row.gender,
           phone: row.phone || "0912000000",
           hometown: row.hometown || "Ea Súp, Đắk Lắk",
@@ -564,7 +646,7 @@ export default function MemberImportModal({ isOpen, onClose, onSuccess }: Member
           isCQN: row.period === "Cựu quân nhân",
           isHouseholdHead: true,
           associationRole: row.associationRole,
-          associationJoinDate: row.associationJoinDate || "19/05/2015",
+          associationJoinDate: row.associationJoinDate || "",
           partyJoinDate: row.isPartyMember ? row.partyJoinDate || "03/02/2010" : undefined,
           policyStatus: row.policyStatus,
           hasHealthInsurance100: row.hasHealthInsurance100,
@@ -810,7 +892,7 @@ export default function MemberImportModal({ isOpen, onClose, onSuccess }: Member
                 </div>
               )}
 
-              {/* BẢNG XEM TRƯỚC 5 DÒNG ĐẦU TIÊN */}
+              {/* BẢNG XEM TRƯỚC 8 DÒNG ĐẦU TIÊN */}
               <div className="overflow-x-auto rounded-lg border border-stone-200">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead className="bg-stone-100 text-stone-700 font-bold border-b border-stone-300">
@@ -818,7 +900,8 @@ export default function MemberImportModal({ isOpen, onClose, onSuccess }: Member
                       <th className="py-2 px-3">STT</th>
                       <th className="py-2 px-3">Họ và Tên</th>
                       <th className="py-2 px-3">Số CCCD</th>
-                      <th className="py-2 px-3">Năm sinh</th>
+                      <th className="py-2 px-3">Ngày sinh</th>
+                      <th className="py-2 px-3">Ngày vào Hội</th>
                       <th className="py-2 px-3">Chi hội Thôn/Buôn</th>
                       <th className="py-2 px-3">Cấp bậc</th>
                       <th className="py-2 px-3">Đảng viên</th>
@@ -840,7 +923,8 @@ export default function MemberImportModal({ isOpen, onClose, onSuccess }: Member
                         <td className="py-2 px-3 font-mono">{idx + 1}</td>
                         <td className="py-2 px-3 font-bold text-deep-text">{row.fullName || "—"}</td>
                         <td className="py-2 px-3 font-mono">{row.cccd || "—"}</td>
-                        <td className="py-2 px-3">{row.birthYear}</td>
+                        <td className="py-2 px-3 font-semibold text-deep-text">{row.birthDate || row.birthYear || "—"}</td>
+                        <td className="py-2 px-3 text-moss-green font-medium">{row.associationJoinDate || "—"}</td>
                         <td className="py-2 px-3 font-semibold text-moss-green">{row.hamletName}</td>
                         <td className="py-2 px-3">{row.militaryRank}</td>
                         <td className="py-2 px-3">
