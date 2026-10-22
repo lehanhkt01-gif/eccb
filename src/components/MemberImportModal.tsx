@@ -407,20 +407,37 @@ export default function MemberImportModal({ isOpen, onClose, onSuccess }: Member
           }
         });
 
-        const fullName = findVal(rowObj, ["Họ và tên (*)", "Họ và tên", "Họ tên", "FullName", "Name", "Ho va ten"]);
-        let cccd = findVal(rowObj, ["Số CCCD (*)", "Số CCCD", "CCCD", "CMND", "So CCCD", "Căn cước", "IdCard"]);
+        let fullName = findVal(rowObj, ["Họ và tên (*)", "Họ và tên", "Họ tên", "FullName", "Name", "Ho va ten"]);
+        if (!fullName && rowArr[1] !== undefined) {
+          fullName = String(rowArr[1] || "").trim();
+        }
+        fullName = fullName.replace(/^\d+[\.\-\s]+/, "").trim();
 
-        // Nếu cả Họ tên và CCCD đều trống thì bỏ qua dòng trống cuối file
-        if (!fullName && !cccd) continue;
+        let cccd = findVal(rowObj, ["Số CCCD (*)", "Số CCCD", "CCCD", "CMND", "So CCCD", "Căn cước", "IdCard"]);
+        if (!cccd && rowArr[4] !== undefined) {
+          cccd = String(rowArr[4] || "").trim();
+        }
 
         // Chuẩn hóa CCCD (loại bỏ ký tự không phải số)
         cccd = cccd.replace(/[^0-9]/g, "");
+        if (cccd.length !== 12) {
+          for (let c = 0; c < rowArr.length; c++) {
+            const testVal = String(rowArr[c] || "").replace(/[^0-9]/g, "").trim();
+            if (testVal.length === 12) {
+              cccd = testVal;
+              break;
+            }
+          }
+        }
         if (cccd.length > 0 && cccd.length < 12) {
           cccd = cccd.padStart(12, "0");
         }
 
-        // Ngày sinh / Năm sinh chuẩn hóa
-        const birthDateRaw = findDateVal(rowObj, [
+        // Nếu cả Họ tên và CCCD đều trống thì bỏ qua dòng trống cuối file
+        if (!fullName && !cccd) continue;
+
+        // Ngày sinh / Năm sinh chuẩn hóa: Kiểm tra Header và ưu tiên Cột C (index 2)
+        let birthDateRaw = findDateVal(rowObj, [
           "Ngày sinh",
           "Ngày, tháng, năm sinh",
           "Ngày tháng năm sinh",
@@ -429,6 +446,9 @@ export default function MemberImportModal({ isOpen, onClose, onSuccess }: Member
           "DOB",
           "BirthDate",
         ]);
+        if (!birthDateRaw && rowArr[2] !== undefined) {
+          birthDateRaw = formatExcelDateVal(rowArr[2]);
+        }
         const birthYearRaw = findVal(rowObj, ["Năm sinh (*)", "Năm sinh", "Nam sinh", "BirthYear"]);
 
         let birthYear = parseInt(birthYearRaw, 10);
@@ -467,8 +487,8 @@ export default function MemberImportModal({ isOpen, onClose, onSuccess }: Member
           "Ngay xuat ngu",
         ]);
 
-        // Ngày vào Hội CCB
-        const associationJoinDate = findDateVal(rowObj, [
+        // Ngày vào Hội CCB: Kiểm tra Header và ưu tiên Cột R (index 17)
+        let associationJoinDate = findDateVal(rowObj, [
           "Ngày vào Hội CCB",
           "Ngày vào Hội",
           "Ngày vào hội",
@@ -480,6 +500,9 @@ export default function MemberImportModal({ isOpen, onClose, onSuccess }: Member
           "Năm vào hội",
           "Vao hoi",
         ]);
+        if (!associationJoinDate && rowArr[17] !== undefined) {
+          associationJoinDate = formatExcelDateVal(rowArr[17]);
+        }
 
         // Thời kỳ quân ngũ (tự động suy luận nếu trống)
         let period = findVal(rowObj, ["Thời kỳ quân ngũ", "Thời kỳ", "Period"]);

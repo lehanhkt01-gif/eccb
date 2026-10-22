@@ -11,7 +11,8 @@ function parseFlexibleDate(raw?: string | Date | null): Date | null {
 
   // Định dạng ISO hoặc YYYY-MM-DD
   if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
-    const d = new Date(str);
+    const parts = str.slice(0, 10).split("-").map(Number);
+    const d = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2], 12, 0, 0));
     return isNaN(d.getTime()) ? null : d;
   }
   // Định dạng DD/MM/YYYY hoặc DD-MM-YYYY
@@ -20,7 +21,7 @@ function parseFlexibleDate(raw?: string | Date | null): Date | null {
     const [d, m, y] = parts.map(Number);
     if (d && m && y) {
       const fullYear = y < 100 ? (y < 50 ? 2000 + y : 1900 + y) : y;
-      const parsed = new Date(fullYear, m - 1, d);
+      const parsed = new Date(Date.UTC(fullYear, m - 1, d, 12, 0, 0));
       return isNaN(parsed.getTime()) ? null : parsed;
     }
   }
@@ -29,13 +30,13 @@ function parseFlexibleDate(raw?: string | Date | null): Date | null {
     const [m, y] = parts.map(Number);
     if (m && y) {
       const fullYear = y < 100 ? (y < 50 ? 2000 + y : 1900 + y) : y;
-      const parsed = new Date(fullYear, m - 1, 1);
+      const parsed = new Date(Date.UTC(fullYear, m - 1, 1, 12, 0, 0));
       return isNaN(parsed.getTime()) ? null : parsed;
     }
   }
   // Định dạng năm YYYY
   if (/^\d{4}$/.test(str)) {
-    return new Date(Number(str), 0, 1);
+    return new Date(Date.UTC(Number(str), 0, 1, 12, 0, 0));
   }
   const d = new Date(str);
   return isNaN(d.getTime()) ? null : d;
