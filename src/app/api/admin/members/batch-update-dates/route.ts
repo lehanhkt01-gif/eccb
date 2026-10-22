@@ -7,7 +7,17 @@ function parseFlexibleDate(raw?: string | Date | null): Date | null {
   if (!raw) return null;
   if (raw instanceof Date) return isNaN(raw.getTime()) ? null : raw;
   const str = String(raw).trim();
-  if (!str || str.toLowerCase().includes("dd/mm/yyyy") || str === "—" || str.toLowerCase() === "không") return null;
+  if (
+    !str ||
+    str.toLowerCase().includes("dd/mm/yyyy") ||
+    str === "—" ||
+    str === "-" ||
+    str.toLowerCase() === "không" ||
+    str.toLowerCase() === "null" ||
+    str.toLowerCase() === "chưa"
+  ) {
+    return null;
+  }
 
   // Định dạng ISO hoặc YYYY-MM-DD
   if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
@@ -44,7 +54,12 @@ function parseFlexibleDate(raw?: string | Date | null): Date | null {
 
 /**
  * POST /api/admin/members/batch-update-dates
- * Cập nhật đồng loạt Ngày sinh và Ngày vào hội cho danh sách hội viên theo Thôn/Buôn
+ * Cập nhật đồng loạt 5 trường ngày tháng theo chuẩn Mẫu 02 cho danh sách hội viên:
+ * 1. Ngày sinh (Cột C)
+ * 2. Ngày vào Đảng (Cột J)
+ * 3. Ngày nhập ngũ (Cột L)
+ * 4. Ngày xuất ngũ (Cột N)
+ * 5. Ngày tham gia công tác Hội CCB (Cột R)
  */
 export async function POST(req: NextRequest) {
   try {
@@ -75,11 +90,25 @@ export async function POST(req: NextRequest) {
 
       const dataToUpdate: any = {};
 
+      // Cột C: Ngày sinh
       if (item.birthDate !== undefined) {
-        dataToUpdate.birthDate = parseFlexibleDate(item.birthDate);
+        dataToUpdate.birthDate = item.birthDate ? parseFlexibleDate(item.birthDate) : null;
       }
+      // Cột J: Ngày vào Đảng
+      if (item.partyJoinDate !== undefined) {
+        dataToUpdate.partyJoinDate = item.partyJoinDate ? parseFlexibleDate(item.partyJoinDate) : null;
+      }
+      // Cột L: Ngày nhập ngũ
+      if (item.enlistmentDate !== undefined) {
+        dataToUpdate.enlistmentDate = item.enlistmentDate ? parseFlexibleDate(item.enlistmentDate) : null;
+      }
+      // Cột N: Ngày xuất ngũ
+      if (item.dischargeDate !== undefined) {
+        dataToUpdate.dischargeDate = item.dischargeDate ? parseFlexibleDate(item.dischargeDate) : null;
+      }
+      // Cột R: Ngày vào Hội CCB
       if (item.associationJoinDate !== undefined) {
-        dataToUpdate.associationJoinDate = parseFlexibleDate(item.associationJoinDate);
+        dataToUpdate.associationJoinDate = item.associationJoinDate ? parseFlexibleDate(item.associationJoinDate) : null;
       }
 
       if (Object.keys(dataToUpdate).length > 0) {
@@ -94,7 +123,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       updatedCount,
-      message: `Đã cập nhật thành công ngày sinh và ngày vào hội cho ${updatedCount} hội viên vào CSDL PostgreSQL!`,
+      message: `Đã cập nhật thành công các trường ngày tháng cho ${updatedCount} hội viên vào CSDL PostgreSQL!`,
     });
   } catch (error: any) {
     console.error("Lỗi cập nhật đồng loạt ngày tháng:", error);

@@ -305,7 +305,11 @@ export default function MemberImportModal({ isOpen, onClose, onSuccess }: Member
 
       const parsed: ParsedMemberRow[] = [];
 
-      // Helper chuẩn hóa ngày tháng từ ô Excel (hỗ trợ Date, Serial Number, String)
+      // Helper chuẩn hóa ngày tháng từ ô Excel theo đúng quy ước:
+      // - Đủ ngày tháng năm: dd/mm/yyyy
+      // - Chỉ có tháng & năm: 01/mm/yyyy
+      // - Chỉ có năm: 01/01/yyyy
+      // - Không có thì để trống ("")
       const formatExcelDateVal = (val: any): string => {
         if (val === undefined || val === null || val === "") return "";
         if (val instanceof Date) {
@@ -315,22 +319,63 @@ export default function MemberImportModal({ isOpen, onClose, onSuccess }: Member
           const y = val.getFullYear();
           return `${d}/${m}/${y}`;
         }
-        if (typeof val === "number" && val > 1000 && val < 60000) {
-          const jsDate = new Date(Math.round((val - 25569) * 86400 * 1000));
-          if (!isNaN(jsDate.getTime())) {
-            const d = String(jsDate.getUTCDate()).padStart(2, "0");
-            const m = String(jsDate.getUTCMonth() + 1).padStart(2, "0");
-            const y = jsDate.getUTCFullYear();
-            return `${d}/${m}/${y}`;
+        if (typeof val === "number") {
+          if (val > 1000 && val < 60000) {
+            const jsDate = new Date(Math.round((val - 25569) * 86400 * 1000));
+            if (!isNaN(jsDate.getTime())) {
+              const d = String(jsDate.getUTCDate()).padStart(2, "0");
+              const m = String(jsDate.getUTCMonth() + 1).padStart(2, "0");
+              const y = jsDate.getUTCFullYear();
+              return `${d}/${m}/${y}`;
+            }
+          }
+          if (val >= 1900 && val <= 2040) {
+            return `01/01/${val}`;
           }
         }
         const str = String(val).trim();
-        if (!str || str.toLowerCase() === "không" || str.toLowerCase() === "chưa" || str === "—") return "";
+        const lower = str.toLowerCase();
+        if (
+          !str ||
+          lower === "không" ||
+          lower === "chưa" ||
+          lower === "—" ||
+          lower === "-" ||
+          lower === "null" ||
+          lower === "undefined" ||
+          lower === "0"
+        ) {
+          return "";
+        }
+
+        // Đủ ngày, tháng, năm ISO
         const isoMatch = str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
         if (isoMatch) {
           return `${isoMatch[3].padStart(2, "0")}/${isoMatch[2].padStart(2, "0")}/${isoMatch[1]}`;
         }
-        return str;
+
+        // Đủ ngày, tháng, năm DD/MM/YYYY
+        const dmyMatch = str.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);
+        if (dmyMatch) {
+          return `${dmyMatch[1].padStart(2, "0")}/${dmyMatch[2].padStart(2, "0")}/${dmyMatch[3]}`;
+        }
+
+        // Chỉ có tháng & năm MM/YYYY -> ghi 01/mm/yyyy
+        const myMatch = str.match(/^(\d{1,2})[\/\-.](\d{4})$/);
+        if (myMatch) {
+          const mNum = parseInt(myMatch[1], 10);
+          if (mNum >= 1 && mNum <= 12) {
+            return `01/${String(mNum).padStart(2, "0")}/${myMatch[2]}`;
+          }
+        }
+
+        // Chỉ có năm YYYY -> ghi 01/01/yyyy
+        const yearMatch = str.match(/^\b(19\d{2}|20\d{2})\b$/);
+        if (yearMatch) {
+          return `01/01/${yearMatch[1]}`;
+        }
+
+        return "";
       };
 
       // Helper tìm giá trị text theo danh sách tên cột
@@ -477,15 +522,22 @@ export default function MemberImportModal({ isOpen, onClose, onSuccess }: Member
           hamletName = matchedHamlet || "Thôn Đoàn Kết";
         }
 
-        // Ngày nhập ngũ & Ngày xuất ngũ
-        const enlistmentDate = findDateVal(rowObj, ["Nhập ngũ", "Ngày nhập ngũ", "Ngay nhap ngu"]);
-        const dischargeDate = findDateVal(rowObj, [
+        // Ngày nhập ngũ (Cột L / index 11) & Ngày xuất ngũ (Cột N / index 13)
+        let enlistmentDate = findDateVal(rowObj, ["Nhập ngũ", "Ngày nhập ngũ", "Ngay nhap ngu"]);
+        if (!enlistmentDate && rowArr[11] !== undefined) {
+          enlistmentDate = formatExcelDateVal(rowArr[11]);
+        }
+
+        let dischargeDate = findDateVal(rowObj, [
           "Ngày xuất ngũ / Nghỉ hưu",
           "Ngày xuất ngũ",
           "Xuất ngũ",
           "Nghỉ hưu",
           "Ngay xuat ngu",
         ]);
+        if (!dischargeDate && rowArr[13] !== undefined) {
+          dischargeDate = formatExcelDateVal(rowArr[13]);
+        }
 
         // Ngày vào Hội CCB: Kiểm tra Header và ưu tiên Cột R (index 17)
         let associationJoinDate = findDateVal(rowObj, [
@@ -533,7 +585,11 @@ export default function MemberImportModal({ isOpen, onClose, onSuccess }: Member
           findVal(rowObj, ["Nơi ở hiện nay", "Địa chỉ hiện nay", "Địa chỉ", "Dia chi"]) ||
           `${hamletName}, Xã Ea Súp, Tỉnh Đắk Lắk`;
 
-        const partyDateRaw = findDateVal(rowObj, ["Ngày vào Đảng", "Vào Đảng", "Ngay vao Dang"]);
+        // Ngày vào Đảng: Kiểm tra Header và ưu tiên Cột J (index 9)
+        let partyDateRaw = findDateVal(rowObj, ["Ngày vào Đảng", "Vào Đảng", "Ngay vao Dang"]);
+        if (!partyDateRaw && rowArr[9] !== undefined) {
+          partyDateRaw = formatExcelDateVal(rowArr[9]);
+        }
         const partyVal = findVal(rowObj, ["Đảng viên (Có/Không)", "Đảng viên", "Dang vien"]).toLowerCase();
         const isPartyMember =
           (partyDateRaw && partyDateRaw.toLowerCase() !== "không") ||

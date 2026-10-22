@@ -1204,14 +1204,14 @@ export default function AdminMembersPage() {
             <span>Nhập File Hội Viên</span>
           </button>
 
-          {/* 4. Nút MỚI: Cập nhật đồng loạt Ngày sinh & Ngày vào hội */}
+          {/* 4. Nút: Sửa lỗi & Cập nhật các trường ngày tháng (Cột C, J, L, N, R) */}
           <button
             onClick={() => setIsBatchDatesModalOpen(true)}
             className="px-3 py-1.5 sm:py-2 bg-moss-green hover:bg-moss-green-light active:scale-95 text-white text-xs sm:text-sm font-bold rounded-lg shadow-xs transition flex items-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap border border-emerald-900"
-            title="Cập nhật nhanh đồng loạt Ngày tháng năm sinh và Ngày vào hội theo từng Thôn / Buôn"
+            title="Sửa lỗi và cập nhật đồng loạt các trường ngày tháng: Ngày sinh (Cột C), Vào Đảng (Cột J), Nhập ngũ (Cột L), Xuất ngũ (Cột N), Vào Hội (Cột R)"
           >
-            <span>📅</span>
-            <span>Cập Nhật Ngày Sinh & Vào Hội</span>
+            <span>🛠️ 📅</span>
+            <span>Sửa Lỗi Cập Nhật Ngày Tháng</span>
           </button>
 
           {/* 5. Nút Xuất Báo Cáo Tùy Chọn Trường & Nút Xuất File Excel Mẫu 02 */}
