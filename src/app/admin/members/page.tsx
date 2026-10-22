@@ -1165,36 +1165,7 @@ export default function AdminMembersPage() {
 
         {/* TẦNG 2: THANH CÔNG CỤ TÁC NGHIỆP TRẢI DÀI 1 HÀNG TỪ TRÁI SANG PHẢI */}
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 w-full">
-          {/* 1. Nút Làm mới / Tải lại CSDL */}
-          <button
-            onClick={() => {
-              setDbSyncStatus("syncing");
-              loadData();
-              showToast("🔄 Đang tải dữ liệu mới nhất từ CSDL máy chủ PostgreSQL...");
-            }}
-            className="px-3 py-1.5 sm:py-2 bg-stone-100 hover:bg-stone-200 active:scale-95 text-deep-text text-xs sm:text-sm font-bold rounded-lg shadow-2xs border border-stone-300 transition flex items-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap"
-            title="Đồng bộ danh sách hội viên trực tiếp từ CSDL PostgreSQL của máy chủ VPS"
-          >
-            <span>🔄</span>
-            <span>Tải Lại CSDL</span>
-          </button>
-
-          {/* 2. Badge trạng thái kết nối CSDL */}
-          <span
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 sm:py-2 rounded-lg text-xs font-bold border shrink-0 whitespace-nowrap ${
-              dbSyncStatus === "synced"
-                ? "bg-emerald-50 text-emerald-800 border-emerald-300"
-                : dbSyncStatus === "syncing"
-                ? "bg-amber-50 text-amber-800 border-amber-300 animate-pulse"
-                : "bg-stone-100 text-stone-700 border-stone-300"
-            }`}
-            title="Trạng thái kết nối CSDL máy chủ PostgreSQL"
-          >
-            <span className={`w-2 h-2 rounded-full ${dbSyncStatus === "synced" ? "bg-emerald-600" : dbSyncStatus === "syncing" ? "bg-amber-600" : "bg-stone-500"}`}></span>
-            <span>{dbSyncStatus === "synced" ? "CSDL Trực Tuyến" : dbSyncStatus === "syncing" ? "Đang Đồng Bộ..." : "Bộ Nhớ Đệm"}</span>
-          </span>
-
-          {/* 3. Nút Nhập File Hội Viên */}
+          {/* 1. Nút Nhập File Hội Viên */}
           <button
             onClick={() => setIsImportModalOpen(true)}
             className="px-3 py-1.5 sm:py-2 bg-amber-700 hover:bg-amber-800 active:scale-95 text-white text-xs sm:text-sm font-bold rounded-lg shadow-xs transition flex items-center gap-1.5 cursor-pointer border border-amber-600 shrink-0 whitespace-nowrap"
