@@ -11,6 +11,7 @@ import {
   getStoredMembers,
   saveStoredMembers,
   getStoredMovements,
+  saveStoredMovements,
   deleteStoredMovement,
   recordLocalMovement,
 } from "@/lib/memberStore";
@@ -129,30 +130,82 @@ export default function BranchOperationsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  const [isLoading, setIsLoading] = useState(false);
+  const [dbSyncStatus, setDbSyncStatus] = useState<"syncing" | "synced" | "offline">("syncing");
+
   const currentHamlet = useMemo(() => {
     return HAMLETS.find((h) => h.code === selectedHamletCode) || HAMLETS[0];
   }, [selectedHamletCode]);
 
-  // Load data
-  const loadData = () => {
+  // Load data: Nạp tức thì từ cache, sau đó đồng bộ trực tiếp 100% từ CSDL PostgreSQL của máy chủ VPS
+  const loadData = async () => {
+    // 1. Nạp nhanh từ bộ nhớ đệm trước để không giật màn hình
     const mems = getStoredMembers();
     setMembers(mems);
 
     const storedMovs = getStoredMovements();
     setMovements(storedMovs);
+
+    // 2. Đồng bộ danh sách Hội viên thực tế từ PostgreSQL
+    try {
+      const resMembers = await fetch("/api/admin/members", { cache: "no-store" });
+      if (resMembers.ok) {
+        const dataMembers = await resMembers.json();
+        if (dataMembers.success && Array.isArray(dataMembers.members) && dataMembers.members.length > 0) {
+          setMembers(dataMembers.members);
+          saveStoredMembers(dataMembers.members);
+        }
+      }
+    } catch (e) {
+      console.warn("Không kết nối được API /api/admin/members, tiếp tục dùng cache:", e);
+    }
+
+    // 3. Đồng bộ danh sách Nghiệp vụ biến động từ CSDL PostgreSQL
+    try {
+      const resMovs = await fetch(
+        `/api/branch/movements?hamletId=${encodeURIComponent(selectedHamletCode)}&hamletName=${encodeURIComponent(currentHamlet.name)}`,
+        { cache: "no-store" }
+      );
+      if (resMovs.ok) {
+        const dataMovs = await resMovs.json();
+        if (dataMovs.success && Array.isArray(dataMovs.data)) {
+          setMovements(dataMovs.data);
+          saveStoredMovements(dataMovs.data);
+          setDbSyncStatus("synced");
+          return;
+        }
+      }
+      setDbSyncStatus("offline");
+    } catch (e) {
+      console.warn("Không kết nối được API /api/branch/movements, giữ cache local:", e);
+      setDbSyncStatus("offline");
+    }
   };
 
-  // Xóa hồ sơ biến động
-  const handleDeleteMovement = (id: string, name?: string) => {
+  // Xóa hồ sơ biến động vĩnh viễn khỏi CSDL PostgreSQL và LocalStore
+  const handleDeleteMovement = async (id: string, name?: string) => {
     const confirmDelete = window.confirm(
-      `Đồng chí có chắc chắn muốn XÓA hồ sơ biến động của "${name || "hội viên này"}" khỏi hệ thống?`
+      `Đồng chí có chắc chắn muốn XÓA hồ sơ nghiệp vụ của "${name || "hội viên này"}" khỏi hệ thống lâu dài?`
     );
     if (!confirmDelete) return;
 
+    try {
+      // 1. Gọi API DELETE xóa vĩnh viễn khỏi PostgreSQL
+      await fetch(`/api/branch/movements?id=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      });
+    } catch (err) {
+      console.warn("Lỗi khi gọi API DELETE movement:", err);
+    }
+
+    // 2. Cập nhật local store và state
     deleteStoredMovement(id);
     const updated = getStoredMovements();
     setMovements(updated);
-    showToast("✓ Đã xóa hồ sơ biến động thành công.");
+    showToast("✓ Đã xóa hồ sơ nghiệp vụ khỏi hệ thống thành công.");
+    window.dispatchEvent(new Event("eccb-movements-updated"));
+    window.dispatchEvent(new Event("eccb-members-updated"));
+    loadData();
   };
 
   useEffect(() => {
@@ -183,7 +236,7 @@ export default function BranchOperationsPage() {
       window.removeEventListener("eccb-members-updated", handleUpdate);
       window.removeEventListener("eccb-movements-updated", handleUpdate);
     };
-  }, []);
+  }, [selectedHamletCode, currentHamlet.name]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -194,6 +247,13 @@ export default function BranchOperationsPage() {
   const hamletMembers = useMemo(() => {
     return members.filter((m) => m.hamletName === currentHamlet.name);
   }, [members, currentHamlet.name]);
+
+  // Tự động chọn hội viên hợp lệ đầu tiên nếu chưa chọn
+  useEffect(() => {
+    if (!selectedMemberId && hamletMembers.length > 0) {
+      setSelectedMemberId(hamletMembers[0].id);
+    }
+  }, [hamletMembers, selectedMemberId]);
 
   // Lọc danh sách nghiệp vụ theo Tab và thôn
   const filteredMovements = useMemo(() => {
@@ -250,7 +310,7 @@ export default function BranchOperationsPage() {
     setIsModalOpen(true);
   };
 
-  // Submit nghiệp vụ
+  // Submit nghiệp vụ & lưu trữ dữ liệu hệ thống lâu dài
   const handleSubmitOperation = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -259,6 +319,7 @@ export default function BranchOperationsPage() {
       let finalMemberId = selectedMemberId;
       let finalMemberName = "";
       let finalMemberCccd = "";
+      let finalMemberPhone = memberPhoneInput || "";
 
       if (opType === "TRANSFER_IN" && isManualMember) {
         if (!memberNameInput.trim()) {
@@ -279,12 +340,17 @@ export default function BranchOperationsPage() {
         finalMemberId = found.id;
         finalMemberName = found.fullName;
         finalMemberCccd = found.cccd;
+        finalMemberPhone = found.phone || "";
       }
 
-      // 1. Tạo FormData gửi lên API Next.js POST /api/branch/movements (lưu file PDF)
+      // 1. Tạo FormData gửi lên API Next.js POST /api/branch/movements (lưu file PDF & lưu PostgreSQL lâu dài)
       const formData = new FormData();
       formData.append("memberId", finalMemberId);
+      formData.append("memberName", finalMemberName);
+      formData.append("memberCccd", finalMemberCccd);
+      formData.append("memberPhone", finalMemberPhone);
       formData.append("hamletId", currentHamlet.code);
+      formData.append("hamletName", currentHamlet.name);
       formData.append("type", opType);
       formData.append("eventDate", eventDate);
       formData.append("reason", reason);
@@ -296,22 +362,30 @@ export default function BranchOperationsPage() {
       }
 
       let uploadedPdfUrl = "";
+      let serverMovementId = "";
+
       try {
         const res = await fetch("/api/branch/movements", {
           method: "POST",
           body: formData,
         });
-        const resData = await res.json();
-        if (resData.success && resData.data?.documentPdfUrl) {
-          uploadedPdfUrl = resData.data.documentPdfUrl;
+        if (res.ok) {
+          const resData = await res.json();
+          if (resData.success && resData.data?.movement) {
+            serverMovementId = resData.data.movement.id || "";
+            uploadedPdfUrl = resData.data.documentPdfUrl || resData.data.movement.documentPdfUrl || "";
+          }
         }
       } catch (apiErr) {
         console.warn("API upload warning (dùng fallback local):", apiErr);
       }
 
-      // 2. Ghi nhận vào local store
+      // 2. Ghi nhận và bảo toàn vào local store
       recordLocalMovement({
+        id: serverMovementId || `mov_${Date.now()}`,
         memberId: finalMemberId,
+        memberName: finalMemberName,
+        memberCccd: finalMemberCccd,
         hamletName: currentHamlet.name,
         type: opType,
         eventDate,
@@ -355,9 +429,13 @@ export default function BranchOperationsPage() {
           status: "CHINH_THUC",
           approvalDate: new Date().toLocaleDateString("vi-VN"),
         };
-        const updated = [newMember, ...currentList];
+        const updated = [newMember, ...currentList.filter(m => m.id !== finalMemberId && m.cccd !== finalMemberCccd)];
         saveStoredMembers(updated);
       }
+
+      // Bắn sự kiện cập nhật hai chiều toàn hệ thống
+      window.dispatchEvent(new Event("eccb-movements-updated"));
+      window.dispatchEvent(new Event("eccb-members-updated"));
 
       const typeLabel =
         opType === "TRANSFER_IN"
@@ -368,9 +446,9 @@ export default function BranchOperationsPage() {
           ? "Xóa tên"
           : "Báo tử";
 
-      showToast(`✅ Đã lập hồ sơ nghiệp vụ [${typeLabel}] cho đ/c ${finalMemberName} thành công!`);
+      showToast(`✅ Đã lưu trữ hồ sơ nghiệp vụ [${typeLabel}] cho đ/c ${finalMemberName} vào hệ thống thành công!`);
       setIsModalOpen(false);
-      loadData();
+      await loadData();
     } catch (err) {
       console.error("Lỗi khi lập hồ sơ nghiệp vụ:", err);
       alert("Đã xảy ra lỗi khi lưu hồ sơ nghiệp vụ. Vui lòng thử lại!");
@@ -479,11 +557,26 @@ export default function BranchOperationsPage() {
         {/* Banner tóm tắt & Nút bấm Thực hiện nghiệp vụ mới */}
         <div className="bg-white border-2 border-stone-300 rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="text-2xl">📑</span>
               <h2 className="text-base sm:text-lg font-bold text-deep-text uppercase tracking-tight">
                 Hồ Sơ Biến Động Hội Viên
               </h2>
+              {dbSyncStatus === "synced" ? (
+                <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold border border-emerald-300">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
+                  Lưu trữ CSDL máy chủ
+                </span>
+              ) : dbSyncStatus === "syncing" ? (
+                <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold border border-amber-300">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-600 animate-spin"></span>
+                  Đang đồng bộ...
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-stone-100 text-stone-700 font-medium border border-stone-300">
+                  Bộ nhớ đệm
+                </span>
+              )}
             </div>
             <p className="text-xs text-deep-muted mt-0.5">
               Quản lý 4 nghiệp vụ: Chuyển đến, chuyển đi, xóa tên, báo tử kèm văn bản PDF / ảnh xác nhận.
@@ -963,10 +1056,10 @@ export default function BranchOperationsPage() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="flex-2 py-3 bg-moss-green hover:bg-moss-green-light text-white font-bold rounded-xl shadow-md border-2 border-bronze-gold active:scale-95 transition flex items-center justify-center gap-1.5 disabled:opacity-50"
+                  className="flex-2 py-3 bg-moss-green hover:bg-moss-green-light active:bg-moss-green-dark text-white font-bold rounded-xl shadow-md border-2 border-bronze-gold active:scale-95 transition flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
                 >
                   <span>💾</span>
-                  <span>{isSubmitting ? "ĐANG LƯU VĂN BẢN..." : "XÁC NHẬN LẬP HỒ SƠ"}</span>
+                  <span>{isSubmitting ? "ĐANG LƯU HỆ THỐNG LÂU DÀI..." : "XÁC NHẬN LẬP HỒ SƠ"}</span>
                 </button>
               </div>
             </form>

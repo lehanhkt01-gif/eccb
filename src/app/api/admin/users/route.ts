@@ -109,6 +109,18 @@ export async function GET(req: NextRequest) {
       } else if (u.role === Role.BRANCH_LEADER) {
         branches.push(accountItem);
       } else {
+        // Chỉ đưa vào danh sách đăng nhập hội viên nếu tài khoản đang hoạt động và hồ sơ không bị xóa / biến động
+        if (!u.isActive) continue;
+        if (
+          u.member &&
+          (u.member.isDeleted ||
+            u.member.isDeceased ||
+            u.member.isTransferred ||
+            u.member.isExpelled ||
+            u.member.status !== MemberStatus.CHINH_THUC)
+        ) {
+          continue;
+        }
         members.push(accountItem);
       }
     }

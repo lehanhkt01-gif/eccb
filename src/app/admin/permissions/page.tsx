@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { getStoredMembers, saveStoredMembers, assignBranchLeader, demoteBranchLeader, MemberRecord } from "@/lib/memberStore";
+import { getStoredMembers, saveStoredMembers, assignBranchLeader, demoteBranchLeader, MemberRecord, getActiveOfficialMembers } from "@/lib/memberStore";
 import { EA_SUP_HAMLETS } from "@/lib/constants/hamlets";
 
 export type RoleType = "SUPER_ADMIN" | "BRANCH_LEADER" | "MEMBER";
@@ -199,14 +199,9 @@ export default function PermissionsManagementPage() {
     customAdmins?: AccountItem[],
     customBranches?: AccountItem[]
   ) => {
-    // 1. Lấy danh sách hội viên chính thức (CHỈ HỘI VIÊN CHÍNH THỨC, KHÔNG LẤY HỒ SƠ ẢO)
+    // 1. Lấy danh sách hội viên chính thức (CHUẨN HÓA DUY NHẤT TOÀN HỆ THỐNG)
     const rawList = customMembers && customMembers.length > 0 ? customMembers : getStoredMembers();
-    const officialMembers = rawList.filter(
-      (m) =>
-        (m.status === "CHINH_THUC" || (m.status as any) === "ACTIVE") &&
-        !FAKE_CCCD_SET.has(m.cccd) &&
-        !["Đặng Hữu Phúc", "Nguyễn Đình Quảng", "Nguyễn Văn Hùng", "Lê Bá Tùng", "Đặng Văn Hảo", "Lương Thế Vinh", "Ngô Quang Hưng"].includes(m.fullName)
-    );
+    let officialMembers = getActiveOfficialMembers(rawList);
 
     // 2. Danh sách Cán bộ xã: Ưu tiên danh sách nạp từ PostgreSQL máy chủ
     let loadedAdmins = customAdmins || adminAccounts;
@@ -227,7 +222,7 @@ export default function PermissionsManagementPage() {
       loadedAdmins = INITIAL_ADMINS;
     }
 
-    // 3. Danh sách Chi hội trưởng
+    // 3. Danh sách Chi hội trưởng & Chi hội phó
     const deletedLeaders = getDeletedBranchLeaders();
     const statusMap = getLeaderStatusMap();
 
@@ -349,7 +344,76 @@ export default function PermissionsManagementPage() {
       };
     });
 
-    // 4. Luôn đảm bảo số tài khoản hội viên trùng khớp chính xác 100% với danh sách hội viên chính thức
+    // 4. LIÊN THÔNG BẮT BUỘC: Đảm bảo 100% Chi hội trưởng, Chi hội phó được cấp quyền PHẢI NẰM TRONG DANH SÁCH HỘI VIÊN
+    const allStored = getStoredMembers();
+    let storeChanged = false;
+    const storeCopy = [...allStored];
+
+    for (const br of loadedBranches) {
+      if (!br.isActive) continue;
+      const cleanBrHamlet = br.unit.replace(/^Chi hội\s+/i, "").trim().toLowerCase();
+      const existingIdx = storeCopy.findIndex(
+        (m) =>
+          (br.username && (m.cccd === br.username || m.phone === br.username)) ||
+          (br.phone && (m.phone === br.phone || m.cccd === br.phone)) ||
+          (m.fullName.toLowerCase() === br.fullName.toLowerCase() &&
+            m.hamletName.replace(/^Chi hội\s+/i, "").trim().toLowerCase() === cleanBrHamlet)
+      );
+
+      const targetRoleTitle = br.title || "Chi hội trưởng";
+
+      if (existingIdx !== -1) {
+        if (storeCopy[existingIdx].associationRole !== targetRoleTitle) {
+          storeCopy[existingIdx] = {
+            ...storeCopy[existingIdx],
+            associationRole: targetRoleTitle,
+          };
+          storeChanged = true;
+        }
+      } else {
+        // Tự động bổ sung đồng chí Chi hội trưởng / Chi hội phó vào danh sách hội viên chính thức nếu chưa có
+        const newLeaderRecord: MemberRecord = {
+          id: br.id.startsWith("mem_") ? br.id : `mem_${br.id}`,
+          cccd: br.username && br.username.length === 12 ? br.username : (br.phone || `0660${Date.now().toString().slice(-8)}`),
+          fullName: br.fullName,
+          birthYear: 1965,
+          gender: "Nam",
+          phone: br.phone || (br.username && br.username.length !== 12 ? br.username : ""),
+          hometown: "Xã Ea Súp, Tỉnh Đắk Lắk",
+          ethnicity: "Kinh",
+          religion: "Không",
+          hamletName: br.unit.replace(/^Chi hội\s+/i, "").trim(),
+          currentAddress: `${br.unit}, Xã Ea Súp, Tỉnh Đắk Lắk`,
+          militaryRank: "Hội viên",
+          period: "Cựu quân nhân",
+          isCQN: true,
+          isHouseholdHead: true,
+          associationRole: targetRoleTitle,
+          policyStatus: "Không",
+          hasHealthInsurance100: true,
+          livingStandard: "KHONG_NGHEO",
+          isPoorHousehold: false,
+          isNearPoorHousehold: false,
+          hasDilapidatedHouse: false,
+          hasEconomicModel: false,
+          totalDebt: 0,
+          isDeceased: false,
+          isTransferred: false,
+          status: "CHINH_THUC",
+          adminApproved: true,
+          branchApproved: true,
+        };
+        storeCopy.unshift(newLeaderRecord);
+        storeChanged = true;
+      }
+    }
+
+    if (storeChanged) {
+      saveStoredMembers(storeCopy);
+      officialMembers = getActiveOfficialMembers(storeCopy);
+    }
+
+    // 5. Luôn đảm bảo số tài khoản hội viên trùng khớp chính xác 100% với danh sách hội viên chính thức
     const loadedMembers: AccountItem[] = officialMembers.map((m) => {
       const explicitStatus =
         statusMap[m.id] ??
@@ -422,7 +486,11 @@ export default function PermissionsManagementPage() {
     };
 
     window.addEventListener("eccb-members-updated", handleUpdated);
-    return () => window.removeEventListener("eccb-members-updated", handleUpdated);
+    window.addEventListener("eccb-movements-updated", handleUpdated);
+    return () => {
+      window.removeEventListener("eccb-members-updated", handleUpdated);
+      window.removeEventListener("eccb-movements-updated", handleUpdated);
+    };
   }, []);
 
   // Lưu trạng thái vào localStorage khi có thay đổi (dự phòng offline)

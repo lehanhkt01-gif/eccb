@@ -166,7 +166,7 @@ export const INITIAL_MEMBERS: MemberRecord[] = [];
 export const OFFICIAL_BRANCH_LEADERS: MemberRecord[] = [
   {
     id: "CHT_BUON_A",
-    cccd: "0982257421",
+    cccd: "0372989270",
     fullName: "Y Nô Rcăm",
     birthDate: "17/03/1986",
     birthYear: 1986,
@@ -176,7 +176,7 @@ export const OFFICIAL_BRANCH_LEADERS: MemberRecord[] = [
     religion: "Không",
     hamletName: "Buôn A",
     currentAddress: "Buôn A, Xã Ea Súp, Tỉnh Đắk Lắk",
-    phone: "0982257421",
+    phone: "0372989270",
     enlistmentDate: "02/2005",
     dischargeDate: "02/2007",
     militaryRank: "Thượng sĩ",
@@ -1015,6 +1015,57 @@ export const BLACKLIST_FAKE_NAMES = new Set([
   "Đặng Văn Hảo", "Lương Thế Vinh", "Ngô Quang Hưng"
 ]);
 
+/**
+ * Lấy danh sách hội viên chính thức thực tế đang quản lý (Chuẩn hóa duy nhất toàn hệ thống)
+ * - Loại bỏ các hồ sơ trong Thùng rác (isDeleted = true)
+ * - Loại bỏ các hồ sơ đã Biến động: Báo tử (isDeceased), Chuyển đi (isTransferred), Xóa tên (isExpelled)
+ * - Loại bỏ các trạng thái không chính thức: TU_CHOI, REJECTED, DECEASED, TRANSFERRED, CHO_CHI_HOI_DUYET, CHO_XA_PHE_DUYET
+ * - Khử trùng lặp triệt để theo CCCD hoặc ID
+ */
+export function getActiveOfficialMembers(members: MemberRecord[]): MemberRecord[] {
+  if (!Array.isArray(members)) return [];
+
+  const filtered = members.filter((m) => {
+    // 1. Loại bỏ nếu đã chuyển vào Thùng rác
+    if (m.isDeleted) return false;
+
+    // 2. Loại bỏ nếu đã Báo tử, Chuyển đi, Xóa tên
+    if (m.isDeceased || m.isTransferred || m.isExpelled) return false;
+
+    // 3. Loại bỏ nếu trạng thái không phải chính thức
+    if (
+      m.status === "TU_CHOI" ||
+      (m.status as string) === "REJECTED" ||
+      (m.status as string) === "DECEASED" ||
+      (m.status as string) === "TRANSFERRED" ||
+      (m.status as string) === "CHO_CHI_HOI_DUYET" ||
+      (m.status as string) === "CHO_XA_PHE_DUYET"
+    ) {
+      return false;
+    }
+    if (m.status !== "CHINH_THUC" && (m.status as any) !== "ACTIVE") {
+      return false;
+    }
+
+    // 4. Loại bỏ các mã CCCD hoặc tên test ảo cũ
+    if (m.cccd && BLACKLIST_FAKE_CCCD.has(m.cccd.trim())) return false;
+    if (m.fullName && BLACKLIST_FAKE_NAMES.has(m.fullName.trim())) return false;
+
+    return true;
+  });
+
+  // 5. Khử trùng lặp triệt để chống nhân đôi bản ghi theo CCCD hoặc ID
+  const uniqueMap = new Map<string, MemberRecord>();
+  for (const m of filtered) {
+    const key = (m.cccd && m.cccd.trim()) || m.id;
+    if (!uniqueMap.has(key)) {
+      uniqueMap.set(key, m);
+    }
+  }
+
+  return Array.from(uniqueMap.values());
+}
+
 export function getStoredMembers(): MemberRecord[] {
   if (typeof window === "undefined") {
     return [...OFFICIAL_BRANCH_LEADERS, ...INITIAL_MEMBERS];
@@ -1817,7 +1868,10 @@ export function deleteStoredMovement(id: string): boolean {
 }
 
 export function recordLocalMovement(data: {
+  id?: string;
   memberId: string;
+  memberName?: string;
+  memberCccd?: string;
   hamletName: string;
   type: MovementType;
   eventDate: string;
@@ -1826,18 +1880,20 @@ export function recordLocalMovement(data: {
   decisionNumber?: string;
   documentPdfUrl?: string;
   burialPlace?: string;
+  createdAt?: string;
 }): { success: boolean; movement?: MemberMovementRecord } {
   const currentMembers = getStoredMembers();
-  const targetMember = currentMembers.find((m) => m.id === data.memberId);
-  if (!targetMember) return { success: false };
+  const targetMember = currentMembers.find(
+    (m) => m.id === data.memberId || (data.memberCccd && m.cccd === data.memberCccd)
+  );
 
   // 1. Tạo bản ghi biến động
   const newMovement: MemberMovementRecord = {
-    id: `mov_${Date.now()}`,
-    memberId: targetMember.id,
-    memberName: targetMember.fullName,
-    memberCccd: targetMember.cccd,
-    hamletName: data.hamletName || targetMember.hamletName,
+    id: data.id || `mov_${Date.now()}`,
+    memberId: targetMember?.id || data.memberId,
+    memberName: targetMember?.fullName || data.memberName || "Hội viên",
+    memberCccd: targetMember?.cccd || data.memberCccd || "",
+    hamletName: data.hamletName || targetMember?.hamletName || "",
     type: data.type,
     eventDate: data.eventDate,
     reason: data.reason,
@@ -1845,18 +1901,18 @@ export function recordLocalMovement(data: {
     decisionNumber: data.decisionNumber,
     documentPdfUrl: data.documentPdfUrl,
     burialPlace: data.burialPlace,
-    createdAt: new Date().toISOString(),
+    createdAt: data.createdAt || new Date().toISOString(),
   };
 
   // 2. Cập nhật cờ trạng thái trên Member
-  const updatedMembers = currentMembers.map((m) => {
-    if (m.id === data.memberId) {
+  let updatedMembers = currentMembers.map((m) => {
+    if (m.id === data.memberId || (data.memberCccd && m.cccd === data.memberCccd)) {
       if (data.type === "DECEASED") {
         return {
           ...m,
           isDeceased: true,
           deceasedDate: data.eventDate,
-          status: "REJECTED" as ApprovalStatus, // hoặc đánh dấu từ trần
+          status: "TU_CHOI" as ApprovalStatus,
         };
       } else if (data.type === "TRANSFER_OUT") {
         return {
@@ -1864,7 +1920,7 @@ export function recordLocalMovement(data: {
           isTransferred: true,
           transferDate: data.eventDate,
           transferDestination: data.destination || "Chuyển sinh hoạt ngoài xã",
-          status: "REJECTED" as ApprovalStatus,
+          status: "TU_CHOI" as ApprovalStatus,
         };
       } else if (data.type === "EXPELLED") {
         return {
@@ -1878,6 +1934,8 @@ export function recordLocalMovement(data: {
         return {
           ...m,
           isTransferred: false,
+          isDeceased: false,
+          isExpelled: false,
           status: "CHINH_THUC" as ApprovalStatus,
         };
       }
@@ -1885,10 +1943,92 @@ export function recordLocalMovement(data: {
     return m;
   });
 
+  // Nếu chuyển đến mà chưa có hồ sơ trong hệ thống, tự động thêm mới vào danh sách hội viên chính thức
+  if (!targetMember && data.type === "TRANSFER_IN") {
+    const finalCccd = data.memberCccd && data.memberCccd.trim().length >= 9
+      ? data.memberCccd.trim()
+      : `0660${Date.now().toString().slice(-8)}`;
+    const finalFullName = data.memberName?.trim() || "Hội viên chuyển đến";
+    const newMemberRecord: MemberRecord = {
+      id: data.memberId && !data.memberId.startsWith("mov_") ? data.memberId : `MEM_${Date.now()}`,
+      cccd: finalCccd,
+      fullName: finalFullName,
+      birthYear: 1965,
+      gender: "Nam",
+      phone: "",
+      hometown: data.destination || "Xã Ea Súp, Tỉnh Đắk Lắk",
+      ethnicity: "Kinh",
+      religion: "Không",
+      hamletName: data.hamletName || "Thôn 1",
+      currentAddress: `${data.hamletName || "Xã Ea Súp"}, Xã Ea Súp, Tỉnh Đắk Lắk`,
+      militaryRank: "Hội viên",
+      period: "Cựu quân nhân",
+      isCQN: true,
+      isHouseholdHead: true,
+      associationRole: "Hội viên",
+      policyStatus: "Không",
+      hasHealthInsurance100: false,
+      livingStandard: "KHONG_NGHEO",
+      isPoorHousehold: false,
+      isNearPoorHousehold: false,
+      hasDilapidatedHouse: false,
+      hasEconomicModel: false,
+      totalDebt: 0,
+      isDeceased: false,
+      isTransferred: false,
+      isExpelled: false,
+      status: "CHINH_THUC",
+      adminApproved: true,
+      branchApproved: true,
+    };
+    updatedMembers = [newMemberRecord, ...updatedMembers];
+  }
+
   saveStoredMembers(updatedMembers);
 
+  // 3. Cập nhật đồng bộ tức thì trạng thái tài khoản đăng nhập trong permissions
+  try {
+    const permKey = "eccb_permissions_state_v6";
+    const rawPerm = localStorage.getItem(permKey);
+    if (rawPerm) {
+      const parsedPerm = JSON.parse(rawPerm);
+      if (parsedPerm && Array.isArray(parsedPerm.members)) {
+        if (data.type === "DECEASED" || data.type === "TRANSFER_OUT" || data.type === "EXPELLED") {
+          // Xóa hoặc vô hiệu hóa tài khoản đăng nhập của hội viên đã biến động
+          parsedPerm.members = parsedPerm.members.filter(
+            (acc: any) =>
+              acc.id !== `mem_user_${data.memberId}` &&
+              (!data.memberCccd || acc.username !== data.memberCccd)
+          );
+        } else if (data.type === "TRANSFER_IN") {
+          // Thêm tài khoản đăng nhập cho hội viên chuyển đến
+          const targetCccd = data.memberCccd || (targetMember ? targetMember.cccd : "");
+          if (targetCccd) {
+            const exists = parsedPerm.members.some((acc: any) => acc.username === targetCccd);
+            if (!exists) {
+              parsedPerm.members.push({
+                id: `mem_user_${data.memberId || Date.now()}`,
+                fullName: data.memberName || targetMember?.fullName || "Hội viên",
+                unit: data.hamletName || targetMember?.hamletName || "",
+                username: targetCccd,
+                phone: "",
+                role: "MEMBER",
+                isActive: true,
+                passwordStatus: "MẶC_ĐỊNH",
+              });
+            }
+          }
+        }
+        localStorage.setItem(permKey, JSON.stringify(parsedPerm));
+      }
+    }
+  } catch (permErr) {
+    console.warn("Lưu ý đồng bộ permissions trong movement:", permErr);
+  }
+
   const existingMovements = getStoredMovements();
-  saveStoredMovements([newMovement, ...existingMovements]);
+  const filtered = existingMovements.filter((m) => m.id !== newMovement.id);
+  saveStoredMovements([newMovement, ...filtered]);
 
   return { success: true, movement: newMovement };
 }

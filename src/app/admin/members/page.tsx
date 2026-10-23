@@ -18,6 +18,7 @@ import {
   getStoredMembers,
   saveStoredMembers,
   getStoredMovements,
+  saveStoredMovements,
   MemberMovementRecord,
   approveMember,
   rejectMember,
@@ -29,6 +30,7 @@ import {
   emptyTrashStoredMembers,
   assignBranchLeader,
   HAMLET_LIST,
+  getActiveOfficialMembers,
 } from "@/lib/memberStore";
 import MemberImportModal from "@/components/MemberImportModal";
 import ExportReportModal from "@/components/ExportReportModal";
@@ -81,13 +83,27 @@ export default function AdminMembersPage() {
             saveStoredMembers(data.members);
           }
           setDbSyncStatus("synced");
-          return;
+        }
+      } else {
+        setDbSyncStatus("offline");
+      }
+    } catch (err) {
+      console.warn("Không kết nối được API CSDL members, dùng dữ liệu đệm:", err);
+      setDbSyncStatus("offline");
+    }
+
+    // 3. Đồng bộ danh sách biến động nghiệp vụ từ CSDL PostgreSQL
+    try {
+      const resMov = await fetch("/api/movements", { cache: "no-store" });
+      if (resMov.ok) {
+        const dataMov = await resMov.json();
+        if (dataMov.success && Array.isArray(dataMov.data)) {
+          setMovements(dataMov.data);
+          saveStoredMovements(dataMov.data);
         }
       }
-      setDbSyncStatus("offline");
     } catch (err) {
-      console.warn("Không kết nối được API CSDL, dùng dữ liệu đệm:", err);
-      setDbSyncStatus("offline");
+      console.warn("Không kết nối được API /api/movements:", err);
     }
   };
 
@@ -108,9 +124,9 @@ export default function AdminMembersPage() {
   };
 
   // Các danh sách phân loại theo quy trình 2 cấp chặt chẽ:
-  // 1. Hội viên chính thức (CHINH_THUC hoặc ACTIVE)
+  // 1. Hội viên chính thức (CHUẨN HÓA DUY NHẤT TOÀN HỆ THỐNG - ĐỒNG BỘ 100% VỚI CẤP QUYỀN VÀ NGHIỆP VỤ)
   const activeMembers = useMemo(
-    () => members.filter((m) => !m.isDeleted && (m.status === "CHINH_THUC" || (m.status as any) === "ACTIVE")),
+    () => getActiveOfficialMembers(members),
     [members]
   );
 
@@ -537,12 +553,20 @@ export default function AdminMembersPage() {
     }
     const uniqueList = Array.from(uniqueMap.values());
 
-    // Ưu tiên Chi hội trưởng đứng đầu danh sách trong từng thôn buôn / toàn xã
+    // Ưu tiên Chi hội trưởng (Rank 2) và Chi hội phó (Rank 1) đứng đầu danh sách hội viên
     return uniqueList.sort((a, b) => {
-      const isLeaderA = a.associationRole === "Chi hội trưởng" ? 1 : 0;
-      const isLeaderB = b.associationRole === "Chi hội trưởng" ? 1 : 0;
-      if (isLeaderA !== isLeaderB) {
-        return isLeaderB - isLeaderA;
+      const getRoleRank = (role?: string) => {
+        if (!role) return 0;
+        if (role === "Chi hội trưởng") return 2;
+        if (role === "Phó Chi hội trưởng" || role === "Chi hội phó") return 1;
+        return 0;
+      };
+
+      const rankA = getRoleRank(a.associationRole);
+      const rankB = getRoleRank(b.associationRole);
+
+      if (rankA !== rankB) {
+        return rankB - rankA; // Rank 2 (Chi hội trưởng) -> Rank 1 (Chi hội phó) -> Rank 0 (Hội viên)
       }
       return a.fullName.localeCompare(b.fullName, "vi");
     });
@@ -1924,12 +1948,17 @@ export default function AdminMembersPage() {
                 <tbody className="divide-y divide-stone-200">
                   {filteredActiveMembers.map((m, idx) => {
                     const isCHT = m.associationRole === "Chi hội trưởng";
+                    const isCHP = m.associationRole === "Phó Chi hội trưởng" || m.associationRole === "Chi hội phó";
                     return (
-                      <tr key={`${m.cccd}_${m.id}_${idx}`} className={`transition ${isCHT ? "bg-amber-50/50 hover:bg-amber-100/60" : "hover:bg-amber-50/50"}`}>
-                        {/* 1. Thứ tự (Chi hội trưởng có ⭐) */}
+                      <tr key={`${m.cccd}_${m.id}_${idx}`} className={`transition ${isCHT ? "bg-amber-50/50 hover:bg-amber-100/60" : isCHP ? "bg-amber-50/30 hover:bg-amber-100/50" : "hover:bg-amber-50/50"}`}>
+                        {/* 1. Thứ tự (Chi hội trưởng & Chi hội phó có ⭐) */}
                         <td className="py-3 px-2 text-center font-bold text-stone-500 whitespace-nowrap">
                           {isCHT ? (
                             <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-500 text-white text-xs font-black shadow-2xs" title="Chi hội trưởng">
+                              ⭐
+                            </span>
+                          ) : isCHP ? (
+                            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-600 text-white text-xs font-black shadow-2xs" title="Phó Chi hội trưởng">
                               ⭐
                             </span>
                           ) : (
@@ -1937,7 +1966,7 @@ export default function AdminMembersPage() {
                           )}
                         </td>
 
-                        {/* 2. Họ và tên ("Sao" ghi chú là chi hội trưởng + badge vàng) */}
+                        {/* 2. Họ và tên ("Sao" ghi chú là chi hội trưởng / phó + badge vàng/đồng) */}
                         <td className="py-3 px-3.5 font-bold text-deep-text whitespace-nowrap">
                           <div className="flex items-center gap-1.5">
                             {isCHT && (
@@ -1945,12 +1974,22 @@ export default function AdminMembersPage() {
                                 ⭐
                               </span>
                             )}
-                            <span className={`text-sm ${isCHT ? "font-black text-amber-950" : "font-bold text-deep-text"}`}>
+                            {isCHP && (
+                              <span className="text-amber-600 text-base select-none leading-none" title="Phó Chi hội trưởng">
+                                ⭐
+                              </span>
+                            )}
+                            <span className={`text-sm ${isCHT ? "font-black text-amber-950" : isCHP ? "font-black text-amber-900" : "font-bold text-deep-text"}`}>
                               {m.fullName}
                             </span>
                             {isCHT && (
                               <span className="px-1.5 py-0.5 bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-bold rounded shadow-2xs">
                                 Chi hội trưởng
+                              </span>
+                            )}
+                            {isCHP && (
+                              <span className="px-1.5 py-0.5 bg-amber-100/80 text-amber-800 border border-amber-300 text-[10px] font-bold rounded shadow-2xs">
+                                Phó Chi hội trưởng
                               </span>
                             )}
                             {(m as any).isNewlyApproved && (
@@ -1977,6 +2016,11 @@ export default function AdminMembersPage() {
                             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-amber-100 text-amber-900 border border-amber-300 font-bold text-xs rounded-full shadow-2xs">
                               <span>⭐</span>
                               <span>Chi hội trưởng</span>
+                            </span>
+                          ) : isCHP ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-amber-100/80 text-amber-800 border border-amber-300 font-bold text-xs rounded-full shadow-2xs">
+                              <span>⭐</span>
+                              <span>Phó Chi hội trưởng</span>
                             </span>
                           ) : m.associationRole && m.associationRole !== "Hội viên" ? (
                             <span className="inline-flex items-center px-2 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-300 font-semibold text-xs rounded-full">
@@ -2017,7 +2061,7 @@ export default function AdminMembersPage() {
                               <span>Sửa</span>
                             </button>
 
-                            {!isCHT && (
+                            {!isCHT && !isCHP && (
                               <button
                                 onClick={() => handleAssignBranchLeader(m)}
                                 className="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold text-xs rounded border border-amber-300 transition flex items-center gap-1 cursor-pointer shadow-2xs"
