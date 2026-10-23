@@ -1102,19 +1102,73 @@ export function getStoredMembers(): MemberRecord[] {
       return true;
     });
 
-    // 2. CHUẨN HÓA TRẠNG THÁI PHÊ DUYỆT 2 CẤP CHO HỘI VIÊN
-    currentList = currentList.map((m) => {
-      let st: ApprovalStatus = "CHINH_THUC";
-      if ((m.status as any) === "ACTIVE" || m.status === "CHINH_THUC") {
-        st = "CHINH_THUC";
-      } else if ((m.status as any) === "REJECTED" || m.status === "TU_CHOI") {
-        st = "TU_CHOI";
-      } else if (m.branchApproved) {
-        st = "CHO_XA_PHE_DUYET";
-      } else {
-        st = "CHO_CHI_HOI_DUYET";
+    // Kiểm tra danh sách biến động đã lưu để đồng bộ cờ Báo tử, Chuyển đi, Xóa tên
+    let storedMovs: MemberMovementRecord[] = [];
+    try {
+      const rawMov = localStorage.getItem("eccb-easup_movements_v1");
+      if (rawMov) storedMovs = JSON.parse(rawMov);
+    } catch {}
+
+    const deceasedSet = new Set<string>();
+    const transferredSet = new Set<string>();
+    const expelledSet = new Set<string>();
+
+    for (const mov of storedMovs) {
+      if (mov.memberId) {
+        if (mov.type === "DECEASED") deceasedSet.add(mov.memberId.trim());
+        if (mov.type === "TRANSFER_OUT") transferredSet.add(mov.memberId.trim());
+        if (mov.type === "EXPELLED") expelledSet.add(mov.memberId.trim());
       }
-      return { ...m, status: st };
+      if (mov.memberCccd) {
+        if (mov.type === "DECEASED") deceasedSet.add(mov.memberCccd.trim());
+        if (mov.type === "TRANSFER_OUT") transferredSet.add(mov.memberCccd.trim());
+        if (mov.type === "EXPELLED") expelledSet.add(mov.memberCccd.trim());
+      }
+      if (mov.memberName) {
+        if (mov.type === "DECEASED") deceasedSet.add(mov.memberName.trim().toLowerCase());
+        if (mov.type === "TRANSFER_OUT") transferredSet.add(mov.memberName.trim().toLowerCase());
+        if (mov.type === "EXPELLED") expelledSet.add(mov.memberName.trim().toLowerCase());
+      }
+    }
+
+    // 2. CHUẨN HÓA TRẠNG THÁI PHÊ DUYỆT 2 CẤP CHO HỘI VIÊN (BẢO TOÀN TUYỆT ĐỐI HỒ SƠ BIẾN ĐỘNG)
+    currentList = currentList.map((m) => {
+      const isDeceased = m.isDeceased || (m.status as string) === "DECEASED" || deceasedSet.has(m.id) || (m.cccd && deceasedSet.has(m.cccd.trim())) || (m.fullName && deceasedSet.has(m.fullName.trim().toLowerCase()));
+      const isTransferred = m.isTransferred || (m.status as string) === "TRANSFERRED" || transferredSet.has(m.id) || (m.cccd && transferredSet.has(m.cccd.trim())) || (m.fullName && transferredSet.has(m.fullName.trim().toLowerCase()));
+      const isExpelled = m.isExpelled || (m.status as string) === "EXPELLED" || expelledSet.has(m.id) || (m.cccd && expelledSet.has(m.cccd.trim())) || (m.fullName && expelledSet.has(m.fullName.trim().toLowerCase()));
+
+      // 2.1. Bảo toàn tuyệt đối trạng thái biến động nghiệp vụ (Báo tử, Chuyển đi, Xóa tên) - TUYỆT ĐỐI KHÔNG CHUYỂN VÀO CHO_XA_PHE_DUYET
+      if (isDeceased) {
+        return { ...m, isDeceased: true, status: "TU_CHOI" as ApprovalStatus };
+      }
+      if (isTransferred) {
+        return { ...m, isTransferred: true, status: "TU_CHOI" as ApprovalStatus };
+      }
+      if (isExpelled) {
+        return { ...m, isExpelled: true, status: "TU_CHOI" as ApprovalStatus };
+      }
+
+      // 2.2. Hồ sơ kết nạp chính thức
+      if ((m.status as any) === "ACTIVE" || m.status === "CHINH_THUC") {
+        return { ...m, status: "CHINH_THUC" as ApprovalStatus };
+      }
+
+      // 2.3. Hồ sơ bị từ chối
+      if ((m.status as any) === "REJECTED" || m.status === "TU_CHOI") {
+        return { ...m, status: "TU_CHOI" as ApprovalStatus };
+      }
+
+      // 2.4. Hồ sơ mới đăng ký chờ phê duyệt (Cấp 1 & Cấp 2)
+      if (m.status === "CHO_XA_PHE_DUYET" || (m.registrationStatus === "PENDING_APPROVAL" && m.branchApproved)) {
+        return { ...m, status: "CHO_XA_PHE_DUYET" as ApprovalStatus };
+      }
+
+      if (m.status === "CHO_CHI_HOI_DUYET" || m.registrationStatus === "PENDING_APPROVAL") {
+        return { ...m, status: "CHO_CHI_HOI_DUYET" as ApprovalStatus };
+      }
+
+      // Mặc định an toàn cho các hội viên hiện có
+      return { ...m, status: "CHINH_THUC" as ApprovalStatus };
     });
 
     // 3. GÁN CỨNG 20 CHI HỘI TRƯỞNG THỰC TẾ NẾU CHƯA CÓ TRONG HỆ THỐNG (DEDUPLICATE BẰNG MAP & CHỐNG HỒI SINH)

@@ -114,7 +114,7 @@ export default function NotificationBell({
 
         {/* Huy hiệu số lượng thông báo chưa đọc */}
         {unreadCount > 0 && (
-          <span className="absolute -top-1.5 -right-1.5 bg-flag-red text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-white shadow-md animate-pulse">
+          <span className="absolute -top-1.5 -right-1.5 bg-flag-red text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-white shadow-md">
             {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         )}

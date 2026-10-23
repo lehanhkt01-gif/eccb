@@ -74,3 +74,13 @@ h1, h2, h3, h4, h5, h6,
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
 }
+
+/* Tiện ích ẩn thanh cuộn nhưng vẫn cuộn ngang được mượt mà */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+

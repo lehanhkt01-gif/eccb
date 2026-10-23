@@ -277,12 +277,19 @@ export default function BranchMobilePage() {
     return HAMLETS.find((h) => h.code === selectedHamletCode) || HAMLETS[0];
   }, [selectedHamletCode]);
 
-  // Đếm số lượng hồ sơ chờ duyệt tại thôn này
+  // Đếm số lượng hồ sơ chờ duyệt tại thôn này (TUYỆT ĐỐI LOẠI TRỪ HỒ SƠ BIẾN ĐỘNG)
   const pendingCount = useMemo(() => {
     const stored = getStoredMembers();
     return stored.filter(
       (m) =>
         m.hamletName === currentHamlet.name &&
+        !m.isDeleted &&
+        !m.isDeceased &&
+        !m.isTransferred &&
+        !m.isExpelled &&
+        (m.status as string) !== "DECEASED" &&
+        (m.status as string) !== "TRANSFERRED" &&
+        (m.status as string) !== "EXPELLED" &&
         (m.status === "CHO_CHI_HOI_DUYET" ||
           m.status === "CHO_XA_PHE_DUYET" ||
           (m.status as any) === "PENDING_APPROVAL" ||
@@ -737,7 +744,7 @@ export default function BranchMobilePage() {
 
   // Số lượng hồ sơ chờ duyệt của chi hội hiện tại
   const pendingHamletCount = useMemo(
-    () => members.filter((m) => m.status === "PENDING_APPROVAL").length,
+    () => members.filter((m) => !m.isDeceased && !m.isTransferred && m.status === "PENDING_APPROVAL").length,
     [members]
   );
 
@@ -1027,7 +1034,7 @@ export default function BranchMobilePage() {
                       XÉT DUYỆT HỘI VIÊN MỚI
                     </h2>
                     {pendingCount > 0 && (
-                      <span className="px-2 py-0.5 bg-flag-red text-white text-[11px] font-black rounded-full animate-pulse shadow-xs">
+                      <span className="px-2 py-0.5 bg-flag-red text-white text-[11px] font-black rounded-full shadow-xs">
                         {pendingCount} chờ duyệt
                       </span>
                     )}

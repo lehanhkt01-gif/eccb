@@ -130,21 +130,51 @@ export default function AdminMembersPage() {
     [members]
   );
 
-  // 2. Cấp 2: Chờ Thường trực Xã phê duyệt (CHO_XA_PHE_DUYET hoặc đã branchApproved)
+  // 2. Cấp 2: Chờ Thường trực Xã phê duyệt (Chỉ hồ sơ mới đăng ký đã qua thẩm tra thôn, TUYỆT ĐỐI KHÔNG LẤY HỒ SƠ BIẾN ĐỘNG)
   const pendingAdminMembers = useMemo(
-    () => members.filter((m) => !m.isDeleted && (m.status === "CHO_XA_PHE_DUYET" || ((m.status as any) === "PENDING_APPROVAL" && m.branchApproved))),
+    () => members.filter((m) =>
+      !m.isDeleted &&
+      !m.isDeceased &&
+      !m.isTransferred &&
+      !m.isExpelled &&
+      (m.status as string) !== "DECEASED" &&
+      (m.status as string) !== "TRANSFERRED" &&
+      (m.status as string) !== "EXPELLED" &&
+      (m.status === "CHO_XA_PHE_DUYET" || (m.registrationStatus === "PENDING_APPROVAL" && m.branchApproved))
+    ),
     [members]
   );
 
-  // 3. Cấp 1: Chờ Chi hội xác minh (CHO_CHI_HOI_DUYET hoặc chưa branchApproved)
+  // 3. Cấp 1: Chờ Chi hội xác minh (Chỉ hồ sơ mới đăng ký chưa qua thẩm tra thôn)
   const pendingBranchMembers = useMemo(
-    () => members.filter((m) => !m.isDeleted && (m.status === "CHO_CHI_HOI_DUYET" || ((m.status as any) === "PENDING_APPROVAL" && !m.branchApproved))),
+    () => members.filter((m) =>
+      !m.isDeleted &&
+      !m.isDeceased &&
+      !m.isTransferred &&
+      !m.isExpelled &&
+      (m.status as string) !== "DECEASED" &&
+      (m.status as string) !== "TRANSFERRED" &&
+      (m.status as string) !== "EXPELLED" &&
+      (m.status === "CHO_CHI_HOI_DUYET" || (m.registrationStatus === "PENDING_APPROVAL" && !m.branchApproved))
+    ),
     [members]
   );
 
-  // 4. Hồ sơ bị từ chối
+  // 4. Hồ sơ bị từ chối kết nạp (Không lấy hồ sơ biến động)
   const rejectedMembers = useMemo(
-    () => members.filter((m) => !m.isDeleted && (m.status === "TU_CHOI" || (m.status as any) === "REJECTED")),
+    () => members.filter((m) =>
+      !m.isDeleted &&
+      !m.isDeceased &&
+      !m.isTransferred &&
+      !m.isExpelled &&
+      (m.status as string) !== "DECEASED" &&
+      (m.status as string) !== "TRANSFERRED" &&
+      (m.status as string) !== "EXPELLED" &&
+      !m.deceasedDate &&
+      !m.transferDate &&
+      !m.expelledDate &&
+      (m.status === "TU_CHOI" || (m.status as any) === "REJECTED")
+    ),
     [members]
   );
 
@@ -1250,7 +1280,7 @@ export default function AdminMembersPage() {
       {/* ==================================================================== */}
       {/* THANH TAB PHÂN TÁCH QUY TRÌNH 2 CẤP PHÊ DUYỆT CHẶT CHẼ              */}
       {/* ==================================================================== */}
-      <div className="flex border-b-2 border-stone-300 gap-1.5 sm:gap-2 overflow-x-auto pb-0.5">
+      <div className="flex border-b-2 border-stone-300 gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar pb-0.5">
         <button
           onClick={() => setActiveTab("active")}
           className={`py-3 px-3 sm:px-5 font-bold text-xs sm:text-sm border-b-4 transition flex items-center gap-1.5 shrink-0 ${
@@ -1277,7 +1307,7 @@ export default function AdminMembersPage() {
           <span>⚖️</span>
           <span>Chờ Thường Trực Xã Phê Duyệt</span>
           {pendingAdminMembers.length > 0 ? (
-            <span className="px-2 py-0.5 bg-flag-red text-white text-xs rounded-full font-black animate-pulse shadow-xs">
+            <span className="px-2 py-0.5 bg-flag-red text-white text-xs rounded-full font-black shadow-xs">
               {pendingAdminMembers.length}
             </span>
           ) : (
@@ -1349,7 +1379,7 @@ export default function AdminMembersPage() {
           <span>🗑️</span>
           <span>Thùng Rác</span>
           {trashedMembers.length > 0 ? (
-            <span className="px-2 py-0.5 bg-red-100 text-flag-red text-xs rounded-full font-black animate-pulse">
+            <span className="px-2 py-0.5 bg-red-100 text-flag-red text-xs rounded-full font-black">
               {trashedMembers.length}
             </span>
           ) : (
