@@ -1148,27 +1148,59 @@ export function getStoredMembers(): MemberRecord[] {
         return { ...m, isExpelled: true, status: "TU_CHOI" as ApprovalStatus };
       }
 
-      // 2.2. Hồ sơ kết nạp chính thức
-      if ((m.status as any) === "ACTIVE" || m.status === "CHINH_THUC") {
-        return { ...m, status: "CHINH_THUC" as ApprovalStatus };
+      // 2.2. Hồ sơ kết nạp chính thức: Khi cán bộ xã nhập thì đương nhiên là hội viên chính thức
+      // (Nạp thẳng vào danh sách hội viên chính thức, tuyệt đối không nằm trong chờ thường trực xã phê duyệt)
+      const isOfficial =
+        (m.status as any) === "ACTIVE" ||
+        m.status === "CHINH_THUC" ||
+        m.adminApproved === true ||
+        m.registrationStatus === "APPROVED";
+
+      if (isOfficial) {
+        return {
+          ...m,
+          status: "CHINH_THUC" as ApprovalStatus,
+          registrationStatus: "APPROVED",
+          adminApproved: true,
+          branchApproved: true,
+        };
       }
 
       // 2.3. Hồ sơ bị từ chối
       if ((m.status as any) === "REJECTED" || m.status === "TU_CHOI") {
-        return { ...m, status: "TU_CHOI" as ApprovalStatus };
+        return { ...m, status: "TU_CHOI" as ApprovalStatus, registrationStatus: "REJECTED" };
       }
 
-      // 2.4. Hồ sơ mới đăng ký chờ phê duyệt (Cấp 1 & Cấp 2)
-      if (m.status === "CHO_XA_PHE_DUYET" || (m.registrationStatus === "PENDING_APPROVAL" && m.branchApproved)) {
-        return { ...m, status: "CHO_XA_PHE_DUYET" as ApprovalStatus };
+      // 2.4. Hồ sơ chờ cấp Xã phê duyệt (CHỈ KHI NÀO Chi hội trưởng hoặc Chi hội phó nhập và bấm chuyển lên Xã)
+      if (m.status === "CHO_XA_PHE_DUYET" || m.registrationStatus === "BRANCH_APPROVED") {
+        return {
+          ...m,
+          status: "CHO_XA_PHE_DUYET" as ApprovalStatus,
+          registrationStatus: "BRANCH_APPROVED",
+          branchApproved: true,
+          adminApproved: false,
+        };
       }
 
+      // 2.5. Hồ sơ mới đăng ký chờ Chi hội thẩm tra cấp thôn
       if (m.status === "CHO_CHI_HOI_DUYET" || m.registrationStatus === "PENDING_APPROVAL") {
-        return { ...m, status: "CHO_CHI_HOI_DUYET" as ApprovalStatus };
+        return {
+          ...m,
+          status: "CHO_CHI_HOI_DUYET" as ApprovalStatus,
+          registrationStatus: "PENDING_APPROVAL",
+          branchApproved: false,
+          adminApproved: false,
+        };
       }
 
-      // Mặc định an toàn cho các hội viên hiện có
-      return { ...m, status: "CHINH_THUC" as ApprovalStatus };
+      // Mặc định an toàn cho các hội viên hiện có trong hệ thống: Hội viên chính thức
+      return {
+        ...m,
+        status: "CHINH_THUC" as ApprovalStatus,
+        registrationStatus: "APPROVED",
+        adminApproved: true,
+        branchApproved: true,
+      };
     });
 
     // 3. GÁN CỨNG 20 CHI HỘI TRƯỞNG THỰC TẾ NẾU CHƯA CÓ TRONG HỆ THỐNG (DEDUPLICATE BẰNG MAP & CHỐNG HỒI SINH)

@@ -277,7 +277,7 @@ export default function BranchMobilePage() {
     return HAMLETS.find((h) => h.code === selectedHamletCode) || HAMLETS[0];
   }, [selectedHamletCode]);
 
-  // Đếm số lượng hồ sơ chờ duyệt tại thôn này (TUYỆT ĐỐI LOẠI TRỪ HỒ SƠ BIẾN ĐỘNG)
+  // Đếm số lượng hồ sơ chờ duyệt tại thôn này (TUYỆT ĐỐI LOẠI TRỪ HỘI VIÊN CHÍNH THỨC VÀ BIẾN ĐỘNG)
   const pendingCount = useMemo(() => {
     const stored = getStoredMembers();
     return stored.filter(
@@ -290,10 +290,12 @@ export default function BranchMobilePage() {
         (m.status as string) !== "DECEASED" &&
         (m.status as string) !== "TRANSFERRED" &&
         (m.status as string) !== "EXPELLED" &&
+        m.status !== "CHINH_THUC" &&
+        (m.status as any) !== "ACTIVE" &&
+        !m.adminApproved &&
+        m.registrationStatus !== "APPROVED" &&
         (m.status === "CHO_CHI_HOI_DUYET" ||
           m.status === "CHO_XA_PHE_DUYET" ||
-          (m.status as any) === "PENDING_APPROVAL" ||
-          m.registrationStatus === "PENDING_APPROVAL" ||
           m.registrationStatus === "BRANCH_APPROVED")
     ).length;
   }, [currentHamlet.name, members]);

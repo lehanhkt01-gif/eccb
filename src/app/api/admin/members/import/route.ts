@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient, MemberStatus, Role, Period, PolicyStatus } from "@prisma/client";
+import { PrismaClient, MemberStatus, Role, Period, PolicyStatus, RegistrationStatus } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
@@ -142,6 +142,7 @@ export async function POST(req: NextRequest) {
           currentAddress: item.currentAddress || `${matchedHamlet.name}, Xã Ea Súp, Tỉnh Đắk Lắk`,
           hometown: item.hometown || undefined,
           status: MemberStatus.CHINH_THUC,
+          registrationStatus: RegistrationStatus.APPROVED,
           policyStatus: prismaPolicy,
           hasHealthInsurance100: Boolean(item.hasHealthInsurance100),
           isPoorHousehold: Boolean(item.isPoorHousehold),
@@ -178,6 +179,7 @@ export async function POST(req: NextRequest) {
           hasEconomicModel: item.hasEconomicModel || false,
           totalDebt: Number(item.totalDebt || 0),
           status: MemberStatus.CHINH_THUC,
+          registrationStatus: RegistrationStatus.APPROVED,
           adminApproved: true,
           branchApproved: true,
         },

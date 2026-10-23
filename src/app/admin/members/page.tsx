@@ -130,7 +130,9 @@ export default function AdminMembersPage() {
     [members]
   );
 
-  // 2. Cấp 2: Chờ Thường trực Xã phê duyệt (Chỉ hồ sơ mới đăng ký đã qua thẩm tra thôn, TUYỆT ĐỐI KHÔNG LẤY HỒ SƠ BIẾN ĐỘNG)
+  // 2. Cấp 2: Chờ Thường trực Xã phê duyệt
+  // NGUYÊN TẮC BẮT BUỘC: Khi cán bộ xã nhập thì đương nhiên là hội viên chính thức (nạp thẳng vào danh sách chính thức).
+  // CHỈ KHI NÀO "Chi hội trưởng" hoặc "Chi hội phó" nhập và bấm chuyển danh sách lên cấp xã thì mới nằm trong danh sách này!
   const pendingAdminMembers = useMemo(
     () => members.filter((m) =>
       !m.isDeleted &&
@@ -140,12 +142,18 @@ export default function AdminMembersPage() {
       (m.status as string) !== "DECEASED" &&
       (m.status as string) !== "TRANSFERRED" &&
       (m.status as string) !== "EXPELLED" &&
-      (m.status === "CHO_XA_PHE_DUYET" || (m.registrationStatus === "PENDING_APPROVAL" && m.branchApproved))
+      m.status !== "CHINH_THUC" &&
+      (m.status as any) !== "ACTIVE" &&
+      !m.adminApproved &&
+      m.registrationStatus !== "APPROVED" &&
+      m.status !== "TU_CHOI" &&
+      (m.status as any) !== "REJECTED" &&
+      (m.status === "CHO_XA_PHE_DUYET" || m.registrationStatus === "BRANCH_APPROVED")
     ),
     [members]
   );
 
-  // 3. Cấp 1: Chờ Chi hội xác minh (Chỉ hồ sơ mới đăng ký chưa qua thẩm tra thôn)
+  // 3. Cấp 1: Chờ Chi hội xác minh (Hồ sơ mới nộp/đăng ký online, chưa được CHT/CHP thẩm tra chuyển lên Xã)
   const pendingBranchMembers = useMemo(
     () => members.filter((m) =>
       !m.isDeleted &&
@@ -155,12 +163,18 @@ export default function AdminMembersPage() {
       (m.status as string) !== "DECEASED" &&
       (m.status as string) !== "TRANSFERRED" &&
       (m.status as string) !== "EXPELLED" &&
+      m.status !== "CHINH_THUC" &&
+      (m.status as any) !== "ACTIVE" &&
+      !m.adminApproved &&
+      m.registrationStatus !== "APPROVED" &&
+      m.status !== "TU_CHOI" &&
+      (m.status as any) !== "REJECTED" &&
       (m.status === "CHO_CHI_HOI_DUYET" || (m.registrationStatus === "PENDING_APPROVAL" && !m.branchApproved))
     ),
     [members]
   );
 
-  // 4. Hồ sơ bị từ chối kết nạp (Không lấy hồ sơ biến động)
+  // 4. Hồ sơ bị từ chối kết nạp (Không lấy hội viên chính thức, không lấy hồ sơ biến động)
   const rejectedMembers = useMemo(
     () => members.filter((m) =>
       !m.isDeleted &&
@@ -170,6 +184,8 @@ export default function AdminMembersPage() {
       (m.status as string) !== "DECEASED" &&
       (m.status as string) !== "TRANSFERRED" &&
       (m.status as string) !== "EXPELLED" &&
+      m.status !== "CHINH_THUC" &&
+      (m.status as any) !== "ACTIVE" &&
       !m.deceasedDate &&
       !m.transferDate &&
       !m.expelledDate &&

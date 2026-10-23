@@ -61,15 +61,16 @@ export default function DualApprovalModal({
   const isBranchLeader = currentUser?.role === "BRANCH_LEADER";
   const isSuperAdmin = currentUser?.role === "SUPER_ADMIN";
 
-  // Lấy các hồ sơ: PENDING_APPROVAL, BRANCH_APPROVED, ADMIN_APPROVED, REJECTED
+  // Lấy các hồ sơ đăng ký chờ duyệt (TUYỆT ĐỐI LOẠI BỎ HỘI VIÊN CHÍNH THỨC VÀ BIẾN ĐỘNG)
   const pendingRecords = members.filter((m) => {
+    if (m.status === "CHINH_THUC" || (m.status as any) === "ACTIVE" || m.adminApproved || m.registrationStatus === "APPROVED") return false;
+    if (m.isDeleted || m.isDeceased || m.isTransferred || m.isExpelled) return false;
+
     const isApprovalState =
       m.status === "CHO_CHI_HOI_DUYET" ||
       m.status === "CHO_XA_PHE_DUYET" ||
-      (m.status as any) === "PENDING_APPROVAL" ||
       m.registrationStatus === "PENDING_APPROVAL" ||
-      m.registrationStatus === "BRANCH_APPROVED" ||
-      m.registrationStatus === "ADMIN_APPROVED";
+      m.registrationStatus === "BRANCH_APPROVED";
 
     if (!isApprovalState) return false;
 

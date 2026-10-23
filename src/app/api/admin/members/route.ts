@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient, MemberStatus, Role, Period, PolicyStatus } from "@prisma/client";
+import { PrismaClient, MemberStatus, Role, Period, PolicyStatus, RegistrationStatus } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
@@ -167,14 +167,14 @@ function mapPrismaToMemberRecord(m: any) {
     expelledDate: formatDateStr(m.expelledDate),
     expelledReason: m.expelledReason || "",
 
-    status: (m.status as string) || "CHINH_THUC",
-    registrationStatus: m.registrationStatus || "APPROVED",
+    status: (m.status === MemberStatus.CHINH_THUC || Boolean(m.adminApproved) || m.registrationStatus === RegistrationStatus.APPROVED) ? "CHINH_THUC" : ((m.status as string) || "CHINH_THUC"),
+    registrationStatus: (m.status === MemberStatus.CHINH_THUC || Boolean(m.adminApproved) || m.registrationStatus === RegistrationStatus.APPROVED) ? "APPROVED" : (m.registrationStatus || "PENDING_APPROVAL"),
     branchApproved: Boolean(m.branchApproved),
     branchApprovedAt: formatDateStr(m.branchApprovedAt),
     branchApprovedBy: m.branchApprovedBy || "",
     branchNotes: m.branchNotes || "",
 
-    adminApproved: Boolean(m.adminApproved),
+    adminApproved: (m.status === MemberStatus.CHINH_THUC || Boolean(m.adminApproved) || m.registrationStatus === RegistrationStatus.APPROVED) ? true : Boolean(m.adminApproved),
     adminApprovedAt: formatDateStr(m.adminApprovedAt),
     adminApprovedBy: m.adminApprovedBy || "",
     adminNotes: m.adminNotes || "",
@@ -206,6 +206,24 @@ export async function GET(req: NextRequest) {
     }
     if (status && status !== "ALL") {
       where.status = status as MemberStatus;
+    }
+    // Tự động chuẩn hóa một lần trên PostgreSQL: Mọi hội viên CHÍNH THỨC đương nhiên có registrationStatus = APPROVED và adminApproved = true
+    try {
+      await prisma.member.updateMany({
+        where: {
+          status: MemberStatus.CHINH_THUC,
+          OR: [
+            { registrationStatus: { not: RegistrationStatus.APPROVED } },
+            { adminApproved: false },
+          ],
+        },
+        data: {
+          registrationStatus: RegistrationStatus.APPROVED,
+          adminApproved: true,
+        },
+      });
+    } catch (normErr) {
+      console.warn("Normalize status warning:", normErr);
     }
 
     const dbMembers = await prisma.member.findMany({
@@ -309,6 +327,7 @@ export async function POST(req: NextRequest) {
         hasDilapidatedHouse: Boolean(member.hasDilapidatedHouse),
         hasEconomicModel: Boolean(member.hasEconomicModel),
         status: (member.status as MemberStatus) || MemberStatus.CHINH_THUC,
+        registrationStatus: RegistrationStatus.APPROVED,
         adminApproved: member.adminApproved ?? true,
         branchApproved: member.branchApproved ?? true,
       },
@@ -348,6 +367,7 @@ export async function POST(req: NextRequest) {
         hasDilapidatedHouse: Boolean(member.hasDilapidatedHouse),
         hasEconomicModel: Boolean(member.hasEconomicModel),
         status: (member.status as MemberStatus) || MemberStatus.CHINH_THUC,
+        registrationStatus: RegistrationStatus.APPROVED,
         adminApproved: member.adminApproved ?? true,
         branchApproved: member.branchApproved ?? true,
       },

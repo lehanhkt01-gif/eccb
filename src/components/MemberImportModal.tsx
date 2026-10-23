@@ -738,6 +738,7 @@ export default function MemberImportModal({ isOpen, onClose, onSuccess }: Member
           isDeceased: false,
           isTransferred: false,
           status: "CHINH_THUC", // Cán bộ xã duyệt nhập chính thức
+          registrationStatus: "APPROVED",
           isUserCreated: true, // Đánh dấu bảo toàn
           approvalDate: new Date().toLocaleDateString("vi-VN"),
           adminApproved: true,
