@@ -31,6 +31,7 @@ import {
   assignBranchLeader,
   HAMLET_LIST,
   getActiveOfficialMembers,
+  normalizeHamlet,
 } from "@/lib/memberStore";
 import MemberImportModal from "@/components/MemberImportModal";
 import ExportReportModal from "@/components/ExportReportModal";
@@ -109,6 +110,16 @@ export default function AdminMembersPage() {
 
   useEffect(() => {
     loadData();
+
+    // Tự động nhận diện thôn buôn nếu chuyển từ Bản đồ trạng thái Tổng quan (?hamlet=...)
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const urlHamlet = params.get("hamlet");
+      if (urlHamlet) {
+        setSelectedHamlet(normalizeHamlet(urlHamlet));
+      }
+    }
+
     const handleUpdate = () => loadData();
     window.addEventListener("eccb-members-updated", handleUpdate);
     window.addEventListener("eccb-movements-updated", handleUpdate);
@@ -547,7 +558,7 @@ export default function AdminMembersPage() {
         const matchPhone = m.phone.includes(query);
         if (!matchName && !matchCccd && !matchPhone) return false;
       }
-      if (selectedHamlet !== "all" && m.hamletName !== selectedHamlet) return false;
+      if (selectedHamlet !== "all" && normalizeHamlet(m.hamletName) !== normalizeHamlet(selectedHamlet)) return false;
       return true;
     });
   }, [trashedMembers, searchQuery, selectedHamlet]);
@@ -564,8 +575,8 @@ export default function AdminMembersPage() {
         if (!matchName && !matchCccd && !matchPhone) return false;
       }
 
-      // Thôn buôn
-      if (selectedHamlet !== "all" && m.hamletName !== selectedHamlet) return false;
+      // Thôn buôn (So khớp chuẩn hóa chính xác)
+      if (selectedHamlet !== "all" && normalizeHamlet(m.hamletName) !== normalizeHamlet(selectedHamlet)) return false;
 
       // Thời kỳ
       if (selectedPeriod !== "all" && m.period !== selectedPeriod) return false;

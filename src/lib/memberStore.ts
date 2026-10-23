@@ -155,8 +155,8 @@ export interface MemberMovementRecord {
   createdAt: string;
 }
 
-import { EA_SUP_HAMLETS } from "./constants/hamlets";
-export { EA_SUP_HAMLETS };
+import { EA_SUP_HAMLETS, normalizeHamlet } from "./constants/hamlets";
+export { EA_SUP_HAMLETS, normalizeHamlet };
 export const HAMLET_LIST = EA_SUP_HAMLETS;
 
 // Danh sách ban đầu (mặc định rỗng, chỉ nạp 20 Chi hội trưởng chuẩn và hồ sơ do người dùng tạo)

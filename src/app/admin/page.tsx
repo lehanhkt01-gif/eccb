@@ -2,32 +2,32 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import { getStoredMembers, saveStoredMembers, MemberRecord, getActiveOfficialMembers } from "@/lib/memberStore";
+import { getStoredMembers, saveStoredMembers, MemberRecord, getActiveOfficialMembers, normalizeHamlet } from "@/lib/memberStore";
 import ExportReportModal from "@/components/ExportReportModal";
 import { classifyCombatPeriod, classifyPolicyStatus, COMBAT_PERIODS } from "@/lib/memberClassifiers";
 
 // 20 Thôn, Buôn xã Ea Súp với danh sách 20 Chi hội trưởng chuẩn xác thực tế
 const BASE_HAMLETS = [
-  { code: "BUON_A", name: "Buôn A", leader: "Y Nô Rcăm", phone: "0982257421" },
+  { code: "BUON_A", name: "Buôn A", leader: "Y Nô Rcăm", phone: "0372989270" },
   { code: "BUON_B", name: "Buôn B", leader: "Đoàn Hữu Tiến", phone: "0935833737" },
-  { code: "BUON_C", name: "Buôn C", leader: "Y Dyơng Êban", phone: "0839931193" },
-  { code: "THON_HOABINH", name: "Thôn Hòa Bình", leader: "Lê Văn Hồng", phone: "0977979709" },
+  { code: "BUON_C", name: "Buôn C", leader: "Y Dyơng Êban", phone: "0839931193 / 0986548316" },
+  { code: "THON_HOABINH", name: "Thôn Hòa Bình", leader: "Lê Văn Hồng", phone: "0917979769" },
   { code: "THON_THANGLOI", name: "Thôn Thắng Lợi", leader: "Nguyễn Văn Đông", phone: "0828838929" },
-  { code: "THON_DOANKET", name: "Thôn Đoàn Kết", leader: "Nguyễn Văn Sơn", phone: "0913779468" },
-  { code: "THON_BINHLOI", name: "Thôn Bình Lợi", leader: "Lục Văn Cường", phone: "0338561794" },
+  { code: "THON_DOANKET", name: "Thôn Đoàn Kết", leader: "Nguyễn Văn Sơn", phone: "0913.779.468" },
+  { code: "THON_BINHLOI", name: "Thôn Bình Lợi", leader: "Lục Văn Cường", phone: "0982541236 / 0338561794" },
   { code: "THON_01", name: "Thôn 1", leader: "Hồ Sỹ Tuấn", phone: "0986042302" },
-  { code: "THON_02", name: "Thôn 2", leader: "Nguyễn Đức Lợi", phone: "0356912318" },
-  { code: "THON_03", name: "Thôn 3", leader: "Nguyễn Văn Dũng", phone: "0342302292" },
-  { code: "THON_04", name: "Thôn 4", leader: "Nguyễn Phú Bốn", phone: "0367875231" },
-  { code: "THON_05", name: "Thôn 5", leader: "Vũ Văn Đạt", phone: "0327560358" },
-  { code: "THON_06", name: "Thôn 6", leader: "Đỗ Thị Lan", phone: "0343800948" },
+  { code: "THON_02", name: "Thôn 2", leader: "Nguyễn Đức Lợi", phone: "0905691231" },
+  { code: "THON_03", name: "Thôn 3", leader: "Nguyễn Văn Dũng", phone: "0342.302.292" },
+  { code: "THON_04", name: "Thôn 4", leader: "Nguyễn Phú Bốn", phone: "0367.875.231" },
+  { code: "THON_05", name: "Thôn 5", leader: "Vũ Văn Đạt", phone: "0912000000" },
+  { code: "THON_06", name: "Thôn 6", leader: "Đỗ Thị Lan", phone: "0912000000" },
   { code: "THON_07", name: "Thôn 7", leader: "Nguyễn Văn Minh", phone: "0975384025" },
   { code: "THON_08", name: "Thôn 8", leader: "Trần Thanh Hùng", phone: "0397508052" },
   { code: "THON_09", name: "Thôn 9", leader: "Trần Văn Cảnh", phone: "0342869974" },
   { code: "THON_10", name: "Thôn 10", leader: "Nguyễn Lai", phone: "0986911610" },
   { code: "THON_11", name: "Thôn 11", leader: "Huỳnh Công Dũng", phone: "0359326437" },
   { code: "THON_12", name: "Thôn 12", leader: "Triệu Đức Quyên", phone: "0857603535" },
-  { code: "THON_13", name: "Thôn 13", leader: "Hoàng Văn Tuyên", phone: "0984594812" },
+  { code: "THON_13", name: "Thôn 13", leader: "Hoàng Văn Tuyên", phone: "0853346779" },
 ];
 
 export default function AdminDashboardPage() {
@@ -88,16 +88,16 @@ export default function AdminDashboardPage() {
     ? `${(totalLoanAmount / 1_000_000_000).toFixed(2)} tỷ`
     : "0 đ";
 
-  // Thống kê từng thôn từ danh sách hội viên chính thức thực tế
+  // Thống kê từng thôn từ danh sách hội viên chính thức thực tế (Khớp chuẩn 100% qua normalizeHamlet)
   const hamletStats = useMemo(() => {
     return BASE_HAMLETS.map((h) => {
+      const targetHamlet = normalizeHamlet(h.name);
+
       const hamletMembers = officialMembers.filter((m) => {
-        const hName = (m.hamletName || "").toLowerCase().trim();
-        const targetName = h.name.toLowerCase().trim();
-        return hName === targetName || hName.includes(targetName) || targetName.includes(hName);
+        return normalizeHamlet(m.hamletName) === targetHamlet;
       });
 
-      // Lấy Chi hội trưởng thực tế được chỉ định trong danh sách hội viên (nếu có)
+      // Lấy Chi hội trưởng thực tế được chỉ định trong danh sách hội viên chính thức của thôn
       const designatedLeader = hamletMembers.find(
         (m) => m.associationRole === "Chi hội trưởng" || (m as any).associationRole === "Chi Hội Trưởng"
       );
@@ -117,10 +117,13 @@ export default function AdminDashboardPage() {
         overdue: "0 đ",
         hasOverdue: false,
         dilapidatedHouse: dilapidated,
-        status: "good" as const,
+        status: (dilapidated > 0 ? "housing" : "good") as "housing" | "overdue" | "good",
       };
     });
   }, [officialMembers]);
+
+  const overdueHamletsCount = hamletStats.filter((h) => h.hasOverdue).length;
+  const dilapidatedHamletsCount = hamletStats.filter((h) => h.dilapidatedHouse > 0).length;
 
   const filteredHamlets = hamletStats.filter((h) => {
     if (filterStatus === "overdue") return h.hasOverdue;
@@ -444,7 +447,7 @@ export default function AdminDashboardPage() {
                   : "bg-stone-100 text-stone-600 border border-stone-300"
               }`}
             >
-              Có nợ quá hạn (0)
+              Có nợ quá hạn ({overdueHamletsCount})
             </button>
             <button
               onClick={() => setFilterStatus("housing")}
@@ -454,7 +457,7 @@ export default function AdminDashboardPage() {
                   : "bg-stone-100 text-stone-600 border border-stone-300"
               }`}
             >
-              Có nhà dột nát (0)
+              Có nhà dột nát ({dilapidatedHamletsCount})
             </button>
           </div>
         </div>
@@ -500,7 +503,7 @@ export default function AdminDashboardPage() {
                 </div>
                 <div className="flex justify-between">
                   <span>Quân số:</span>
-                  <span>{h.members} đ/c</span>
+                  <span className="font-bold text-deep-text">{h.members} đ/c</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Dư nợ NHCSXH:</span>
@@ -522,8 +525,8 @@ export default function AdminDashboardPage() {
                   📞 {h.phone}
                 </a>
                 <Link
-                  href="/admin/members"
-                  className="text-stone-500 hover:text-moss-green"
+                  href={`/admin/members?hamlet=${encodeURIComponent(h.name)}`}
+                  className="text-stone-500 hover:text-moss-green font-medium"
                 >
                   Xem hội viên →
                 </Link>

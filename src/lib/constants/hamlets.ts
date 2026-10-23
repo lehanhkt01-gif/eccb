@@ -52,3 +52,52 @@ export const EA_SUP_HAMLET_CODES: Record<HamletName, string> = {
   "Buôn B": "BUON_B",
   "Buôn C": "BUON_C",
 };
+
+/**
+ * Chuẩn hóa tên thôn, buôn về 1 trong 20 thôn buôn chuẩn của xã Ea Súp
+ * Khắc phục triệt để lỗi so khớp chuỗi lỏng lẻo gây trùng lặp / lệch số liệu
+ */
+export function normalizeHamlet(raw?: string): string {
+  if (!raw) return "";
+  let clean = raw.trim();
+  clean = clean.replace(/^Chi\s+hội\s+/i, "").trim();
+
+  // "1", "01", "10", "13" -> "Thôn 1", "Thôn 10"
+  const numOnlyMatch = clean.match(/^0*([1-9]|1[0-3])$/);
+  if (numOnlyMatch) {
+    return `Thôn ${numOnlyMatch[1]}`;
+  }
+
+  // "Thôn 01" -> "Thôn 1"
+  const numMatch = clean.match(/^Thôn\s*0*([1-9]|1[0-3])$/i);
+  if (numMatch) {
+    return `Thôn ${numMatch[1]}`;
+  }
+
+  // Khớp chính xác không phân biệt hoa thường
+  for (const h of EA_SUP_HAMLETS) {
+    if (clean.toLowerCase() === h.toLowerCase()) {
+      return h;
+    }
+  }
+
+  // Tên rút gọn (không có chữ Thôn / Buôn): "Đoàn Kết" -> "Thôn Đoàn Kết"
+  for (const h of EA_SUP_HAMLETS) {
+    const shortName = h.replace(/^(Thôn|Buôn)\s+/i, "");
+    if (clean.toLowerCase() === shortName.toLowerCase()) {
+      return h;
+    }
+  }
+
+  // Khớp tiền tố theo thứ tự dài -> ngắn để Thôn 10, 11, 12, 13 được xét trước Thôn 1
+  const sortedHamlets = [...EA_SUP_HAMLETS].sort((a, b) => b.length - a.length);
+  for (const h of sortedHamlets) {
+    const pattern = new RegExp(`^${h}\\b`, "i");
+    if (pattern.test(clean)) {
+      return h;
+    }
+  }
+
+  return clean;
+}
+
