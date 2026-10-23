@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import { getStoredMembers, saveStoredMembers, MemberRecord } from "@/lib/memberStore";
+import { getStoredMembers, saveStoredMembers, MemberRecord, getActiveOfficialMembers } from "@/lib/memberStore";
 import ExportReportModal from "@/components/ExportReportModal";
 import { classifyCombatPeriod, classifyPolicyStatus, COMBAT_PERIODS } from "@/lib/memberClassifiers";
 
@@ -65,41 +65,62 @@ export default function AdminDashboardPage() {
     };
 
     window.addEventListener("eccb-members-updated", handleUpdate);
+    window.addEventListener("eccb-movements-updated", handleUpdate);
     return () => {
       window.removeEventListener("eccb-members-updated", handleUpdate);
+      window.removeEventListener("eccb-movements-updated", handleUpdate);
     };
   }, []);
 
-  const totalMembers = members.length;
-  const partyMembersCount = members.filter((m) => Boolean(m.partyJoinDate)).length;
+  // 1. CHUẨN HÓA DUY NHẤT TOÀN HỆ THỐNG: LẤY 100% HỘI VIÊN CHÍNH THỨC THỰC TẾ
+  const officialMembers = useMemo(
+    () => getActiveOfficialMembers(members),
+    [members]
+  );
+
+  const totalMembers = officialMembers.length;
+  const partyMembersCount = officialMembers.filter((m) => Boolean(m.partyJoinDate)).length;
   const partyPercent = totalMembers > 0 ? ((partyMembersCount / totalMembers) * 100).toFixed(1) : "0.0";
 
-  const totalLoanAmount = members.reduce((sum, m) => sum + (m.totalDebt || 0), 0);
+  const totalLoanAmount = officialMembers.reduce((sum, m) => sum + (m.totalDebt || 0), 0);
+  const borrowersCount = officialMembers.filter((m) => (m.totalDebt || 0) > 0).length;
   const totalLoanStr = totalLoanAmount > 0
     ? `${(totalLoanAmount / 1_000_000_000).toFixed(2)} tỷ`
     : "0 đ";
 
-  // Thống kê từng thôn từ danh sách hội viên thực tế
-  const hamletStats = BASE_HAMLETS.map((h) => {
-    const hamletMembers = members.filter((m) => {
-      const hName = (m.hamletName || "").toLowerCase();
-      const targetName = h.name.toLowerCase();
-      return hName.includes(targetName) || targetName.includes(hName);
+  // Thống kê từng thôn từ danh sách hội viên chính thức thực tế
+  const hamletStats = useMemo(() => {
+    return BASE_HAMLETS.map((h) => {
+      const hamletMembers = officialMembers.filter((m) => {
+        const hName = (m.hamletName || "").toLowerCase().trim();
+        const targetName = h.name.toLowerCase().trim();
+        return hName === targetName || hName.includes(targetName) || targetName.includes(hName);
+      });
+
+      // Lấy Chi hội trưởng thực tế được chỉ định trong danh sách hội viên (nếu có)
+      const designatedLeader = hamletMembers.find(
+        (m) => m.associationRole === "Chi hội trưởng" || (m as any).associationRole === "Chi Hội Trưởng"
+      );
+
+      const leaderName = designatedLeader?.fullName || h.leader;
+      const leaderPhone = designatedLeader?.phone || h.phone;
+
+      const debt = hamletMembers.reduce((sum, m) => sum + (m.totalDebt || 0), 0);
+      const dilapidated = hamletMembers.filter((m) => m.hasDilapidatedHouse).length;
+
+      return {
+        ...h,
+        leader: leaderName,
+        phone: leaderPhone,
+        members: hamletMembers.length,
+        debt: debt > 0 ? `${(debt / 1_000_000).toFixed(1)} triệu` : "0 đ",
+        overdue: "0 đ",
+        hasOverdue: false,
+        dilapidatedHouse: dilapidated,
+        status: "good" as const,
+      };
     });
-
-    const debt = hamletMembers.reduce((sum, m) => sum + (m.totalDebt || 0), 0);
-    const dilapidated = hamletMembers.filter((m) => m.hasDilapidatedHouse).length;
-
-    return {
-      ...h,
-      members: hamletMembers.length,
-      debt: debt > 0 ? `${(debt / 1_000_000).toFixed(1)} triệu` : "0 đ",
-      overdue: "0 đ",
-      hasOverdue: false,
-      dilapidatedHouse: dilapidated,
-      status: "good" as const,
-    };
-  });
+  }, [officialMembers]);
 
   const filteredHamlets = hamletStats.filter((h) => {
     if (filterStatus === "overdue") return h.hasOverdue;
@@ -107,7 +128,7 @@ export default function AdminDashboardPage() {
     return true;
   });
 
-  // Phân bổ thời kỳ chiến đấu từ hồ sơ hội viên (chuẩn hóa đồng bộ 100% từ hồ sơ Mẫu 02)
+  // Phân bổ thời kỳ chiến đấu từ hồ sơ hội viên chính thức (chuẩn hóa đồng bộ 100% từ hồ sơ Mẫu 02)
   const periodDistribution = useMemo(() => {
     const counts: Record<string, number> = {
       BIEN_GIOI_BAC: 0,
@@ -117,7 +138,7 @@ export default function AdminDashboardPage() {
       QUOC_TE: 0,
     };
 
-    members.forEach((m) => {
+    officialMembers.forEach((m) => {
       const key = classifyCombatPeriod(m);
       counts[key] = (counts[key] || 0) + 1;
     });
@@ -128,7 +149,7 @@ export default function AdminDashboardPage() {
       count: counts[item.key] || 0,
       color: item.color,
     }));
-  }, [members]);
+  }, [officialMembers]);
 
   // Thống kê chính sách người có công (Thương binh, Bệnh binh, Da cam)
   const { woundedCount, sickCount, agentOrangeCount } = useMemo(() => {
@@ -136,7 +157,7 @@ export default function AdminDashboardPage() {
     let sick = 0;
     let orange = 0;
 
-    members.forEach((m) => {
+    officialMembers.forEach((m) => {
       const p = classifyPolicyStatus(m);
       if (p.isWounded) wounded++;
       if (p.isSick) sick++;
@@ -148,7 +169,7 @@ export default function AdminDashboardPage() {
       sickCount: sick,
       agentOrangeCount: orange,
     };
-  }, [members]);
+  }, [officialMembers]);
 
   return (
     <div className="space-y-6">
@@ -222,11 +243,11 @@ export default function AdminDashboardPage() {
           </div>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="text-3xl sm:text-4xl font-extrabold text-flag-red">
-              0 đ
+              {totalLoanStr}
             </span>
           </div>
           <p className="text-xs text-stone-500 mt-2">
-            Chưa phát sinh dư nợ trong kỳ
+            {borrowersCount > 0 ? `${borrowersCount} hội viên đang vay vốn` : "Chưa phát sinh dư nợ trong kỳ"}
           </p>
           <div className="absolute bottom-0 left-0 right-0 h-1 bg-flag-red"></div>
         </div>
@@ -515,7 +536,7 @@ export default function AdminDashboardPage() {
       <ExportReportModal
         isOpen={isExportModalOpen}
         onClose={() => setIsExportModalOpen(false)}
-        members={members}
+        members={officialMembers}
       />
     </div>
   );

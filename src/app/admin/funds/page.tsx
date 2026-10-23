@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import { getStoredMembers, MemberRecord } from "@/lib/memberStore";
+import { getStoredMembers, MemberRecord, getActiveOfficialMembers } from "@/lib/memberStore";
 
 interface FundTransaction {
   id: string;
@@ -33,8 +33,9 @@ export default function AdminFundsPage() {
       .catch((err) => console.warn("Lỗi tải hội viên CSDL:", err));
   }, []);
 
-  const totalLoanAmount = members.reduce((sum, m) => sum + (m.totalDebt || 0), 0);
-  const borrowersCount = members.filter((m) => (m.totalDebt || 0) > 0).length;
+  const officialMembers = useMemo(() => getActiveOfficialMembers(members), [members]);
+  const totalLoanAmount = officialMembers.reduce((sum, m) => sum + (m.totalDebt || 0), 0);
+  const borrowersCount = officialMembers.filter((m) => (m.totalDebt || 0) > 0).length;
 
   const filteredTx = transactions.filter(
     (tx) => filterType === "ALL" || tx.type === filterType
@@ -68,7 +69,7 @@ export default function AdminFundsPage() {
             href="/admin/members"
             className="px-3 py-2 bg-moss-green hover:bg-moss-green-dark text-white text-xs font-bold rounded transition"
           >
-            👥 {members.length > 0 ? `${members.length} Hội Viên` : "Hội Viên"}
+            👥 {officialMembers.length > 0 ? `${officialMembers.length} Hội Viên` : "Hội Viên"}
           </Link>
         </div>
       </div>
@@ -108,7 +109,7 @@ export default function AdminFundsPage() {
             Hộ Hội Viên Vay Vốn
           </p>
           <p className="text-2xl font-black text-moss-green">
-            {borrowersCount} / {members.length}
+            {borrowersCount} / {officialMembers.length}
           </p>
           <p className="text-[11px] text-deep-muted">
             {borrowersCount > 0 ? "Hỗ trợ phát triển kinh tế" : "Chưa có dữ liệu vay vốn"}
