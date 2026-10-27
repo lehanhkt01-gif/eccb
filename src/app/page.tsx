@@ -5,7 +5,11 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { getCurrentUser, setCurrentUser, subscribeAuthChange, AuthUser } from "@/lib/authSession";
-import { getStoredMembers } from "@/lib/memberStore";
+import {
+  getStoredMembers,
+  getActiveOfficialMembers,
+  getStoredMovements,
+} from "@/lib/memberStore";
 import Header from "@/components/Header";
 import NewsShareBar from "@/components/NewsShareBar";
 import NewsCreateModal from "@/components/NewsCreateModal";
@@ -39,11 +43,136 @@ export default function HomePage() {
   // Tab lọc trạng thái bài viết (Dành cho Cán bộ xã hoặc tác giả)
   const [articleTab, setArticleTab] = useState<"ALL" | "APPROVED" | "PENDING_APPROVAL">("ALL");
 
+  // State thống kê 4 chỉ số tổ chức Hội CCB Xã Ea Súp
+  const [stats, setStats] = useState({
+    totalBranches: 20,
+    totalMembers: 0,
+    totalBranchLeaders: 20,
+    totalMovements: 0,
+    movementsBreakdown: {
+      transferIn: 0,
+      transferOut: 0,
+      expelled: 0,
+      deceased: 0,
+    },
+  });
+
+  // Tính toán nhanh số liệu từ bộ nhớ cục bộ
+  const computeLocalStats = () => {
+    try {
+      const allMembers = getStoredMembers();
+      const official = getActiveOfficialMembers(allMembers);
+
+      const branchLeaders = official.filter(
+        (m) =>
+          m.associationRole === "Chi hội trưởng" ||
+          (m as any).associationRole === "Chi Hội Trưởng"
+      );
+      const leaderCount = Math.max(branchLeaders.length, 20);
+
+      const allMovements = getStoredMovements();
+      const transferIn = allMovements.filter((m) => m.type === "TRANSFER_IN").length;
+      const transferOut = allMovements.filter((m) => m.type === "TRANSFER_OUT").length;
+      const expelled = allMovements.filter((m) => m.type === "EXPELLED").length;
+      const deceased = allMovements.filter((m) => m.type === "DECEASED").length;
+
+      return {
+        totalBranches: 20,
+        totalMembers: official.length,
+        totalBranchLeaders: leaderCount,
+        totalMovements: allMovements.length,
+        movementsBreakdown: {
+          transferIn,
+          transferOut,
+          expelled,
+          deceased,
+        },
+      };
+    } catch {
+      return null;
+    }
+  };
+
+  // Nạp và đồng bộ thống kê chỉ số với máy chủ PostgreSQL
+  const loadStats = async () => {
+    const local = computeLocalStats();
+    if (local) {
+      setStats((prev) => ({
+        ...prev,
+        ...local,
+      }));
+    }
+
+    try {
+      const res = await fetch("/api/stats", { cache: "no-store" });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data) {
+          setStats((prev) => ({
+            totalBranches: json.data.totalBranches || prev.totalBranches || 20,
+            totalMembers:
+              json.data.totalMembers !== null && json.data.totalMembers !== undefined
+                ? json.data.totalMembers
+                : prev.totalMembers,
+            totalBranchLeaders:
+              json.data.totalBranchLeaders || prev.totalBranchLeaders || 20,
+            totalMovements:
+              json.data.totalMovements !== null && json.data.totalMovements !== undefined
+                ? json.data.totalMovements
+                : prev.totalMovements,
+            movementsBreakdown:
+              json.data.movementsBreakdown || prev.movementsBreakdown,
+          }));
+        }
+      }
+    } catch (e) {
+      console.warn("Không kết nối được /api/stats, dùng số liệu đệm:", e);
+    }
+
+    // Đồng bộ trực tiếp từ danh sách hội viên chính thức trên CSDL máy chủ
+    try {
+      const resMembers = await fetch("/api/admin/members", { cache: "no-store" });
+      if (resMembers.ok) {
+        const dataMembers = await resMembers.json();
+        if (dataMembers.success && Array.isArray(dataMembers.members) && dataMembers.members.length > 0) {
+          saveStoredMembers(dataMembers.members);
+          const official = getActiveOfficialMembers(dataMembers.members);
+          setStats((prev) => ({
+            ...prev,
+            totalMembers: official.length,
+          }));
+        }
+      }
+    } catch {}
+
+    // Đồng bộ trực tiếp từ lịch sử biến động trên CSDL máy chủ
+    try {
+      const resMovs = await fetch("/api/movements", { cache: "no-store" });
+      if (resMovs.ok) {
+        const dataMovs = await resMovs.json();
+        if (dataMovs.success && Array.isArray(dataMovs.data)) {
+          const mList = dataMovs.data;
+          setStats((prev) => ({
+            ...prev,
+            totalMovements: mList.length,
+            movementsBreakdown: {
+              transferIn: mList.filter((m: any) => m.type === "TRANSFER_IN").length,
+              transferOut: mList.filter((m: any) => m.type === "TRANSFER_OUT").length,
+              expelled: mList.filter((m: any) => m.type === "EXPELLED").length,
+              deceased: mList.filter((m: any) => m.type === "DECEASED").length,
+            },
+          }));
+        }
+      }
+    } catch {}
+  };
+
   // Tải danh sách bản tin từ API và đồng bộ liên tục trạng thái đăng nhập
   useEffect(() => {
     const user = getCurrentUser();
     setCurrentUserState(user);
     fetchNews(user);
+    loadStats();
 
     // Đăng ký nhận sự kiện cập nhật auth tức thì trong và giữa các tab
     const unsubscribe = subscribeAuthChange((updatedUser) => {
@@ -51,8 +180,17 @@ export default function HomePage() {
       fetchNews(updatedUser);
     });
 
+    const handleDataUpdate = () => {
+      loadStats();
+    };
+
+    window.addEventListener("eccb-members-updated", handleDataUpdate);
+    window.addEventListener("eccb-movements-updated", handleDataUpdate);
+
     return () => {
       unsubscribe();
+      window.removeEventListener("eccb-members-updated", handleDataUpdate);
+      window.removeEventListener("eccb-movements-updated", handleDataUpdate);
     };
   }, []);
 
@@ -290,8 +428,64 @@ export default function HomePage() {
               <span className="italic">Hình ảnh: Đại hội Đại biểu Hội Cựu Chiến Binh Xã Ea Súp</span>
             </div>
           </div>
-        </div>
-      </section>
+
+
+            {/* THỐNG KÊ NGẮN GỌN, ĐƠN GIẢN, XÚC TÍCH: Chi hội: 20 - Hội viên: 600 - Biến động: 03 */}
+            <div className="pt-2 sm:pt-2.5 flex items-center justify-center md:justify-start">
+              <div className="inline-flex flex-wrap items-center gap-2 sm:gap-3 px-3.5 py-1.5 rounded-full bg-white/90 backdrop-blur-md border border-stone-300/80 shadow-2xs text-xs sm:text-sm font-semibold text-deep-text">
+                <span
+                  className="inline-flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition"
+                  title="20 Chi hội thôn, buôn trực thuộc Hội CCB Xã Ea Súp"
+                  onClick={() => {
+                    if (currentUser?.role === "SUPER_ADMIN") router.push("/admin");
+                    else if (currentUser?.role === "BRANCH_LEADER") router.push("/branch");
+                  }}
+                >
+                  <span className="w-2 h-2 rounded-full bg-moss-green shrink-0"></span>
+                  <span className="text-stone-700">Chi hội:</span>
+                  <strong className="text-moss-green font-extrabold font-serif text-sm sm:text-base">
+                    {stats.totalBranches || 20}
+                  </strong>
+                </span>
+
+                <span className="text-stone-300 font-light select-none">-</span>
+
+                <span
+                  className="inline-flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition"
+                  title="Hội viên Cựu Chiến Binh chính thức toàn xã"
+                  onClick={() => {
+                    if (currentUser?.role === "SUPER_ADMIN") router.push("/admin/members");
+                    else if (currentUser?.role === "BRANCH_LEADER") router.push("/branch");
+                  }}
+                >
+                  <span className="w-2 h-2 rounded-full bg-flag-red shrink-0"></span>
+                  <span className="text-stone-700">Hội viên:</span>
+                  <strong className="text-flag-red font-extrabold font-serif text-sm sm:text-base">
+                    {stats.totalMembers}
+                  </strong>
+                </span>
+
+                <span className="text-stone-300 font-light select-none">-</span>
+
+                <span
+                  className="inline-flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition"
+                  title={`Chi tiết biến động: Chuyển đi: ${stats.movementsBreakdown.transferOut} | Chuyển đến: ${stats.movementsBreakdown.transferIn} | Xóa tên: ${stats.movementsBreakdown.expelled} | Báo tử: ${stats.movementsBreakdown.deceased}`}
+                  onClick={() => {
+                    if (currentUser?.role === "SUPER_ADMIN" || currentUser?.role === "BRANCH_LEADER") {
+                      router.push("/branch/operations");
+                    }
+                  }}
+                >
+                  <span className="w-2 h-2 rounded-full bg-amber-600 shrink-0"></span>
+                  <span className="text-stone-700">Biến động:</span>
+                  <strong className="text-deep-text font-extrabold font-serif text-sm sm:text-base">
+                    {String(stats.totalMovements).padStart(2, "0")}
+                  </strong>
+                </span>
+              </div>
+            </div>
+          </div>
+        </section>
 
       {/* BẢN TIN CÁC HOẠT ĐỘNG CỦA HỘI CỰU CHIẾN BINH XÃ */}
       {/* Khoảng cách thu gọn sát lại với Hero (py-6 sm:py-8) */}
