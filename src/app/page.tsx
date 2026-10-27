@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { getCurrentUser, setCurrentUser, subscribeAuthChange, AuthUser } from "@/lib/authSession";
 import {
   getStoredMembers,
+  saveStoredMembers,
   getActiveOfficialMembers,
   getStoredMovements,
 } from "@/lib/memberStore";

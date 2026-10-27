@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { MemberStatus, MovementType, Role } from "@prisma/client";
+import { MemberStatus, MovementType, Role, RegistrationStatus } from "@prisma/client";
 import { EA_SUP_HAMLETS } from "@/lib/constants/hamlets";
 
 export const dynamic = "force-dynamic";
